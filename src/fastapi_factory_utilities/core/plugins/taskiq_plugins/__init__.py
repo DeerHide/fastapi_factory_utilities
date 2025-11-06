@@ -22,8 +22,8 @@ if find_spec("beanie") is not None:
     ]
 
 if find_spec("aio_pika") is not None:
-    from .depends import depends_aiopike_robust_connection
+    from .depends import depends_aiopika_robust_connection
 
     __all__ += [
-        "depends_aiopike_robust_connection",
+        "depends_aiopika_robust_connection",
     ]
