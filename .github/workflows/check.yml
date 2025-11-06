@@ -10,7 +10,7 @@ jobs:
   pre-commit:
     env:
       PYTHON_PATH: "./src:./tests:$PYTHON_PATH"
-    runs-on: ubuntu-24.04
+    runs-on: public-actions-runner-scale-set
     steps:
       - uses: actions/checkout@v4
       - name: Install MongoDB
