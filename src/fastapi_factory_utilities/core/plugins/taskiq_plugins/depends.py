@@ -34,7 +34,7 @@ if find_spec("beanie") is not None:
         return request.app.state.odm_database
 
 
-if find_spec("aio-pika") is not None:
+if find_spec("aio_pika") is not None:
     from aio_pika.abc import AbstractRobustConnection
 
     from fastapi_factory_utilities.core.plugins.aiopika.depends import DEPENDS_AIOPIKA_ROBUST_CONNECTION_KEY
