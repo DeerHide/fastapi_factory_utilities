@@ -13,8 +13,6 @@ jobs:
     runs-on: public-actions-runner-scale-set
     steps:
       - uses: actions/checkout@v4
-      - name: Install MongoDB
-        uses: ankane/setup-mongodb@v1
       - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
