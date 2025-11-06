@@ -21,7 +21,7 @@ if find_spec("beanie") is not None:
         "depends_odm_database",
     ]
 
-if find_spec("aio-pika") is not None:
+if find_spec("aio_pika") is not None:
     from .depends import depends_aiopike_robust_connection
 
     __all__ += [
