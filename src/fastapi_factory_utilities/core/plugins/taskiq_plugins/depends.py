@@ -39,7 +39,7 @@ if find_spec("aio_pika") is not None:
 
     from fastapi_factory_utilities.core.plugins.aiopika.depends import DEPENDS_AIOPIKA_ROBUST_CONNECTION_KEY
 
-    def depends_aiopike_robust_connection(request: Request = TaskiqDepends()) -> AbstractRobustConnection:
+    def depends_aiopika_robust_connection(request: Request = TaskiqDepends()) -> AbstractRobustConnection:
         """Acquire the Aiopika robust connection from the request.
 
         Args:
