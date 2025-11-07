@@ -1,9 +1,9 @@
 """Test the queue for the RabbitMQ plugin."""
 
 from aio_pika import ExchangeType
+from docker.models.containers import ExecResult
 from testcontainers.rabbitmq import RabbitMqContainer
 
-from docker.models.containers import ExecResult
 from fastapi_factory_utilities.core.plugins.aiopika import Exchange, Queue
 from fastapi_factory_utilities.core.plugins.aiopika.plugins import AiopikaPlugin
 

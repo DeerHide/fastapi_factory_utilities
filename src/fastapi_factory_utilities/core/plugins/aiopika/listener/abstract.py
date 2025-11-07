@@ -1,8 +1,8 @@
 """Provides the abstract class for the listener port for the Aiopika plugin."""
 
 from abc import abstractmethod
-from collections.abc import Awaitable
-from typing import Any, Callable, ClassVar, Generic, Self, TypeVar, cast, get_args
+from collections.abc import Awaitable, Callable
+from typing import Any, ClassVar, Generic, Self, TypeVar, cast, get_args
 
 from aio_pika.abc import ConsumerTag, TimeoutType
 from aio_pika.message import IncomingMessage
