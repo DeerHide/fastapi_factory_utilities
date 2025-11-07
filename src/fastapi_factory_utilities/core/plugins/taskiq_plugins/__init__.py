@@ -7,7 +7,7 @@ from .exceptions import TaskiqPluginBaseError
 from .plugin import TaskiqPlugin
 from .schedulers import SchedulerComponent
 
-__all__: list[str] = [
+__all__: list[str] = [  # pylint: disable=invalid-name
     "SchedulerComponent",
     "TaskiqPlugin",
     "TaskiqPluginBaseError",
@@ -17,13 +17,13 @@ __all__: list[str] = [
 if find_spec("beanie") is not None:
     from .depends import depends_odm_database
 
-    __all__ += [
+    __all__ += [  # pylint: disable=invalid-name
         "depends_odm_database",
     ]
 
 if find_spec("aio_pika") is not None:
     from .depends import depends_aiopika_robust_connection
 
-    __all__ += [
+    __all__ += [  # pylint: disable=invalid-name
         "depends_aiopika_robust_connection",
     ]
