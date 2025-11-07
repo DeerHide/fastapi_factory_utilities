@@ -3,6 +3,7 @@
 This module provides components and utilities for scheduling tasks using Taskiq, FastAPI, and Redis.
 It enables registration, configuration, and management of scheduled tasks in FastAPI applications.
 """
+
 import asyncio
 from collections.abc import Coroutine
 from typing import Any, Self, cast
