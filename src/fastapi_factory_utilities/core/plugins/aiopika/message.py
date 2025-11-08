@@ -76,7 +76,6 @@ class AbstractMessage(BaseModel, Generic[GenericMessageData]):
 
     def to_aiopika_message(self) -> Message:
         """Convert the message to an Aiopika message."""
-        assert self._incoming_message is not None
         return Message(
             body=self.model_dump_json().encode("utf-8"),
             headers=self.get_headers(),

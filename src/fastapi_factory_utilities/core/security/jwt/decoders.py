@@ -1,0 +1,101 @@
+"""Provides the JWT bearer token decoders.
+
+Can be implemented to support different JWT bearer token formats or additional claims.
+https://www.iana.org/assignments/jwt/jwt.xhtml#claims
+"""
+
+from abc import ABC, abstractmethod
+from typing import Any, Generic, TypeVar
+
+from jwt import InvalidTokenError, decode
+from jwt.api_jwk import PyJWK
+from pydantic import ValidationError
+
+from .configs import JWTBearerAuthenticationConfig
+from .exceptions import InvalidJWTError, InvalidJWTPayploadError
+from .objects import JWTPayload
+from .types import JWTToken, OAuth2Subject
+
+JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)
+
+
+async def decode_jwt_token_payload(
+    jwt_token: JWTToken,
+    public_key: PyJWK,
+    jwt_bearer_authentication_config: JWTBearerAuthenticationConfig,
+    subject: OAuth2Subject | None = None,
+) -> dict[str, Any]:
+    """Decode the JWT bearer token payload.
+
+    Args:
+        jwt_token (JWTToken): The JWT bearer token.
+        public_key (PyJWK): The public key.
+        jwt_bearer_authentication_config (JWTBearerAuthenticationConfig): The JWT bearer authentication configuration.
+        subject (OAuth2Subject | None): The subject.
+
+    Returns:
+        dict[str, Any]: The decoded JWT bearer token payload.
+
+    Raises:
+        JWTBearerTokenDecoderError: If the JWT bearer token is invalid.
+    """
+    # Additional kwargs for the decode function
+    kwargs: dict[str, Any] = {}
+    if jwt_bearer_authentication_config.authorized_issuers:
+        kwargs["issuer"] = jwt_bearer_authentication_config.authorized_issuers
+    if jwt_bearer_authentication_config.authorized_audiences:
+        kwargs["audience"] = jwt_bearer_authentication_config.authorized_audiences
+    if subject:
+        kwargs["subject"] = subject
+    # Decode the JWT bearer token payload
+    try:
+        return decode(
+            jwt=jwt_token,
+            key=public_key,
+            algorithms=jwt_bearer_authentication_config.authorized_algorithms,
+            options={"verify_signature": True},
+            **kwargs,
+        )
+    except InvalidTokenError as e:
+        raise InvalidJWTError("Failed to decode the JWT bearer token payload") from e
+
+
+class JWTBearerTokenDecoderAbstract(ABC, Generic[JWTBearerPayloadGeneric]):
+    """JWT bearer token decoder."""
+
+    @abstractmethod
+    async def decode_payload(self, jwt_token: JWTToken) -> JWTBearerPayloadGeneric:
+        """Decode the JWT bearer token payload.
+
+        Args:
+            jwt_token (JWTToken): The JWT bearer token.
+
+        Returns:
+            JWTBearerPayloadGeneric: The decoded JWT bearer token payload.
+
+        Raises:
+            InvalidJWTError: If the JWT bearer token is invalid.
+            InvalidJWTPayploadError: If the JWT bearer token payload is invalid.
+        """
+        raise NotImplementedError()
+
+
+class JWTBearerTokenDecoder(JWTBearerTokenDecoderAbstract[JWTPayload]):
+    """JWT bearer token classic decoder."""
+
+    def __init__(self, jwt_bearer_authentication_config: JWTBearerAuthenticationConfig, public_key: PyJWK) -> None:
+        """Initialize the JWT bearer token classic decoder."""
+        self._jwt_bearer_authentication_config: JWTBearerAuthenticationConfig = jwt_bearer_authentication_config
+        self._public_key: PyJWK = public_key
+
+    async def decode_payload(self, jwt_token: JWTToken) -> JWTPayload:
+        """Decode the JWT bearer token."""
+        jwt_decoded: dict[str, Any] = await decode_jwt_token_payload(
+            jwt_token=jwt_token,
+            public_key=self._public_key,
+            jwt_bearer_authentication_config=self._jwt_bearer_authentication_config,
+        )
+        try:
+            return JWTPayload.model_validate(jwt_decoded)
+        except ValidationError as e:
+            raise InvalidJWTPayploadError("Failed to validate the JWT bearer token payload") from e

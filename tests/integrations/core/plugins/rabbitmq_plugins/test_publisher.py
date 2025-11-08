@@ -15,17 +15,17 @@ from fastapi_factory_utilities.core.plugins.aiopika import (
 from fastapi_factory_utilities.core.plugins.aiopika.queue import Queue
 
 
-class TestBodyMessage(BaseModel):
+class BodyMessageForTest(BaseModel):
     """Test body message."""
 
     message: str = Field(description="The message.")
 
 
-class TestMessage(AbstractMessage[TestBodyMessage]):
+class MessageForTest(AbstractMessage[BodyMessageForTest]):
     """Test message."""
 
 
-class TestPublisher(AbstractPublisher[TestMessage]):
+class PublisherForTest(AbstractPublisher[MessageForTest]):
     """Test publisher."""
 
 
@@ -39,7 +39,7 @@ class TestPublisherRabbitMQ:
         exchange: Exchange = Exchange(name="test_exchange", exchange_type=ExchangeType.FANOUT)
         exchange.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
         # Prepare the publisher
-        publisher: TestPublisher = TestPublisher(exchange=exchange)
+        publisher: PublisherForTest = PublisherForTest(exchange=exchange)
         publisher.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
         # Prepare the queue (this is required to be able to receive a delivery acknowledgement)
         queue: Queue = Queue(name="test_queue", exchange=exchange, routing_key="test_routing_key")
@@ -50,6 +50,6 @@ class TestPublisherRabbitMQ:
         await publisher.setup()
         # Prepare the message
         sender: SenderModel = SenderModel(name="test_sender")
-        message: TestMessage = TestMessage(sender=sender, data=TestBodyMessage(message=str(uuid4())))
+        message: MessageForTest = MessageForTest(sender=sender, data=BodyMessageForTest(message=str(uuid4())))
         # Publish the message
         await publisher.publish(message=message, routing_key="test_routing_key")
