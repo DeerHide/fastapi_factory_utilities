@@ -17,22 +17,22 @@ from fastapi_factory_utilities.core.plugins.aiopika import (
 )
 
 
-class TestBodyMessage(BaseModel):
+class BodyMessageForTest(BaseModel):
     """Test body message."""
 
     message: str = Field(description="The message.")
 
 
-class TestMessage(AbstractMessage[TestBodyMessage]):
+class MessageForTest(AbstractMessage[BodyMessageForTest]):
     """Test message."""
 
 
-class TestPublisher(AbstractPublisher[TestMessage]):
-    """Test publisher."""
+class PublisherForTest(AbstractPublisher[MessageForTest]):
+    """Publisher for test."""
 
 
-class TestListener(AbstractListener[TestMessage]):
-    """Test listener."""
+class ListenerForTest(AbstractListener[MessageForTest]):
+    """Listener for test."""
 
     def __init__(self, queue: Queue, name: str | None = None) -> None:
         """Initialize the listener."""
@@ -44,7 +44,7 @@ class TestListener(AbstractListener[TestMessage]):
         """Get the message count."""
         return self._message_count
 
-    async def on_message(self, message: TestMessage) -> None:
+    async def on_message(self, message: MessageForTest) -> None:
         """On message."""
         self._message_count += 1
         await message.ack()
@@ -63,10 +63,10 @@ class TestListenerRabbitMQ:
         queue: Queue = Queue(name="test_queue", exchange=exchange, routing_key="test_routing_key")
         queue.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
         # Prepare the publisher
-        publisher: TestPublisher = TestPublisher(exchange=exchange)
+        publisher: PublisherForTest = PublisherForTest(exchange=exchange)
         publisher.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
         # Prepare the listener
-        listener: TestListener = TestListener(queue=queue)
+        listener: ListenerForTest = ListenerForTest(queue=queue)
         listener.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
         # Setup the resources
         await exchange.setup()
@@ -78,7 +78,9 @@ class TestListenerRabbitMQ:
         await asyncio.sleep(1)  # Give listener time to start
         # Publish the message
         await publisher.publish(
-            message=TestMessage(sender=SenderModel(name="test_sender"), data=TestBodyMessage(message=str(uuid4()))),
+            message=MessageForTest(
+                sender=SenderModel(name="test_sender"), data=BodyMessageForTest(message=str(uuid4()))
+            ),
             routing_key="test_routing_key",
         )
         # Wait for the message to be received
