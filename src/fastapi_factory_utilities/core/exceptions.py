@@ -1,7 +1,6 @@
 """FastAPI Factory Utilities exceptions."""
 
 import logging
-from collections.abc import Sequence
 from typing import NotRequired, TypedDict, Unpack
 
 from opentelemetry.trace import Span, get_current_span
@@ -21,6 +20,9 @@ class ExceptionParameters(TypedDict):
 class FastAPIFactoryUtilitiesError(Exception):
     """Base exception for the FastAPI Factory Utilities."""
 
+    DEFAULT_LOGGING_LEVEL: int = logging.ERROR
+    DEFAULT_MESSAGE: str | None = None
+
     def __init__(
         self,
         *args: object,
@@ -35,13 +37,19 @@ class FastAPIFactoryUtilitiesError(Exception):
             **kwargs: The keyword arguments.
 
         """
+        # If Default Message is not set, try to extract it from docstring (first line)
+        default_message: str = "An error occurred"
+        if self.DEFAULT_MESSAGE is None and self.__doc__ is not None:
+            default_message = self.__doc__.split("\n", maxsplit=1)[0]
         # Extract the message and the level from the kwargs if they are present
         self.message: str | None = kwargs.pop("message", None)
-        self.level: int = kwargs.pop("level", logging.ERROR)
+        self.level: int = kwargs.pop("level", self.DEFAULT_LOGGING_LEVEL)
 
         # If the message is not present, try to extract it from the args
         if self.message is None and len(args) > 0 and isinstance(args[0], str):
             self.message = args[0]
+        elif self.message is None:
+            self.message = default_message
 
         # Log the Exception
         if self.message:
@@ -56,7 +64,7 @@ class FastAPIFactoryUtilitiesError(Exception):
                 span.record_exception(self)
                 for key, value in kwargs.items():
                     attribute_value: AttributeValue
-                    if not isinstance(value, (str, bool, int, float, Sequence)):
+                    if not isinstance(value, (str, bool, int, float)):
                         attribute_value = str(value)
                     else:
                         attribute_value = value
