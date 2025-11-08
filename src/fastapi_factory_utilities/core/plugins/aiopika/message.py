@@ -3,8 +3,8 @@
 from enum import StrEnum, auto
 from typing import ClassVar, Generic, TypeVar
 
-from aio_pika.abc import DeliveryMode, HeadersType
-from aio_pika.message import IncomingMessage, Message
+from aio_pika.abc import AbstractIncomingMessage, DeliveryMode, HeadersType
+from aio_pika.message import Message
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 GenericMessageData = TypeVar("GenericMessageData", bound=BaseModel)
@@ -35,7 +35,7 @@ class AbstractMessage(BaseModel, Generic[GenericMessageData]):
     sender: SenderModel = Field(description="The sender of the message.")
     data: GenericMessageData = Field(description="The data of the message.")
 
-    _incoming_message: IncomingMessage | None = PrivateAttr()
+    _incoming_message: AbstractIncomingMessage | None = PrivateAttr()
     _headers: HeadersType = PrivateAttr(default_factory=dict)
 
     def get_headers(self) -> HeadersType:
@@ -46,7 +46,7 @@ class AbstractMessage(BaseModel, Generic[GenericMessageData]):
         """Set the headers of the message."""
         self._headers = headers
 
-    def set_incoming_message(self, incoming_message: IncomingMessage) -> None:
+    def set_incoming_message(self, incoming_message: AbstractIncomingMessage) -> None:
         """Set the incoming message."""
         self._incoming_message = incoming_message
         self.set_headers(headers=incoming_message.headers)
@@ -76,6 +76,7 @@ class AbstractMessage(BaseModel, Generic[GenericMessageData]):
 
     def to_aiopika_message(self) -> Message:
         """Convert the message to an Aiopika message."""
+        assert self._incoming_message is not None
         return Message(
             body=self.model_dump_json().encode("utf-8"),
             headers=self.get_headers(),

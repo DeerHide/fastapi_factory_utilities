@@ -2,9 +2,7 @@
 
 from typing import ClassVar, Self
 
-from aio_pika import Exchange as AiopikaExchange
-from aio_pika import ExchangeType
-from aio_pika.abc import TimeoutType
+from aio_pika.abc import AbstractExchange, ExchangeType, TimeoutType
 
 from .abstract import AbstractAiopikaResource
 from .exceptions import AiopikaPluginBaseError, AiopikaPluginExchangeNotDeclaredError
@@ -34,11 +32,11 @@ class Exchange(AbstractAiopikaResource):
         self._internal: bool = internal
         self._passive: bool = passive
         self._timeout: TimeoutType = timeout
-        self._aiopika_exchange: AiopikaExchange | None = None
+        self._aiopika_exchange: AbstractExchange | None = None
         self._is_declared: bool = False
 
     @property
-    def exchange(self) -> AiopikaExchange:
+    def exchange(self) -> AbstractExchange:
         """Get the Aiopika exchange."""
         if self._aiopika_exchange is None:
             raise AiopikaPluginExchangeNotDeclaredError(message="Exchange not declared.", exchange=self._name)
@@ -46,6 +44,7 @@ class Exchange(AbstractAiopikaResource):
 
     async def _declare(self) -> Self:
         """Declare the exchange."""
+        assert self._channel is not None
         try:
             self._aiopika_exchange = await self._channel.declare_exchange(  # pyright: ignore
                 name=self._name,

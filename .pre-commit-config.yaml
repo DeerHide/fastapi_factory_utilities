@@ -43,6 +43,7 @@ repos:
         always_run: true
         stages:
           - "pre-push"
+          - "pre-commit"
           - "manual"
       - id: ruff-format
         name: ruff-format

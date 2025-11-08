@@ -49,6 +49,7 @@ class Queue(AbstractAiopikaResource):
 
     async def _declare(self) -> Self:
         """Declare the queue."""
+        assert self._channel is not None
         try:
             self._queue = await self._channel.declare_queue(  # pyright: ignore
                 name=self._name,
@@ -65,6 +66,7 @@ class Queue(AbstractAiopikaResource):
 
     async def _bind(self) -> Self:
         """Bind the queue to the exchange."""
+        assert self._queue is not None
         try:
             await self._queue.bind(  # pyright: ignore
                 exchange=self._exchange.exchange,

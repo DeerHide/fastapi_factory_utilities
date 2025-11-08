@@ -4,8 +4,7 @@ from abc import abstractmethod
 from collections.abc import Awaitable, Callable
 from typing import Any, ClassVar, Generic, Self, TypeVar, cast, get_args
 
-from aio_pika.abc import ConsumerTag, TimeoutType
-from aio_pika.message import IncomingMessage
+from aio_pika.abc import AbstractIncomingMessage, ConsumerTag, TimeoutType
 
 from ..abstract import AbstractAiopikaResource
 from ..message import AbstractMessage
@@ -36,12 +35,13 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessage]):
 
     async def listen(self) -> None:
         """Listen for messages."""
+        assert self._queue.queue is not None
         self._consumer_tag = await self._queue.queue.consume(  # pyright: ignore
-            callback=cast(Callable[[IncomingMessage], Awaitable[Any]], self._on_message),  # pyright: ignore
+            callback=cast(Callable[[AbstractIncomingMessage], Awaitable[Any]], self._on_message),  # pyright: ignore
             exclusive=True,
         )
 
-    async def _on_message(self, incoming_message: IncomingMessage) -> None:
+    async def _on_message(self, incoming_message: AbstractIncomingMessage) -> None:
         """On message."""
         message: GenericMessage = self._message_type.model_validate_json(incoming_message.body)
         message.set_incoming_message(incoming_message=incoming_message)
