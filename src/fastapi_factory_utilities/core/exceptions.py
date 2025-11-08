@@ -1,7 +1,7 @@
 """FastAPI Factory Utilities exceptions."""
 
 import logging
-from typing import NotRequired, TypedDict, Unpack
+from typing import Any, cast
 
 from opentelemetry.trace import Span, get_current_span
 from opentelemetry.util.types import AttributeValue
@@ -10,40 +10,32 @@ from structlog.stdlib import BoundLogger, get_logger
 _logger: BoundLogger = get_logger()
 
 
-class ExceptionParameters(TypedDict):
-    """Parameters for the exception."""
-
-    message: NotRequired[str]
-    level: NotRequired[int]
-
-
 class FastAPIFactoryUtilitiesError(Exception):
     """Base exception for the FastAPI Factory Utilities."""
 
+    FILTERED_ATTRIBUTES: tuple[str, ...] = ()
     DEFAULT_LOGGING_LEVEL: int = logging.ERROR
     DEFAULT_MESSAGE: str | None = None
 
     def __init__(
         self,
         *args: object,
-        **kwargs: Unpack[ExceptionParameters],
+        **kwargs: Any,
     ) -> None:
         """Instantiate the exception.
 
         Args:
             *args: The arguments.
-            message: The message.
-            level: The logging level.
             **kwargs: The keyword arguments.
 
         """
         # If Default Message is not set, try to extract it from docstring (first line)
-        default_message: str = "An error occurred"
+        default_message: str = self.DEFAULT_MESSAGE or "An error occurred"
         if self.DEFAULT_MESSAGE is None and self.__doc__ is not None:
             default_message = self.__doc__.split("\n", maxsplit=1)[0]
         # Extract the message and the level from the kwargs if they are present
-        self.message: str | None = kwargs.pop("message", None)
-        self.level: int = kwargs.pop("level", self.DEFAULT_LOGGING_LEVEL)
+        self.message: str | None = cast(str | None, kwargs.pop("message", None))
+        self.level: int = cast(int, kwargs.pop("level", self.DEFAULT_LOGGING_LEVEL))
 
         # If the message is not present, try to extract it from the args
         if self.message is None and len(args) > 0 and isinstance(args[0], str):
@@ -55,6 +47,12 @@ class FastAPIFactoryUtilitiesError(Exception):
         if self.message:
             _logger.log(level=self.level, event=self.message)
 
+        # Set the kwargs as attributes of the exception
+        for key, value in kwargs.items():
+            if key in self.FILTERED_ATTRIBUTES:
+                continue
+            setattr(self, key, value)
+
         try:
             # Propagate the exception
             span: Span = get_current_span()
@@ -63,6 +61,8 @@ class FastAPIFactoryUtilitiesError(Exception):
             if span.is_recording():
                 span.record_exception(self)
                 for key, value in kwargs.items():
+                    if key in self.FILTERED_ATTRIBUTES:
+                        continue
                     attribute_value: AttributeValue
                     if not isinstance(value, (str, bool, int, float)):
                         attribute_value = str(value)
