@@ -23,5 +23,5 @@ class ComponentRegistrationError(StatusServiceError):
         """
         super().__init__(
             message="An error occurred while registering the component instance.",
-            component_instance=component_instance,  # type: ignore
+            component_instance=component_instance,
         )
