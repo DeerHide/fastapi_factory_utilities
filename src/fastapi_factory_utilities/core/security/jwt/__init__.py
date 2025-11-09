@@ -18,7 +18,7 @@ from .services import (
     JWTAuthenticationServiceAbstract,
 )
 from .stores import JWKStoreAbstract, JWKStoreMemory
-from .types import OAuth2Scope
+from .types import JWTToken, OAuth2Audience, OAuth2Issuer, OAuth2Scope, OAuth2Subject
 from .verifiers import JWTNoneVerifier, JWTVerifierAbstract
 
 __all__: list[str] = [
@@ -34,8 +34,12 @@ __all__: list[str] = [
     "JWTBearerTokenDecoderAbstract",
     "JWTNoneVerifier",
     "JWTPayload",
+    "JWTToken",
     "JWTVerifierAbstract",
     "MissingJWTCredentialsError",
     "NotVerifiedJWTError",
+    "OAuth2Audience",
+    "OAuth2Issuer",
     "OAuth2Scope",
+    "OAuth2Subject",
 ]
