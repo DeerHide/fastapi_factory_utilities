@@ -6,6 +6,7 @@ from http import HTTPStatus
 from typing import Annotated, Any, Generic, TypeVar, get_args
 
 import aiohttp
+import jwt
 from fastapi import Depends
 from pydantic import ValidationError
 
@@ -25,14 +26,21 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
     """Service to interact with the Hydra introspect service with a generic introspect object."""
 
     INTROSPECT_ENDPOINT: str = "/admin/oauth2/introspect"
+    WELLKNOWN_JWKS_ENDPOINT: str = "/.well-known/jwks.json"
 
-    def __init__(self, hydra_admin_http_config: HttpServiceDependencyConfig) -> None:
+    def __init__(
+        self,
+        hydra_admin_http_config: HttpServiceDependencyConfig,
+        hydra_public_http_config: HttpServiceDependencyConfig,
+    ) -> None:
         """Instanciate the Hydra introspect service.
 
         Args:
             hydra_admin_http_config (HttpServiceDependencyConfig): The Hydra admin HTTP configuration.
+            hydra_public_http_config (HttpServiceDependencyConfig): The Hydra public HTTP configuration.
         """
         self._hydra_admin_http_config: HttpServiceDependencyConfig = hydra_admin_http_config
+        self._hydra_public_http_config: HttpServiceDependencyConfig = hydra_public_http_config
         # Retrieve the concrete introspect object class
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
         self._concreate_introspect_object_class: type[HydraIntrospectObjectGeneric] = generic_args[0]
@@ -43,26 +51,48 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
         Args:
             token (str): The token to introspect.
         """
-        async with aiohttp.ClientSession(
-            base_url=str(self._hydra_admin_http_config.url),
-        ) as session:
-            async with session.post(
-                url=self.INTROSPECT_ENDPOINT,
-                data={"token": token},
-            ) as response:
-                try:
+        try:
+            async with aiohttp.ClientSession(
+                base_url=str(self._hydra_admin_http_config.url),
+            ) as session:
+                async with session.post(
+                    url=self.INTROSPECT_ENDPOINT,
+                    data={"token": token},
+                ) as response:
                     response.raise_for_status()
                     instrospect: HydraIntrospectObjectGeneric = self._concreate_introspect_object_class.model_validate(
                         await response.json()
                     )
-                except aiohttp.ClientResponseError as error:
-                    raise HydraOperationError("Failed to introspect the token", status_code=error.status) from error
-                except json.JSONDecodeError as error:
-                    raise HydraOperationError("Failed to decode the introspect response") from error
-                except ValidationError as error:
-                    raise HydraOperationError("Failed to validate the introspect response") from error
+        except aiohttp.ClientResponseError as error:
+            raise HydraOperationError("Failed to introspect the token", status_code=error.status) from error
+        except json.JSONDecodeError as error:
+            raise HydraOperationError("Failed to decode the introspect response") from error
+        except ValidationError as error:
+            raise HydraOperationError("Failed to validate the introspect response") from error
 
-                return instrospect
+        return instrospect
+
+    async def get_wellknown_jwks(self) -> jwt.PyJWKSet:
+        """Get the JWKS from the Hydra service."""
+        try:
+            async with aiohttp.ClientSession(
+                base_url=str(self._hydra_public_http_config.url),
+            ) as session:
+                async with session.get(
+                    url=self.WELLKNOWN_JWKS_ENDPOINT,
+                ) as response:
+                    response.raise_for_status()
+                    jwks_data: dict[str, Any] = await response.json()
+                    jwks: jwt.PyJWKSet = jwt.PyJWKSet.from_dict(jwks_data)
+                    return jwks
+        except aiohttp.ClientResponseError as error:
+            raise HydraOperationError(
+                "Failed to get the JWKS from the Hydra service", status_code=error.status
+            ) from error
+        except json.JSONDecodeError as error:
+            raise HydraOperationError("Failed to decode the JWKS from the Hydra service") from error
+        except ValidationError as error:
+            raise HydraOperationError("Failed to validate the JWKS from the Hydra service") from error
 
 
 class HydraIntrospectService(HydraIntrospectGenericService[HydraTokenIntrospectObject]):
@@ -157,9 +187,14 @@ def depends_hydra_introspect_service(
     Raises:
         HydraOperationError: If the Hydra admin dependency is not configured.
     """
-    if dependency_config.hydra_admin is None:
+    if getattr(dependency_config, "hydra_admin", None) is None:
         raise HydraOperationError(message="Hydra admin dependency not configured")
+    assert dependency_config.hydra_admin is not None
+    if getattr(dependency_config, "hydra_public", None) is None:
+        raise HydraOperationError(message="Hydra public dependency not configured")
+    assert dependency_config.hydra_public is not None
 
     return HydraIntrospectService(
         hydra_admin_http_config=dependency_config.hydra_admin,
+        hydra_public_http_config=dependency_config.hydra_public,
     )
