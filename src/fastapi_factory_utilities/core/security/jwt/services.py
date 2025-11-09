@@ -1,9 +1,11 @@
 """Provides the JWT bearer authentication service."""
 
-from abc import ABC
+from http import HTTPStatus
 from typing import Generic, TypeVar
 
-from fastapi import Request
+from fastapi import HTTPException, Request
+
+from fastapi_factory_utilities.core.security.abstracts import AuthenticationAbstract
 
 from .configs import JWTBearerAuthenticationConfig
 from .decoders import JWTBearerTokenDecoder, JWTBearerTokenDecoderAbstract
@@ -16,7 +18,7 @@ from .verifiers import JWTNoneVerifier, JWTVerifierAbstract
 JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)
 
 
-class JWTAuthenticationServiceAbstract(ABC, Generic[JWTBearerPayloadGeneric]):
+class JWTAuthenticationServiceAbstract(AuthenticationAbstract, Generic[JWTBearerPayloadGeneric]):
     """JWT authentication service.
 
     This service is the orchestrator for the JWT bearer authentication.
@@ -45,9 +47,7 @@ class JWTAuthenticationServiceAbstract(ABC, Generic[JWTBearerPayloadGeneric]):
         # Runtime variables
         self._jwt: JWTToken | None = None
         self._jwt_payload: JWTBearerPayloadGeneric | None = None
-        # Exception handling for multi-authentication methods support
-        self._raise_exception: bool = raise_exception
-        self._errors: list[Exception] = []
+        super().__init__(raise_exception=raise_exception)
 
     @property
     def verifier(self) -> JWTVerifierAbstract[JWTBearerPayloadGeneric]:
@@ -102,20 +102,12 @@ class JWTAuthenticationServiceAbstract(ABC, Generic[JWTBearerPayloadGeneric]):
             raise InvalidJWTError(message="Invalid Credentials")
         return JWTToken(authorization_header.split(sep=" ")[1])
 
-    def has_errors(self) -> bool:
-        """Check if the service has errors.
-
-        Returns:
-            bool: True if the service has errors, False otherwise.
-        """
-        return len(self._errors) > 0
-
     @property
     def payload(self) -> JWTBearerPayloadGeneric | None:
         """Get the JWT bearer payload.
 
         Returns:
-            JWTBearerPayloadGeneric | None: The JWT bearer payload.
+            JWTBearerPayloadGeneric | None: The JWT bearer payload, or None if not authenticated yet.
         """
         return self._jwt_payload
 
@@ -139,26 +131,17 @@ class JWTAuthenticationServiceAbstract(ABC, Generic[JWTBearerPayloadGeneric]):
             authorization_header = self.extract_authorization_header_from_request(request=request)
             self._jwt = self.extract_bearer_token_from_authorization_header(authorization_header=authorization_header)
         except (MissingJWTCredentialsError, InvalidJWTError) as e:
-            if not self._raise_exception:
-                self._errors.append(e)
-                return
-            raise
+            return self.raise_exception(HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=str(e)))
 
         try:
             self._jwt_payload = await self._jwt_decoder.decode_payload(jwt_token=self._jwt)
         except (InvalidJWTError, InvalidJWTPayploadError) as e:
-            if not self._raise_exception:
-                self._errors.append(e)
-                return
-            raise
+            return self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(e)))
 
         try:
             await self._jwt_verifier.verify(jwt_token=self._jwt, jwt_payload=self._jwt_payload)
         except NotVerifiedJWTError as e:
-            if not self._raise_exception:
-                self._errors.append(e)
-                return
-            raise
+            return self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(e)))
 
         return
 

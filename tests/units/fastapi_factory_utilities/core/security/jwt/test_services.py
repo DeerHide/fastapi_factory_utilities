@@ -1,10 +1,11 @@
 """Unit tests for the JWT authentication services."""
 
 import datetime
+from http import HTTPStatus
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import Request
+from fastapi import HTTPException, Request
 
 from fastapi_factory_utilities.core.security.jwt.configs import JWTBearerAuthenticationConfig
 from fastapi_factory_utilities.core.security.jwt.decoders import (
@@ -271,9 +272,11 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         request = MagicMock(spec=Request)
         request.headers = {}
 
-        with pytest.raises(MissingJWTCredentialsError):
+        with pytest.raises(HTTPException) as exc_info:
             await concrete_service.authenticate(request=request)
 
+        assert exc_info.value.status_code == HTTPStatus.UNAUTHORIZED
+        assert "Missing Credentials" in str(exc_info.value.detail)
         assert concrete_service.payload is None
         assert concrete_service.has_errors() is False
 
@@ -312,7 +315,9 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         assert service.payload is None
         assert service.has_errors() is True
         assert len(service._errors) == 1  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert isinstance(service._errors[0], MissingJWTCredentialsError)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert isinstance(service._errors[0], HTTPException)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._errors[0].status_code == HTTPStatus.UNAUTHORIZED  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert "Missing Credentials" in str(service._errors[0].detail)  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     @pytest.mark.asyncio
     async def test_authenticate_invalid_jwt_raises(
@@ -327,9 +332,11 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         request = MagicMock(spec=Request)
         request.headers = {"Authorization": "Basic test.token.here"}
 
-        with pytest.raises(InvalidJWTError):
+        with pytest.raises(HTTPException) as exc_info:
             await concrete_service.authenticate(request=request)
 
+        assert exc_info.value.status_code == HTTPStatus.UNAUTHORIZED
+        assert "Invalid Credentials" in str(exc_info.value.detail)
         assert concrete_service.payload is None
         assert concrete_service.has_errors() is False
 
@@ -368,7 +375,9 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         assert service.payload is None
         assert service.has_errors() is True
         assert len(service._errors) == 1  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert isinstance(service._errors[0], InvalidJWTError)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert isinstance(service._errors[0], HTTPException)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._errors[0].status_code == HTTPStatus.UNAUTHORIZED  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert "Invalid Credentials" in str(service._errors[0].detail)  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     @pytest.mark.asyncio
     async def test_authenticate_invalid_payload_raises(
@@ -387,9 +396,11 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             side_effect=InvalidJWTPayploadError("Invalid payload")
         )
 
-        with pytest.raises(InvalidJWTPayploadError):
+        with pytest.raises(HTTPException) as exc_info:
             await concrete_service.authenticate(request=request)
 
+        assert exc_info.value.status_code == HTTPStatus.FORBIDDEN
+        assert "Invalid payload" in str(exc_info.value.detail)
         assert concrete_service.payload is None
         assert concrete_service.has_errors() is False
 
@@ -432,7 +443,9 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         assert service.payload is None
         assert service.has_errors() is True
         assert len(service._errors) == 1  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert isinstance(service._errors[0], InvalidJWTPayploadError)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert isinstance(service._errors[0], HTTPException)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._errors[0].status_code == HTTPStatus.FORBIDDEN  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert "Invalid payload" in str(service._errors[0].detail)  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     @pytest.mark.asyncio
     async def test_authenticate_not_verified_raises(
@@ -454,9 +467,11 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             side_effect=NotVerifiedJWTError("Not verified")
         )
 
-        with pytest.raises(NotVerifiedJWTError):
+        with pytest.raises(HTTPException) as exc_info:
             await concrete_service.authenticate(request=request)
 
+        assert exc_info.value.status_code == HTTPStatus.FORBIDDEN
+        assert "Not verified" in str(exc_info.value.detail)
         assert concrete_service.payload == jwt_payload
         assert concrete_service.has_errors() is False
 
@@ -500,7 +515,9 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         assert service.payload == jwt_payload
         assert service.has_errors() is True
         assert len(service._errors) == 1  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert isinstance(service._errors[0], NotVerifiedJWTError)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert isinstance(service._errors[0], HTTPException)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._errors[0].status_code == HTTPStatus.FORBIDDEN  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert "Not verified" in str(service._errors[0].detail)  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     @pytest.mark.asyncio
     async def test_authenticate_invalid_jwt_from_decoder_raises(
@@ -519,9 +536,11 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             side_effect=InvalidJWTError("Invalid JWT")
         )
 
-        with pytest.raises(InvalidJWTError):
+        with pytest.raises(HTTPException) as exc_info:
             await concrete_service.authenticate(request=request)
 
+        assert exc_info.value.status_code == HTTPStatus.FORBIDDEN
+        assert "Invalid JWT" in str(exc_info.value.detail)
         assert concrete_service.payload is None
         assert concrete_service.has_errors() is False
 
@@ -562,7 +581,9 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         assert service.payload is None
         assert service.has_errors() is True
         assert len(service._errors) == 1  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert isinstance(service._errors[0], InvalidJWTError)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert isinstance(service._errors[0], HTTPException)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._errors[0].status_code == HTTPStatus.FORBIDDEN  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert "Invalid JWT" in str(service._errors[0].detail)  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     @pytest.mark.asyncio
     async def test_authenticate_calls_decoder_with_correct_token(

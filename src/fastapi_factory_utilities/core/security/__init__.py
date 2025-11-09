@@ -1,5 +1,5 @@
 """Security module."""
 
-from .flags import AuthenticationMethodsFlag
+from .abstracts import AuthenticationAbstract
 
-__all__: list[str] = ["AuthenticationMethodsFlag"]
+__all__: list[str] = ["AuthenticationAbstract"]
