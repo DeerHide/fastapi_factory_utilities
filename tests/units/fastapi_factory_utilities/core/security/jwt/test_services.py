@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import Request
-from jwt.api_jwk import PyJWK
 
 from fastapi_factory_utilities.core.security.jwt.configs import JWTBearerAuthenticationConfig
 from fastapi_factory_utilities.core.security.jwt.decoders import (
@@ -23,6 +22,7 @@ from fastapi_factory_utilities.core.security.jwt.services import (
     JWTAuthenticationService,
     JWTAuthenticationServiceAbstract,
 )
+from fastapi_factory_utilities.core.security.jwt.stores import JWKStoreAbstract
 from fastapi_factory_utilities.core.security.jwt.types import JWTToken
 from fastapi_factory_utilities.core.security.jwt.verifiers import (
     JWTNoneVerifier,
@@ -628,48 +628,49 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
         )
 
     @pytest.fixture
-    def mock_public_key(self) -> MagicMock:
-        """Create a mock public key.
+    def mock_jwks_store(self) -> MagicMock:
+        """Create a mock JWKS store.
 
         Returns:
-            MagicMock: A mock PyJWK object.
+            MagicMock: A mock JWKStoreAbstract object.
         """
-        return MagicMock(spec=PyJWK)
+        store = MagicMock(spec=JWKStoreAbstract)
+        return store
 
     @pytest.fixture
     def service(
         self,
         jwt_config: JWTBearerAuthenticationConfig,
-        mock_public_key: MagicMock,
+        mock_jwks_store: MagicMock,
     ) -> JWTAuthenticationService:
         """Create a JWT authentication service.
 
         Args:
             jwt_config (JWTBearerAuthenticationConfig): The JWT config.
-            mock_public_key (MagicMock): The mock public key.
+            mock_jwks_store (MagicMock): The mock JWKS store.
 
         Returns:
             JWTAuthenticationService: A JWT authentication service.
         """
         return JWTAuthenticationService(
             jwt_bearer_authentication_config=jwt_config,
-            public_key=mock_public_key,
+            jwks_store=mock_jwks_store,
         )
 
     def test_can_be_instantiated(
         self,
         jwt_config: JWTBearerAuthenticationConfig,
-        mock_public_key: MagicMock,
+        mock_jwks_store: MagicMock,
     ) -> None:
         """Test that JWTAuthenticationService can be instantiated.
 
         Args:
             jwt_config (JWTBearerAuthenticationConfig): The JWT config.
-            mock_public_key (MagicMock): The mock public key.
+            mock_jwks_store (MagicMock): The mock JWKS store.
         """
         service = JWTAuthenticationService(
             jwt_bearer_authentication_config=jwt_config,
-            public_key=mock_public_key,
+            jwks_store=mock_jwks_store,
         )
         assert isinstance(service, JWTAuthenticationService)
         assert isinstance(service, JWTAuthenticationServiceAbstract)
@@ -693,48 +694,48 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
     def test_initializes_with_decoder(
         self,
         service: JWTAuthenticationService,
-        mock_public_key: MagicMock,
+        mock_jwks_store: MagicMock,
     ) -> None:
         """Test that service initializes with JWTBearerTokenDecoder.
 
         Args:
             service (JWTAuthenticationService): The service instance.
-            mock_public_key (MagicMock): The mock public key.
+            mock_jwks_store (MagicMock): The mock JWKS store.
         """
         assert isinstance(service._jwt_decoder, JWTBearerTokenDecoder)  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert service._jwt_decoder._public_key == mock_public_key  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._jwt_decoder._jwks_store == mock_jwks_store  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     def test_initializes_with_raise_exception_true_by_default(
         self,
         jwt_config: JWTBearerAuthenticationConfig,
-        mock_public_key: MagicMock,
+        mock_jwks_store: MagicMock,
     ) -> None:
         """Test that service initializes with raise_exception=True by default.
 
         Args:
             jwt_config (JWTBearerAuthenticationConfig): The JWT config.
-            mock_public_key (MagicMock): The mock public key.
+            mock_jwks_store (MagicMock): The mock JWKS store.
         """
         service = JWTAuthenticationService(
             jwt_bearer_authentication_config=jwt_config,
-            public_key=mock_public_key,
+            jwks_store=mock_jwks_store,
         )
         assert service._raise_exception is True  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     def test_initializes_with_raise_exception_false(
         self,
         jwt_config: JWTBearerAuthenticationConfig,
-        mock_public_key: MagicMock,
+        mock_jwks_store: MagicMock,
     ) -> None:
         """Test that service can be initialized with raise_exception=False.
 
         Args:
             jwt_config (JWTBearerAuthenticationConfig): The JWT config.
-            mock_public_key (MagicMock): The mock public key.
+            mock_jwks_store (MagicMock): The mock JWKS store.
         """
         service = JWTAuthenticationService(
             jwt_bearer_authentication_config=jwt_config,
-            public_key=mock_public_key,
+            jwks_store=mock_jwks_store,
             raise_exception=False,
         )
         assert service._raise_exception is False  # type: ignore[attr-defined] # pylint: disable=protected-access

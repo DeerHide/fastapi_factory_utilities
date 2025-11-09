@@ -2,7 +2,7 @@
 
 import datetime
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from jwt import InvalidTokenError
@@ -17,6 +17,7 @@ from fastapi_factory_utilities.core.security.jwt.decoders import (
 )
 from fastapi_factory_utilities.core.security.jwt.exceptions import InvalidJWTError, InvalidJWTPayploadError
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
+from fastapi_factory_utilities.core.security.jwt.stores import JWKStoreAbstract
 from fastapi_factory_utilities.core.security.jwt.types import JWTToken, OAuth2Subject
 
 
@@ -323,6 +324,76 @@ class TestJWTBearerTokenDecoderAbstract:
         with pytest.raises(TypeError):
             JWTBearerTokenDecoderAbstract()  # type: ignore[abstract] # pylint: disable=abstract-class-instantiated
 
+    def test_get_kid_from_jwt_unsafe_header_success(self) -> None:
+        """Test that get_kid_from_jwt_unsafe_header returns the kid from the JWT header."""
+
+        # Create a concrete implementation for testing
+        class ConcreteDecoder(JWTBearerTokenDecoderAbstract[JWTPayload]):
+            """Concrete implementation for testing."""
+
+            async def decode_payload(self, jwt_token: JWTToken) -> JWTPayload:
+                """Decode the JWT bearer token payload."""
+                raise NotImplementedError()
+
+        decoder = ConcreteDecoder()
+        jwt_token = JWTToken("test.jwt.token")
+
+        with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
+            mock_get_header.return_value = {"kid": "test_kid_123"}
+
+            result = decoder.get_kid_from_jwt_unsafe_header(jwt_token=jwt_token)
+
+            assert result == "test_kid_123"
+            mock_get_header.assert_called_once_with(jwt_token)
+
+    def test_get_kid_from_jwt_unsafe_header_raises_invalid_jwt_error_on_missing_kid(self) -> None:
+        """Test that get_kid_from_jwt_unsafe_header raises InvalidJWTError when kid is missing."""
+
+        # Create a concrete implementation for testing
+        class ConcreteDecoder(JWTBearerTokenDecoderAbstract[JWTPayload]):
+            """Concrete implementation for testing."""
+
+            async def decode_payload(self, jwt_token: JWTToken) -> JWTPayload:
+                """Decode the JWT bearer token payload."""
+                raise NotImplementedError()
+
+        decoder = ConcreteDecoder()
+        jwt_token = JWTToken("test.jwt.token")
+
+        with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
+            mock_get_header.return_value = {}  # No kid in header
+
+            with pytest.raises(InvalidJWTError) as exc_info:
+                decoder.get_kid_from_jwt_unsafe_header(jwt_token=jwt_token)
+
+            assert "Failed to get the kid from the JWT header" in str(exc_info.value)
+            assert exc_info.value.__cause__ is not None
+            assert isinstance(exc_info.value.__cause__, KeyError)
+
+    def test_get_kid_from_jwt_unsafe_header_raises_invalid_jwt_error_on_invalid_token(self) -> None:
+        """Test that get_kid_from_jwt_unsafe_header raises InvalidJWTError on invalid token."""
+
+        # Create a concrete implementation for testing
+        class ConcreteDecoder(JWTBearerTokenDecoderAbstract[JWTPayload]):
+            """Concrete implementation for testing."""
+
+            async def decode_payload(self, jwt_token: JWTToken) -> JWTPayload:
+                """Decode the JWT bearer token payload."""
+                raise NotImplementedError()
+
+        decoder = ConcreteDecoder()
+        jwt_token = JWTToken("test.jwt.token")
+
+        with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
+            mock_get_header.side_effect = InvalidTokenError("Invalid token")
+
+            with pytest.raises(InvalidJWTError) as exc_info:
+                decoder.get_kid_from_jwt_unsafe_header(jwt_token=jwt_token)
+
+            assert "Failed to get the kid from the JWT header" in str(exc_info.value)
+            assert exc_info.value.__cause__ is not None
+            assert isinstance(exc_info.value.__cause__, InvalidTokenError)
+
 
 class TestJWTBearerTokenDecoder:
     """Various tests for the JWTBearerTokenDecoder class."""
@@ -358,19 +429,29 @@ class TestJWTBearerTokenDecoder:
         )
 
     @pytest.fixture
-    def decoder(self, jwt_config: JWTBearerAuthenticationConfig, mock_public_key: MagicMock) -> JWTBearerTokenDecoder:
+    def mock_jwks_store(self) -> MagicMock:
+        """Create a mock JWKS store.
+
+        Returns:
+            MagicMock: A mock JWKStoreAbstract object.
+        """
+        store = MagicMock(spec=JWKStoreAbstract)
+        return store
+
+    @pytest.fixture
+    def decoder(self, jwt_config: JWTBearerAuthenticationConfig, mock_jwks_store: MagicMock) -> JWTBearerTokenDecoder:
         """Create a JWT bearer token decoder.
 
         Args:
             jwt_config (JWTBearerAuthenticationConfig): The JWT config.
-            mock_public_key (MagicMock): The mock public key.
+            mock_jwks_store (MagicMock): The mock JWKS store.
 
         Returns:
             JWTBearerTokenDecoder: A JWT bearer token decoder.
         """
         return JWTBearerTokenDecoder(
             jwt_bearer_authentication_config=jwt_config,
-            public_key=mock_public_key,
+            jwks_store=mock_jwks_store,
         )
 
     @pytest.fixture
@@ -397,6 +478,7 @@ class TestJWTBearerTokenDecoder:
         decoder: JWTBearerTokenDecoder,
         jwt_token: JWTToken,
         valid_decoded_payload: dict[str, Any],
+        mock_jwks_store: MagicMock,
     ) -> None:
         """Test successful payload decoding.
 
@@ -404,104 +486,138 @@ class TestJWTBearerTokenDecoder:
             decoder (JWTBearerTokenDecoder): The decoder instance.
             jwt_token (JWTToken): The JWT token.
             valid_decoded_payload (dict[str, Any]): The valid decoded payload.
+            mock_jwks_store (MagicMock): The mock JWKS store.
         """
-        with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
-            mock_decode.return_value = valid_decoded_payload
+        mock_jwk = MagicMock(spec=PyJWK)
+        mock_jwks_store.get_jwk = AsyncMock(return_value=mock_jwk)
 
-            result = await decoder.decode_payload(jwt_token=jwt_token)
+        with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
+            mock_get_header.return_value = {"kid": "test_kid"}
+            with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
+                mock_decode.return_value = valid_decoded_payload
 
-            assert isinstance(result, JWTPayload)
-            assert result.scope == ["read", "write"]
-            assert result.aud == ["test_audience"]
-            assert result.iss == "https://example.com"
-            assert result.sub == "test_subject"
-            mock_decode.assert_called_once_with(
-                jwt_token=jwt_token,
-                public_key=decoder._public_key,  # pylint: disable=protected-access
-                jwt_bearer_authentication_config=decoder._jwt_bearer_authentication_config,  # pylint: disable=protected-access
-            )
+                result = await decoder.decode_payload(jwt_token=jwt_token)
+
+                assert isinstance(result, JWTPayload)
+                assert result.scope == ["read", "write"]
+                assert result.aud == ["test_audience"]
+                assert result.iss == "https://example.com"
+                assert result.sub == "test_subject"
+                mock_get_header.assert_called_once_with(jwt_token)
+                mock_jwks_store.get_jwk.assert_called_once_with(kid="test_kid")
+                mock_decode.assert_called_once_with(
+                    jwt_token=jwt_token,
+                    public_key=mock_jwk,
+                    jwt_bearer_authentication_config=decoder._jwt_bearer_authentication_config,  # pylint: disable=protected-access
+                )
 
     @pytest.mark.asyncio
     async def test_decode_payload_raises_invalid_jwt_error(
         self,
         decoder: JWTBearerTokenDecoder,
         jwt_token: JWTToken,
+        mock_jwks_store: MagicMock,
     ) -> None:
         """Test that InvalidJWTError is raised when decode fails.
 
         Args:
             decoder (JWTBearerTokenDecoder): The decoder instance.
             jwt_token (JWTToken): The JWT token.
+            mock_jwks_store (MagicMock): The mock JWKS store.
         """
-        with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
-            mock_decode.side_effect = InvalidJWTError("Failed to decode")
+        mock_jwk = MagicMock(spec=PyJWK)
+        mock_jwks_store.get_jwk = AsyncMock(return_value=mock_jwk)
 
-            with pytest.raises(InvalidJWTError) as exc_info:
-                await decoder.decode_payload(jwt_token=jwt_token)
+        with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
+            mock_get_header.return_value = {"kid": "test_kid"}
+            with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
+                mock_decode.side_effect = InvalidJWTError("Failed to decode")
 
-            assert "Failed to decode" in str(exc_info.value)
+                with pytest.raises(InvalidJWTError) as exc_info:
+                    await decoder.decode_payload(jwt_token=jwt_token)
+
+                assert "Failed to decode" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_decode_payload_raises_invalid_jwt_payload_error_on_validation_failure(
         self,
         decoder: JWTBearerTokenDecoder,
         jwt_token: JWTToken,
+        mock_jwks_store: MagicMock,
     ) -> None:
         """Test that InvalidJWTPayploadError is raised when payload validation fails.
 
         Args:
             decoder (JWTBearerTokenDecoder): The decoder instance.
             jwt_token (JWTToken): The JWT token.
+            mock_jwks_store (MagicMock): The mock JWKS store.
         """
+        mock_jwk = MagicMock(spec=PyJWK)
+        mock_jwks_store.get_jwk = AsyncMock(return_value=mock_jwk)
+
         invalid_payload = {"invalid": "payload"}
-        with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
-            mock_decode.return_value = invalid_payload
+        with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
+            mock_get_header.return_value = {"kid": "test_kid"}
+            with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
+                mock_decode.return_value = invalid_payload
 
-            with pytest.raises(InvalidJWTPayploadError) as exc_info:
-                await decoder.decode_payload(jwt_token=jwt_token)
+                with pytest.raises(InvalidJWTPayploadError) as exc_info:
+                    await decoder.decode_payload(jwt_token=jwt_token)
 
-            assert "Failed to validate the JWT bearer token payload" in str(exc_info.value)
-            assert exc_info.value.__cause__ is not None
-            assert isinstance(exc_info.value.__cause__, ValidationError)
+                assert "Failed to validate the JWT bearer token payload" in str(exc_info.value)
+                assert exc_info.value.__cause__ is not None
+                assert isinstance(exc_info.value.__cause__, ValidationError)
 
     @pytest.mark.asyncio
     async def test_decode_payload_with_missing_required_fields(
         self,
         decoder: JWTBearerTokenDecoder,
         jwt_token: JWTToken,
+        mock_jwks_store: MagicMock,
     ) -> None:
         """Test that InvalidJWTPayploadError is raised when required fields are missing.
 
         Args:
             decoder (JWTBearerTokenDecoder): The decoder instance.
             jwt_token (JWTToken): The JWT token.
+            mock_jwks_store (MagicMock): The mock JWKS store.
         """
+        mock_jwk = MagicMock(spec=PyJWK)
+        mock_jwks_store.get_jwk = AsyncMock(return_value=mock_jwk)
+
         incomplete_payload = {
             "scope": "read",
             # Missing other required fields
         }
-        with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
-            mock_decode.return_value = incomplete_payload
+        with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
+            mock_get_header.return_value = {"kid": "test_kid"}
+            with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
+                mock_decode.return_value = incomplete_payload
 
-            with pytest.raises(InvalidJWTPayploadError) as exc_info:
-                await decoder.decode_payload(jwt_token=jwt_token)
+                with pytest.raises(InvalidJWTPayploadError) as exc_info:
+                    await decoder.decode_payload(jwt_token=jwt_token)
 
-            assert "Failed to validate the JWT bearer token payload" in str(exc_info.value)
-            assert exc_info.value.__cause__ is not None
-            assert isinstance(exc_info.value.__cause__, ValidationError)
+                assert "Failed to validate the JWT bearer token payload" in str(exc_info.value)
+                assert exc_info.value.__cause__ is not None
+                assert isinstance(exc_info.value.__cause__, ValidationError)
 
     @pytest.mark.asyncio
     async def test_decode_payload_with_invalid_timestamp_format(
         self,
         decoder: JWTBearerTokenDecoder,
         jwt_token: JWTToken,
+        mock_jwks_store: MagicMock,
     ) -> None:
         """Test that InvalidJWTPayploadError is raised when timestamp format is invalid.
 
         Args:
             decoder (JWTBearerTokenDecoder): The decoder instance.
             jwt_token (JWTToken): The JWT token.
+            mock_jwks_store (MagicMock): The mock JWKS store.
         """
+        mock_jwk = MagicMock(spec=PyJWK)
+        mock_jwks_store.get_jwk = AsyncMock(return_value=mock_jwk)
+
         invalid_timestamp_payload = {
             "scope": "read write",
             "aud": "test_audience",
@@ -511,12 +627,14 @@ class TestJWTBearerTokenDecoder:
             "nbf": "invalid_timestamp",
             "sub": "test_subject",
         }
-        with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
-            mock_decode.return_value = invalid_timestamp_payload
+        with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
+            mock_get_header.return_value = {"kid": "test_kid"}
+            with patch("fastapi_factory_utilities.core.security.jwt.decoders.decode_jwt_token_payload") as mock_decode:
+                mock_decode.return_value = invalid_timestamp_payload
 
-            with pytest.raises(InvalidJWTPayploadError) as exc_info:
-                await decoder.decode_payload(jwt_token=jwt_token)
+                with pytest.raises(InvalidJWTPayploadError) as exc_info:
+                    await decoder.decode_payload(jwt_token=jwt_token)
 
-            assert "Failed to validate the JWT bearer token payload" in str(exc_info.value)
-            assert exc_info.value.__cause__ is not None
-            assert isinstance(exc_info.value.__cause__, ValidationError)
+                assert "Failed to validate the JWT bearer token payload" in str(exc_info.value)
+                assert exc_info.value.__cause__ is not None
+                assert isinstance(exc_info.value.__cause__, ValidationError)

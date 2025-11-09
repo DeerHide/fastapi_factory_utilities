@@ -7,13 +7,14 @@ https://www.iana.org/assignments/jwt/jwt.xhtml#claims
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
-from jwt import InvalidTokenError, decode
+from jwt import InvalidTokenError, decode, get_unverified_header
 from jwt.api_jwk import PyJWK
 from pydantic import ValidationError
 
 from .configs import JWTBearerAuthenticationConfig
 from .exceptions import InvalidJWTError, InvalidJWTPayploadError
 from .objects import JWTPayload
+from .stores import JWKStoreAbstract
 from .types import JWTToken, OAuth2Subject
 
 JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)
@@ -63,6 +64,21 @@ async def decode_jwt_token_payload(
 class JWTBearerTokenDecoderAbstract(ABC, Generic[JWTBearerPayloadGeneric]):
     """JWT bearer token decoder."""
 
+    def get_kid_from_jwt_unsafe_header(self, jwt_token: JWTToken) -> str:
+        """Get the kid from the JWT header.
+
+        Args:
+            jwt_token (JWTToken): The JWT bearer token.
+
+        Returns:
+            str: The kid.
+        """
+        try:
+            jwt_unsafe_headers: dict[str, Any] = get_unverified_header(jwt_token)
+            return jwt_unsafe_headers["kid"]
+        except (KeyError, InvalidTokenError) as e:
+            raise InvalidJWTError("Failed to get the kid from the JWT header") from e
+
     @abstractmethod
     async def decode_payload(self, jwt_token: JWTToken) -> JWTBearerPayloadGeneric:
         """Decode the JWT bearer token payload.
@@ -83,16 +99,29 @@ class JWTBearerTokenDecoderAbstract(ABC, Generic[JWTBearerPayloadGeneric]):
 class JWTBearerTokenDecoder(JWTBearerTokenDecoderAbstract[JWTPayload]):
     """JWT bearer token classic decoder."""
 
-    def __init__(self, jwt_bearer_authentication_config: JWTBearerAuthenticationConfig, public_key: PyJWK) -> None:
-        """Initialize the JWT bearer token classic decoder."""
+    def __init__(
+        self, jwt_bearer_authentication_config: JWTBearerAuthenticationConfig, jwks_store: JWKStoreAbstract
+    ) -> None:
+        """Initialize the JWT bearer token classic decoder.
+
+        Args:
+            jwt_bearer_authentication_config (JWTBearerAuthenticationConfig): The JWT bearer authentication
+            configuration.
+            jwks_store (JWKStoreAbstract): The JWKS store.
+        """
         self._jwt_bearer_authentication_config: JWTBearerAuthenticationConfig = jwt_bearer_authentication_config
-        self._public_key: PyJWK = public_key
+        self._jwks_store: JWKStoreAbstract = jwks_store
 
     async def decode_payload(self, jwt_token: JWTToken) -> JWTPayload:
         """Decode the JWT bearer token."""
+        # Get the kid from the JWT header
+        kid: str = self.get_kid_from_jwt_unsafe_header(jwt_token=jwt_token)
+        # Get the JWK from the JWKS store
+        jwk: PyJWK = await self._jwks_store.get_jwk(kid=kid)
+        # Decode the JWT bearer token payload
         jwt_decoded: dict[str, Any] = await decode_jwt_token_payload(
             jwt_token=jwt_token,
-            public_key=self._public_key,
+            public_key=jwk,
             jwt_bearer_authentication_config=self._jwt_bearer_authentication_config,
         )
         try:

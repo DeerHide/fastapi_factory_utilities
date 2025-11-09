@@ -17,12 +17,15 @@ from .services import (
     JWTAuthenticationService,
     JWTAuthenticationServiceAbstract,
 )
+from .stores import JWKStoreAbstract, JWKStoreMemory
 from .types import OAuth2Scope
 from .verifiers import JWTNoneVerifier, JWTVerifierAbstract
 
 __all__: list[str] = [
     "InvalidJWTError",
     "InvalidJWTPayploadError",
+    "JWKStoreAbstract",
+    "JWKStoreMemory",
     "JWTAuthenticationError",
     "JWTAuthenticationService",
     "JWTAuthenticationServiceAbstract",

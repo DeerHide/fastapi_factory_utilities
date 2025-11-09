@@ -4,12 +4,12 @@ from abc import ABC
 from typing import Generic, TypeVar
 
 from fastapi import Request
-from jwt.api_jwk import PyJWK
 
 from .configs import JWTBearerAuthenticationConfig
 from .decoders import JWTBearerTokenDecoder, JWTBearerTokenDecoderAbstract
 from .exceptions import InvalidJWTError, InvalidJWTPayploadError, MissingJWTCredentialsError, NotVerifiedJWTError
 from .objects import JWTPayload
+from .stores import JWKStoreAbstract
 from .types import JWTToken
 from .verifiers import JWTNoneVerifier, JWTVerifierAbstract
 
@@ -169,7 +169,7 @@ class JWTAuthenticationService(JWTAuthenticationServiceAbstract[JWTPayload]):
     def __init__(
         self,
         jwt_bearer_authentication_config: JWTBearerAuthenticationConfig,
-        public_key: PyJWK,
+        jwks_store: JWKStoreAbstract,
         raise_exception: bool = True,
     ) -> None:
         """Initialize the JWT bearer authentication service.
@@ -180,14 +180,14 @@ class JWTAuthenticationService(JWTAuthenticationServiceAbstract[JWTPayload]):
         Args:
             jwt_bearer_authentication_config (JWTBearerAuthenticationConfig): The JWT bearer authentication
             configuration.
-            public_key (PyJWK): The public key.
+            jwks_store (JWKStoreAbstract): The JWKS store.
             raise_exception (bool, optional): Whether to raise an exception or return None. Defaults to True.
         """
         super().__init__(
             jwt_bearer_authentication_config=jwt_bearer_authentication_config,
             jwt_verifier=JWTNoneVerifier(),
             jwt_decoder=JWTBearerTokenDecoder(
-                jwt_bearer_authentication_config=jwt_bearer_authentication_config, public_key=public_key
+                jwt_bearer_authentication_config=jwt_bearer_authentication_config, jwks_store=jwks_store
             ),
             raise_exception=raise_exception,
         )
