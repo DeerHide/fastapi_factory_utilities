@@ -1,10 +1,7 @@
 """Provides security-related functions for the API."""
 
 from .configs import JWTBearerAuthenticationConfig
-from .decoders import (
-    JWTBearerTokenDecoder,
-    JWTBearerTokenDecoderAbstract,
-)
+from .decoders import JWTBearerTokenDecoder, JWTBearerTokenDecoderAbstract, decode_jwt_token_payload
 from .exceptions import (
     InvalidJWTError,
     InvalidJWTPayploadError,
@@ -42,4 +39,5 @@ __all__: list[str] = [
     "OAuth2Issuer",
     "OAuth2Scope",
     "OAuth2Subject",
+    "decode_jwt_token_payload",
 ]
