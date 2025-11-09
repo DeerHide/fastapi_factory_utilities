@@ -134,15 +134,13 @@ class TestIntegrationOpentelemetryPlugin:
             application=application_mock, settings=settings
         )
         builder.build_all()
-
-        tracer: Tracer = builder.tracer_provider.get_tracer(__package__)
+        assert builder.tracer_provider is not None
+        tracer: Tracer = builder.tracer_provider.get_tracer(__package__)  # type: ignore[reportOptionalMemberAccess]
         span: Span = tracer.start_span("test_span")
         span.end()
 
-        assert builder._trace_exporter is not None  # pylint: disable=protected-access
-
-        assert builder._trace_exporter.force_flush()  # pylint: disable=protected-access
-        builder._trace_exporter.shutdown()  # pylint: disable=protected-access
+        assert builder.tracer_provider.force_flush()
+        builder.tracer_provider.shutdown()
 
     def test_simple(self, fixture_otel_collector: OtelCollectorDict) -> None:
         """Test the OpenTelemetry plugin.
@@ -159,7 +157,7 @@ class TestIntegrationOpentelemetryPlugin:
         multi_span_processor: SynchronousMultiSpanProcessor = SynchronousMultiSpanProcessor()
         multi_span_processor.add_span_processor(span_processor=processor)
 
-        tracer_provder: TracerProvider = TracerProvider(
+        tracer_provider: TracerProvider = TracerProvider(
             resource=Resource(
                 attributes={
                     "service.name": "test",
@@ -170,9 +168,10 @@ class TestIntegrationOpentelemetryPlugin:
             active_span_processor=multi_span_processor,
         )
 
-        tracer: Tracer = tracer_provder.get_tracer(__package__)
+        tracer: Tracer = tracer_provider.get_tracer(__package__)
         span: Span = tracer.start_span("test_span")
         span.end()
+        tracer_provider.shutdown()
         assert exporter.force_flush()
         exporter.shutdown()
 
