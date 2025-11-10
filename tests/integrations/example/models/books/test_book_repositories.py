@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import beanie
 import pytest
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo.asynchronous.database import AsyncDatabase
 
 from fastapi_factory_utilities.example.entities.books import (
     BookEntity,
@@ -20,11 +20,11 @@ class TestIntegrationBookRepository:
     """Unit tests for the BookRepository class."""
 
     @pytest.mark.asyncio()
-    async def test_book_create(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_book_create(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test create method.
 
         Args:
-            async_motor_database (AsyncIOMotorDatabase): The async motor database.
+            async_motor_database (AsyncDatabase): The async motor database.
         """
         await beanie.init_beanie(database=async_motor_database, document_models=[BookDocument])  # pyright: ignore
         book_repository = BookRepository(database=async_motor_database)
@@ -41,11 +41,11 @@ class TestIntegrationBookRepository:
         assert book_entity_created.book_type == BookType.FANTASY
 
     @pytest.mark.asyncio()
-    async def test_book_get_one_by_id(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_book_get_one_by_id(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test get_one_by_id method.
 
         Args:
-            async_motor_database (AsyncIOMotorDatabase): The async motor database.
+            async_motor_database (AsyncDatabase): The async motor database.
         """
         await beanie.init_beanie(database=async_motor_database, document_models=[BookDocument])  # pyright: ignore
         book_repository = BookRepository(database=async_motor_database)
@@ -66,11 +66,11 @@ class TestIntegrationBookRepository:
         assert book_entity_retrieved.book_type == BookType.FANTASY
 
     @pytest.mark.asyncio()
-    async def test_book_delete_one_by_id(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_book_delete_one_by_id(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test delete_one_by_id method.
 
         Args:
-            async_motor_database (AsyncIOMotorDatabase): The async motor database.
+            async_motor_database (AsyncDatabase): The async motor database.
         """
         await beanie.init_beanie(database=async_motor_database, document_models=[BookDocument])  # pyright: ignore
         book_repository = BookRepository(database=async_motor_database)
@@ -92,11 +92,11 @@ class TestIntegrationBookRepository:
         assert book_entity_retrieved is None
 
     @pytest.mark.asyncio()
-    async def test_find_all_books(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_find_all_books(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test finding all books.
 
         Args:
-            async_motor_database (AsyncIOMotorDatabase): The async motor database.
+            async_motor_database (AsyncDatabase): The async motor database.
         """
         await beanie.init_beanie(database=async_motor_database, document_models=[BookDocument])  # pyright: ignore
         book_repository = BookRepository(database=async_motor_database)
@@ -128,11 +128,11 @@ class TestIntegrationBookRepository:
         assert len(found_books) == len(books_to_create)
 
     @pytest.mark.asyncio()
-    async def test_find_books_with_filter(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_find_books_with_filter(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test finding books with filter.
 
         Args:
-            async_motor_database (AsyncIOMotorDatabase): The async motor database.
+            async_motor_database (AsyncDatabase): The async motor database.
         """
         await beanie.init_beanie(database=async_motor_database, document_models=[BookDocument])  # pyright: ignore
         book_repository = BookRepository(database=async_motor_database)
@@ -165,11 +165,11 @@ class TestIntegrationBookRepository:
         assert all(book.book_type == BookType.FANTASY for book in fantasy_books)
 
     @pytest.mark.asyncio()
-    async def test_find_books_with_pagination(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_find_books_with_pagination(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test finding books with pagination.
 
         Args:
-            async_motor_database (AsyncIOMotorDatabase): The async motor database.
+            async_motor_database (AsyncDatabase): The async motor database.
         """
         await beanie.init_beanie(database=async_motor_database, document_models=[BookDocument])  # pyright: ignore
         book_repository = BookRepository(database=async_motor_database)
@@ -198,11 +198,11 @@ class TestIntegrationBookRepository:
         assert len(last_page) == 1
 
     @pytest.mark.asyncio()
-    async def test_find_books_with_sort(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_find_books_with_sort(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test finding books with sorting.
 
         Args:
-            async_motor_database (AsyncIOMotorDatabase): The async motor database.
+            async_motor_database (AsyncDatabase): The async motor database.
         """
         await beanie.init_beanie(database=async_motor_database, document_models=[BookDocument])  # pyright: ignore
         book_repository = BookRepository(database=async_motor_database)

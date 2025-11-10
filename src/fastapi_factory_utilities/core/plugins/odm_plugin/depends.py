@@ -3,10 +3,11 @@
 from typing import Any
 
 from fastapi import Request
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.asynchronous.mongo_client import AsyncMongoClient
 
 
-def depends_odm_client(request: Request) -> AsyncIOMotorClient[Any]:
+def depends_odm_client(request: Request) -> AsyncMongoClient[Any]:
     """Acquire the ODM client from the request.
 
     Args:
@@ -18,7 +19,7 @@ def depends_odm_client(request: Request) -> AsyncIOMotorClient[Any]:
     return request.app.state.odm_client
 
 
-def depends_odm_database(request: Request) -> AsyncIOMotorDatabase[Any]:
+def depends_odm_database(request: Request) -> AsyncDatabase[Any]:
     """Acquire the ODM database from the request.
 
     Args:

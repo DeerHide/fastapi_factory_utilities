@@ -3,7 +3,8 @@
 from typing import Any, ClassVar, Self
 
 from bson import CodecOptions
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.asynchronous.mongo_client import AsyncMongoClient
 from pymongo.server_api import ServerApi, ServerApiVersion
 from structlog.stdlib import get_logger
 
@@ -45,22 +46,22 @@ class ODMBuilder:
         self,
         application: ApplicationAbstractProtocol,
         odm_config: ODMConfig | None = None,
-        odm_client: AsyncIOMotorClient[Any] | None = None,
-        odm_database: AsyncIOMotorDatabase[Any] | None = None,
+        odm_client: AsyncMongoClient[Any] | None = None,
+        odm_database: AsyncDatabase[Any] | None = None,
     ) -> None:
         """Initialize the ODMFactory.
 
         Args:
             application (BaseApplicationProtocol): The application.
             odm_config (ODMConfig): The ODM configuration for injection. (Default is None)
-            odm_client (AsyncIOMotorClient): The ODM client for injection. (Default is None)
-            odm_database (AsyncIOMotorDatabase): The ODM database for injection. (Default is None)
+            odm_client (AsyncMongoClient): The ODM client for injection. (Default is None)
+            odm_database (AsyncDatabase): The ODM database for injection. (Default is None)
 
         """
         self._application: ApplicationAbstractProtocol = application
         self._config: ODMConfig | None = odm_config
-        self._odm_client: AsyncIOMotorClient[Any] | None = odm_client
-        self._odm_database: AsyncIOMotorDatabase[Any] | None = odm_database
+        self._odm_client: AsyncMongoClient[Any] | None = odm_client
+        self._odm_database: AsyncDatabase[Any] | None = odm_database
 
     @property
     def config(self) -> ODMConfig | None:
@@ -72,20 +73,20 @@ class ODMBuilder:
         return self._config
 
     @property
-    def odm_client(self) -> AsyncIOMotorClient[Any] | None:
+    def odm_client(self) -> AsyncMongoClient[Any] | None:
         """Provide the ODM client.
 
         Returns:
-            AsyncIOMotorClient | None: The ODM client.
+            AsyncMongoClient | None: The ODM client.
         """
         return self._odm_client
 
     @property
-    def odm_database(self) -> AsyncIOMotorDatabase[Any] | None:
+    def odm_database(self) -> AsyncDatabase[Any] | None:
         """Provide the ODM database.
 
         Returns:
-            AsyncIOMotorDatabase | None: The ODM database.
+            AsyncDatabase | None: The ODM database.
         """
         return self._odm_database
 
@@ -174,7 +175,7 @@ class ODMBuilder:
                 "build_odm_config method or through parameter."
             )
 
-        self._odm_client = AsyncIOMotorClient(
+        self._odm_client = AsyncMongoClient(
             host=self._config.uri,
             connect=True,
             connectTimeoutMS=self._config.connection_timeout_ms,
@@ -241,19 +242,3 @@ class ODMBuilder:
         self.build_database()
 
         return self
-
-    async def wait_ping(self) -> None:
-        """Wait for the ODM client to be ready.
-
-        Returns:
-            Self: The ODM factory.
-        """
-        if self._odm_client is None:
-            raise ODMPluginConfigError(
-                "ODM client is not set. Provide the ODM client using build_client method or through parameter."
-            )
-
-        try:
-            await self._odm_client.admin.command("ping")
-        except Exception as exception:  # pylint: disable=broad-except
-            raise ODMPluginConfigError("Unable to ping the ODM client.") from exception

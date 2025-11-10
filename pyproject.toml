@@ -3,7 +3,7 @@ name = "fastapi_factory_utilities"
 homepage = "https://github.com/DeerHide/fastapi_factory_utilities"
 repository = "https://github.com/DeerHide/fastapi_factory_utilities"
 keywords = ["python", "fastapi", "beanie", "taskiq", "opentelemetry", "microservices"]
-version = "0.8.4"
+version = "0.9.0"
 description = "Consolidate libraries and utilities to create microservices in Python with FastAPI, Beanie, Taskiq, AioPika and OpenTelemetry."
 authors = ["miragecentury <victorien.vanroye@gmail.com>"]
 maintainers = ["miragecentury <victorien.vanroye@gmail.com>"]
@@ -41,7 +41,7 @@ opentelemetry-exporter-otlp-proto-http = "^1.26.0"
 opentelemetry-exporter-otlp-proto-grpc = "^1.26.0"
 opentelemetry-instrumentation-fastapi = "^0"
 opentelemetry-propagator-b3 = "^1.26.0"
-beanie = "^1.30.0"
+beanie = "^2.0.0"
 opentelemetry-instrumentation-pymongo = "^0"
 pymongo = ">=4.9.2,<4.16.0"
 pyaml = "^25.1.0"

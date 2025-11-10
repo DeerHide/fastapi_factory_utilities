@@ -20,16 +20,16 @@ def depends_scheduler_component(
 
 
 if find_spec("beanie") is not None:
-    from motor.motor_asyncio import AsyncIOMotorDatabase
+    from pymongo.asynchronous.database import AsyncDatabase
 
-    def depends_odm_database(request: Request = TaskiqDepends()) -> AsyncIOMotorDatabase[Any]:
+    def depends_odm_database(request: Request = TaskiqDepends()) -> AsyncDatabase[Any]:
         """Acquire the ODM database from the request.
 
         Args:
             request (Request): The request.
 
         Returns:
-            AsyncIOMotorClient: The ODM database.
+            AsyncDatabase: The ODM database.
         """
         return request.app.state.odm_database
 

@@ -1,10 +1,11 @@
 """Oriented Data Model (ODM) plugin package."""
 
 from logging import INFO, Logger, getLogger
-from typing import Any, Self
+from typing import Any, Self, cast
 
 from beanie import Document, init_beanie  # pyright: ignore[reportUnknownVariableType]
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.asynchronous.mongo_client import AsyncMongoClient
 from reactivex import Subject
 from structlog.stdlib import BoundLogger, get_logger
 
@@ -44,8 +45,8 @@ class ODMPlugin(PluginAbstract):
         self._monitoring_subject: Subject[Status] | None = None
         self._document_models: list[type[Document]] | None = document_models
         self._odm_config: ODMConfig | None = odm_config
-        self._odm_client: AsyncIOMotorClient[Any] | None = None
-        self._odm_database: AsyncIOMotorDatabase[Any] | None = None
+        self._odm_client: AsyncMongoClient[Any] | None = None
+        self._odm_database: AsyncDatabase[Any] | None = None
 
     def set_application(self, application: ApplicationAbstractProtocol) -> Self:
         """Set the application."""
@@ -92,6 +93,8 @@ class ODMPlugin(PluginAbstract):
 
     async def on_startup(self) -> None:
         """Actions to perform on startup for the ODM plugin."""
+        host: str
+        port: int
         assert self._application is not None
         self._setup_status()
         assert self._monitoring_subject is not None
@@ -99,22 +102,15 @@ class ODMPlugin(PluginAbstract):
 
         try:
             odm_factory: ODMBuilder = ODMBuilder(application=self._application, odm_config=self._odm_config).build_all()
-            await odm_factory.wait_ping()
+            assert odm_factory.odm_client is not None
+            assert odm_factory.odm_database is not None
+            assert (await odm_factory.odm_client.address) is not None
+            host, port = cast(tuple[str, int], await odm_factory.odm_client.address)
+            await odm_factory.odm_client.aconnect()
             self._odm_database = odm_factory.odm_database
             self._odm_client = odm_factory.odm_client
         except Exception as exception:  # pylint: disable=broad-except
             _logger.error(f"ODM plugin failed to start. {exception}")
-            # TODO: Report the error to the status_service
-            # this will report the application as unhealthy
-            self._monitoring_subject.on_next(
-                value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
-            )
-            return None
-
-        if self._odm_database is None or self._odm_client is None:
-            _logger.error(
-                f"ODM plugin failed to start. Database: {odm_factory.odm_database} - Client: {odm_factory.odm_client}"
-            )
             # TODO: Report the error to the status_service
             # this will report the application as unhealthy
             self._monitoring_subject.on_next(
@@ -127,9 +123,11 @@ class ODMPlugin(PluginAbstract):
 
         await self._setup_beanie()
 
+        assert self._odm_client is not None
+
         _logger.info(
             f"ODM plugin started. Database: {self._odm_database.name} - "
-            f"Client: {self._odm_client.address} - "
+            f"Client: {host}:{port} - "
             f"Document models: {self._application.ODM_DOCUMENT_MODELS}"
         )
 
@@ -140,7 +138,7 @@ class ODMPlugin(PluginAbstract):
     async def on_shutdown(self) -> None:
         """Actions to perform on shutdown for the ODM plugin."""
         if self._odm_client is not None:
-            self._odm_client.close()
+            await self._odm_client.close()
         _logger.debug("ODM plugin shutdown.")
 
 

@@ -8,8 +8,9 @@ from typing import Any, Generic, TypeVar, get_args
 from uuid import UUID
 
 from beanie import SortDirection
-from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorDatabase
 from pydantic import BaseModel
+from pymongo.asynchronous.client_session import AsyncClientSession
+from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError, PyMongoError
 from pymongo.results import DeleteResult
 
@@ -43,28 +44,30 @@ def managed_session() -> Callable[[Callable[..., Any]], Callable[..., Any]]:
 class AbstractRepository(ABC, Generic[DocumentGenericType, EntityGenericType]):
     """Abstract class for the repository."""
 
-    def __init__(self, database: AsyncIOMotorDatabase[Any]) -> None:
+    def __init__(self, database: AsyncDatabase[Any]) -> None:
         """Initialize the repository."""
         super().__init__()
-        self._database: AsyncIOMotorDatabase[Any] = database
+        self._database: AsyncDatabase[Any] = database
         # Retrieve the generic concrete types
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
         self._document_type: type[DocumentGenericType] = generic_args[0]
         self._entity_type: type[EntityGenericType] = generic_args[1]
 
     @asynccontextmanager
-    async def get_session(self) -> AsyncGenerator[AsyncIOMotorClientSession, None]:
+    async def get_session(self) -> AsyncGenerator[AsyncClientSession, None]:
         """Yield a new session."""
+        session: AsyncClientSession | None = None
         try:
-            async with await self._database.client.start_session() as session:
-                yield session
+            session = self._database.client.start_session()
+            yield session
         except PyMongoError as error:
             raise OperationError(f"Failed to create session: {error}") from error
+        finally:
+            if session is not None:
+                await session.end_session()
 
     @managed_session()
-    async def insert(
-        self, entity: EntityGenericType, session: AsyncIOMotorClientSession | None = None
-    ) -> EntityGenericType:
+    async def insert(self, entity: EntityGenericType, session: AsyncClientSession | None = None) -> EntityGenericType:
         """Insert the entity into the database.
 
         Args:
@@ -104,9 +107,7 @@ class AbstractRepository(ABC, Generic[DocumentGenericType, EntityGenericType]):
         return entity_created
 
     @managed_session()
-    async def update(
-        self, entity: EntityGenericType, session: AsyncIOMotorClientSession | None = None
-    ) -> EntityGenericType:
+    async def update(self, entity: EntityGenericType, session: AsyncClientSession | None = None) -> EntityGenericType:
         """Update the entity in the database.
 
         Args:
@@ -145,7 +146,7 @@ class AbstractRepository(ABC, Generic[DocumentGenericType, EntityGenericType]):
     async def get_one_by_id(
         self,
         entity_id: UUID,
-        session: AsyncIOMotorClientSession | None = None,
+        session: AsyncClientSession | None = None,
     ) -> EntityGenericType | None:
         """Get the entity by its ID.
 
@@ -179,7 +180,7 @@ class AbstractRepository(ABC, Generic[DocumentGenericType, EntityGenericType]):
 
     @managed_session()
     async def delete_one_by_id(
-        self, entity_id: UUID, raise_if_not_found: bool = False, session: AsyncIOMotorClientSession | None = None
+        self, entity_id: UUID, raise_if_not_found: bool = False, session: AsyncClientSession | None = None
     ) -> None:
         """Delete a document by its ID.
 
@@ -224,7 +225,7 @@ class AbstractRepository(ABC, Generic[DocumentGenericType, EntityGenericType]):
         skip: int | None = None,
         limit: int | None = None,
         sort: None | str | list[tuple[str, SortDirection]] = None,
-        session: AsyncIOMotorClientSession | None = None,
+        session: AsyncClientSession | None = None,
         ignore_cache: bool = False,
         fetch_links: bool = False,
         lazy_parse: bool = False,

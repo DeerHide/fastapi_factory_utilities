@@ -7,7 +7,8 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.asynchronous.mongo_client import AsyncMongoClient
 from structlog.stdlib import BoundLogger, get_logger
 from testcontainers.mongodb import MongoDbContainer
 
@@ -34,13 +35,13 @@ def mongodb_server_as_container() -> Generator[MongoDbContainer, None, None]:
 @pytest_asyncio.fixture(scope="function", name="async_motor_database")  # pyright: ignore
 async def mongodb_async_database_from_container(
     mongodb_server_as_container: MongoDbContainer,  # pylint: disable=redefined-outer-name
-) -> AsyncGenerator[AsyncIOMotorDatabase[Any], None]:
+) -> AsyncGenerator[AsyncDatabase[Any], None]:
     """Create an async motor database."""
     exposed_port: int | None = int(mongodb_server_as_container.get_exposed_port(27017))
     exposed_port = exposed_port if exposed_port else 27017
     username: str = os.environ.get("MONGO_INITDB_ROOT_USERNAME", "test")
     password: str = os.environ.get("MONGO_INITDB_ROOT_PASSWORD", "test")
-    mongodb_client: AsyncIOMotorClient[Any] = AsyncIOMotorClient(
+    mongodb_client: AsyncMongoClient[Any] = AsyncMongoClient(
         host=mongodb_server_as_container.get_container_host_ip(),
         port=exposed_port,
         connect=True,
@@ -48,9 +49,9 @@ async def mongodb_async_database_from_container(
         password=password,
     )
     database_name: UUID = uuid4()
-    mongodb_database: AsyncIOMotorDatabase[Any] = AsyncIOMotorDatabase(mongodb_client, str(database_name))
+    mongodb_database: AsyncDatabase[Any] = AsyncDatabase(mongodb_client, str(database_name))
 
     yield mongodb_database
 
     await mongodb_client.drop_database(str(database_name))
-    mongodb_client.close()
+    await mongodb_client.close()

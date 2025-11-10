@@ -9,8 +9,8 @@ from beanie import (  # pyright: ignore[reportUnknownVariableType]
     SortDirection,
     init_beanie,
 )
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, Field
+from pymongo.asynchronous.database import AsyncDatabase
 
 from fastapi_factory_utilities.core.plugins.odm_plugin.documents import BaseDocument
 from fastapi_factory_utilities.core.plugins.odm_plugin.repositories import (
@@ -47,7 +47,7 @@ class TestAbstractRepository:
     """Test AbstractRepository class."""
 
     @pytest.mark.asyncio()
-    async def test_insert(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_insert(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test insert method."""
         await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
         repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
@@ -63,7 +63,7 @@ class TestAbstractRepository:
         assert entity_created.created_at == entity_created.updated_at
 
     @pytest.mark.asyncio()
-    async def test_find_one(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_find_one(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test find_one method."""
         await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
         repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
@@ -90,7 +90,7 @@ class TestAbstractRepository:
         assert entity_found.updated_at == updated_at_less_precision
 
     @pytest.mark.asyncio()
-    async def test_delete_one(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_delete_one(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test delete_one method."""
         await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
         repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
@@ -100,7 +100,7 @@ class TestAbstractRepository:
         await repository.delete_one_by_id(entity_id=entity_created.id)
 
     @pytest.mark.asyncio()
-    async def test_update_one(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_update_one(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test update_one method."""
         await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
         repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
@@ -130,7 +130,7 @@ class TestAbstractRepository:
         assert entity_updated.updated_at >= updated_at_less_precision
 
     @pytest.mark.asyncio()
-    async def test_find_all(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_find_all(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test find method without filters."""
         await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
         repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
@@ -145,7 +145,7 @@ class TestAbstractRepository:
         assert len(found_entities) == 3  # noqa: PLR2004
 
     @pytest.mark.asyncio()
-    async def test_find_with_filter(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_find_with_filter(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test find method with filters."""
         await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
         repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
@@ -165,7 +165,7 @@ class TestAbstractRepository:
         assert all(entity.category == "A" for entity in found_entities)
 
     @pytest.mark.asyncio()
-    async def test_find_with_pagination(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_find_with_pagination(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test find method with pagination."""
         await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
         repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
@@ -186,7 +186,7 @@ class TestAbstractRepository:
         assert len(last_page) == 1
 
     @pytest.mark.asyncio()
-    async def test_find_with_sort(self, async_motor_database: AsyncIOMotorDatabase[Any]) -> None:
+    async def test_find_with_sort(self, async_motor_database: AsyncDatabase[Any]) -> None:
         """Test find method with sorting."""
         await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
         repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
