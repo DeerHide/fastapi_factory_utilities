@@ -1,9 +1,11 @@
-[tool.poetry]
+[project]
 name = "fastapi_factory_utilities"
+dynamic = ["version"]
+
+[tool.poetry]
 homepage = "https://github.com/DeerHide/fastapi_factory_utilities"
 repository = "https://github.com/DeerHide/fastapi_factory_utilities"
 keywords = ["python", "fastapi", "beanie", "taskiq", "opentelemetry", "microservices"]
-version = "0.9.1"
 description = "Consolidate libraries and utilities to create microservices in Python with FastAPI, Beanie, Taskiq, AioPika and OpenTelemetry."
 authors = ["miragecentury <victorien.vanroye@gmail.com>"]
 maintainers = ["miragecentury <victorien.vanroye@gmail.com>"]
@@ -23,6 +25,19 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
 ]
+version = "0.0.0"
+
+[tool.poetry.requires-plugins]
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+metadata = false
+dirty = true
+
+[tool.poetry-dynamic-versioning.substitution]
+folders = [{path= "src/fastapi_factory_utilities/core/__init__.py"}]
 
 [[tool.poetry.source]]
 name = "velmios"

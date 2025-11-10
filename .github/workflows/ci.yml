@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  # Setup job to generate the poetry.lock file and upload it as an artifact
+  setup:
+    runs-on: public-actions-runner-scale-set
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - uses: abatilo/actions-poetry@v2
+      # Generate poetry.lock file for the CI and upload it as an artifact
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+          poetry lock
+      - name: Upload poetry.lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: poetry-lock
+          path: poetry.lock
+      # Define a cache for the virtual environment based on the dependencies lock file
+      # This will speed up the CI by avoiding to reinstall the dependencies if they are already installed
+      - uses: actions/cache@v3
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-
+      - name: Install the project dependencies
+        run: poetry install --with test
+  create-sbom:
+    needs: setup
+    runs-on: public-actions-runner-scale-set
+    permissions:
+      contents: write
+      packages: write
+      security-events: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download poetry.lock
+        uses: actions/download-artifact@v4
+        with:
+          name: poetry-lock
+      - uses: anchore/sbom-action@v0
+        id: sbom
+        with:
+          file: ./poetry.lock
+          dependency-snapshot: true
+          upload-artifact: true
+          upload-artifact-retention: 1
+          upload-release-assets: true
+          format: "spdx-json"
+          artifact-name: "${{ github.event.repository.name }}-sbom.spdx.json"
+  dependency-scan-grype:
+    needs:
+      - setup
+      - create-sbom
+    runs-on: public-actions-runner-scale-set
+    permissions:
+      contents: write
+      actions: read
+      packages: write
+      security-events: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ github.event.repository.name }}-sbom.spdx.json"
+      - name: Scan current project
+        id: scan
+        uses: anchore/scan-action@v7
+        with:
+          cache-db: true
+          sbom: "${{ github.event.repository.name }}-sbom.spdx.json"
+          output-format: table
+          output-file: "${{ github.event.repository.name }}-grype-scan.txt"
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ github.event.repository.name }}-grype-scan.txt"
+          path: "${{ github.event.repository.name }}-grype-scan.txt"
+  pre-commit:
+    needs: setup
+    runs-on: public-actions-runner-scale-set
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download poetry.lock
+        uses: actions/download-artifact@v4
+        with:
+          name: poetry-lock
+      - name: Restore Cache
+        uses: actions/cache/restore@v3
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v3
+        name: Restore virtualenv
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            venv-
+      - uses: abatilo/actions-poetry@v2
+      - name: Setup a local virtual environment
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+      - name: Install the project dependencies
+        run: poetry install --with test
+      - name: Run pre-commit (formatting, linting, type checking and tests)
+        run: |
+          export PYTHONPATH=./src:./tests:$PYTHONPATH
+          poetry run pre-commit run --all-files
+  release:
+    needs:
+      - setup
+      - pre-commit
+      - dependency-scan-grype
+    runs-on: public-actions-runner-scale-set
+    if: startsWith(github.ref, 'refs/tags/')
+    environment: pypi
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write # for the pypi
+      contents: write # for the release
+      packages: write
+      discussions: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download poetry.lock
+        uses: actions/download-artifact@v4
+        with:
+          name: poetry-lock
+      - name: Download SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ github.event.repository.name }}-sbom.spdx.json"
+      - name: Download Grype Scan
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ github.event.repository.name }}-grype-scan.txt"
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - uses: abatilo/actions-poetry@v2
+      - name: Setup a local virtual environment
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+      - name: Build package distributions
+        run: |
+          poetry self add poetry-dynamic-versioning
+          poetry build
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/fastapi_factory_utilities-*.tar.gz
+            dist/fastapi_factory_utilities-*.whl
+            poetry.lock
+            ${{ github.event.repository.name }}-sbom.spdx.json
+            ${{ github.event.repository.name }}-grype-scan.txt
+          tag_name: ${{ github.ref }}
+          name: ${{ github.ref_name }}
+          prerelease: false
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
