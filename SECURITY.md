@@ -12,6 +12,6 @@ currently being supported with security updates.
 ## Reporting a Vulnerability
 
 You can use Issue on the repository to report any vulnerabilities.
-https://github.com/miragecentury/fastapi_factory_utilities/issues
+https://github.com/DeerHide/fastapi_factory_utilities/issues
 
 Fixes will be done as best effort.
