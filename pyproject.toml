@@ -3,7 +3,7 @@ name = "fastapi_factory_utilities"
 homepage = "https://github.com/DeerHide/fastapi_factory_utilities"
 repository = "https://github.com/DeerHide/fastapi_factory_utilities"
 keywords = ["python", "fastapi", "beanie", "taskiq", "opentelemetry", "microservices"]
-version = "0.9.0"
+version = "0.9.1"
 description = "Consolidate libraries and utilities to create microservices in Python with FastAPI, Beanie, Taskiq, AioPika and OpenTelemetry."
 authors = ["miragecentury <victorien.vanroye@gmail.com>"]
 maintainers = ["miragecentury <victorien.vanroye@gmail.com>"]
@@ -69,7 +69,7 @@ pyupgrade = "^3.15.2"
 pytest = "^8.2.0"
 pytest-xdist = "^3.6.1"
 pytest-cov = "^7.0.0"
-ruff = "^0.14"
+ruff = "^0"
 pytest-asyncio = ">=0.25,<1.3"
 pytest-mongo = "^3.1.0"
 locust = "^2.32.4"
