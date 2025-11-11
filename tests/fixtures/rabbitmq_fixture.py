@@ -8,8 +8,9 @@ import pytest
 from pydantic_core import Url
 from testcontainers.rabbitmq import RabbitMqContainer  # pyright: ignore[reportMissingTypeStubs]
 
-from fastapi_factory_utilities.core.plugins.aiopika import AiopikaConfig, AiopikaPlugin
+from fastapi_factory_utilities.core.plugins.aiopika import AiopikaPlugin
 from fastapi_factory_utilities.core.protocols import ApplicationAbstractProtocol
+from fastapi_factory_utilities.core.utils.rabbitmq_configs import RabbitMQCredentialsConfig
 
 
 @pytest.fixture(scope="session", name="rabbitmq_container")
@@ -60,7 +61,7 @@ async def fixture_aiopika_plugin(
         + "?heartbeat=10",
     )
     plugin: AiopikaPlugin = AiopikaPlugin(
-        aiopika_config=AiopikaConfig(
+        rabbitmq_credentials_config=RabbitMQCredentialsConfig(
             amqp_url=amqp_url,
         ),
     )

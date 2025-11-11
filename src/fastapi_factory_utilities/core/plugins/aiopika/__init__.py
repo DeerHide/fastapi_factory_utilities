@@ -1,6 +1,5 @@
 """Aiopika Plugin Module."""
 
-from .configs import AiopikaConfig
 from .depends import depends_aiopika_robust_connection
 from .exceptions import AiopikaPluginBaseError, AiopikaPluginConfigError
 from .exchange import Exchange
@@ -14,7 +13,6 @@ __all__: list[str] = [
     "AbstractListener",
     "AbstractMessage",
     "AbstractPublisher",
-    "AiopikaConfig",
     "AiopikaPlugin",
     "AiopikaPluginBaseError",
     "AiopikaPluginConfigError",

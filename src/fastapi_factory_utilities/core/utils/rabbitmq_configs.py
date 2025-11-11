@@ -1,20 +1,23 @@
-"""Provides the configuration for the Aiopika plugin."""
+"""Provides the configuration for the RabbitMQ."""
 
 from typing import Annotated, Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, UrlConstraints
 from pydantic_core import Url, ValidationError
 
+from fastapi_factory_utilities.core.exceptions import FastAPIFactoryUtilitiesError
 from fastapi_factory_utilities.core.utils.importlib import get_path_file_in_package
 from fastapi_factory_utilities.core.utils.yaml_reader import (
     UnableToReadYamlFileError,
     YamlFileReader,
 )
 
-from .exceptions import AiopikaPluginConfigError
+
+class RabbitMQCredentialsConfigError(FastAPIFactoryUtilitiesError):
+    """RabbitMQ credentials config error."""
 
 
-class AiopikaConfig(BaseModel):
+class RabbitMQCredentialsConfig(BaseModel):
     """Provides the configuration model for the Aiopika plugin.
 
     https://docs.aio-pika.com/#aio-pika-connect-robust-function-and-aio-pika-robustconnection-class-specific
@@ -44,7 +47,7 @@ class AiopikaConfig(BaseModel):
     amqp_url: Annotated[Url, UrlConstraints(allowed_schemes=["amqp", "amqps"])] = Field(description="The AMQP URL.")
 
 
-def build_config_from_package(package_name: str) -> AiopikaConfig:
+def build_rabbitmq_credentials_config(package_name: str) -> RabbitMQCredentialsConfig:
     """Build the configuration from the package.
 
     Args:
@@ -66,17 +69,17 @@ def build_config_from_package(package_name: str) -> AiopikaConfig:
             use_environment_injection=True,
         ).read()
     except (FileNotFoundError, ImportError, UnableToReadYamlFileError) as exception:
-        raise AiopikaPluginConfigError(
+        raise RabbitMQCredentialsConfigError(
             message="Unable to read the application configuration file for the Aiopika plugin in the package.",
             package_name=package_name,
         ) from exception
 
     # Create the application configuration model
-    config: AiopikaConfig
+    config: RabbitMQCredentialsConfig
     try:
-        config = AiopikaConfig(**yaml_file_content)
+        config = RabbitMQCredentialsConfig.model_validate(yaml_file_content)
     except ValidationError as exception:
-        raise AiopikaPluginConfigError(
+        raise RabbitMQCredentialsConfigError(
             message="Unable to create the application configuration model for the Aiopika plugin in the package.",
             package_name=package_name,
             validation_errors=exception.errors(),

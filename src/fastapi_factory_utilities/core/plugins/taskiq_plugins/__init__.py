@@ -2,17 +2,16 @@
 
 from importlib.util import find_spec
 
-from .configs import RedisCredentialsConfig
 from .depends import depends_scheduler_component
-from .exceptions import TaskiqPluginBaseError
+from .exceptions import TaskiqPluginBaseError, TaskiqPluginConfigError
 from .plugin import TaskiqPlugin
 from .schedulers import SchedulerComponent
 
 __all__: list[str] = [  # pylint: disable=invalid-name
-    "RedisCredentialsConfig",
     "SchedulerComponent",
     "TaskiqPlugin",
     "TaskiqPluginBaseError",
+    "TaskiqPluginConfigError",
     "depends_scheduler_component",
 ]
 
