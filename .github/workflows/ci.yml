@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # branches: [main] # Disable for now, manual release only
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
