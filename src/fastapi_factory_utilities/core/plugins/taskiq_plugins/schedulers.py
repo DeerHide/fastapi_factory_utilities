@@ -32,9 +32,7 @@ _logger = get_logger(__package__)
 class SchedulerComponent:
     """Scheduler component."""
 
-    NAME_SUFFIX: str = "tiktok_integration"
-
-    def __init__(self) -> None:
+    def __init__(self, name_suffix: str) -> None:
         """Initialize the scheduler component."""
         self._result_backend: RedisAsyncResultBackend[Any] | None = None
         self._stream_broker: RedisStreamBroker | None = None
@@ -43,6 +41,7 @@ class SchedulerComponent:
         self._dyn_task: AsyncTaskiqDecoratedTask[Any, Any] | None = None
         self._schedule_cron: ScheduledTask | None = None
         self._schedulers_tasks: dict[str, AsyncTaskiqDecoratedTask[Any, Any]] = {}
+        self._name_suffix: str = name_suffix
 
     def register_task(self, task: Coroutine[Any, Any, Any], task_name: str) -> None:
         """Register a task.
@@ -83,20 +82,20 @@ class SchedulerComponent:
         """Configure the scheduler component."""
         self._result_backend = RedisAsyncResultBackend(
             redis_url=redis_connection_string,
-            prefix_str=f"velmios_taskiq_result_backend_{self.NAME_SUFFIX}",
+            prefix_str=f"taskiq_result_backend_{self._name_suffix}",
             result_ex_time=120,
         )
         self._stream_broker = RedisStreamBroker(
             url=redis_connection_string,
-            queue_name=f"velmios_taskiq_stream_broker_{self.NAME_SUFFIX}",
-            consumer_group_name=f"velmios_taskiq_consumer_group_{self.NAME_SUFFIX}",
+            queue_name=f"taskiq_stream_broker_{self._name_suffix}",
+            consumer_group_name=f"taskiq_consumer_group_{self._name_suffix}",
         ).with_result_backend(self._result_backend)
 
         taskiq_fastapi.populate_dependency_context(self._stream_broker, app)
 
         self._scheduler_source = ListRedisScheduleSource(
             url=redis_connection_string,
-            prefix=f"velmios_taskiq_schedule_source_{self.NAME_SUFFIX}",
+            prefix=f"taskiq_schedule_source_{self._name_suffix}",
         )
 
         self._scheduler = TaskiqScheduler(

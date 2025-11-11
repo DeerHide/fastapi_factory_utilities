@@ -23,6 +23,7 @@ class TaskiqPlugin(PluginAbstract):
 
     def __init__(
         self,
+        name_suffix: str,
         redis_credentials_config: RedisCredentialsConfig | None = None,
         register_hook: Callable[[SchedulerComponent], None] | None = None,
     ) -> None:
@@ -30,7 +31,7 @@ class TaskiqPlugin(PluginAbstract):
         super().__init__()
         self._redis_credentials_config: RedisCredentialsConfig | None = redis_credentials_config
         self._register_hook: Callable[[SchedulerComponent], None] | None = register_hook
-        self._scheduler_component: SchedulerComponent = SchedulerComponent()
+        self._scheduler_component: SchedulerComponent = SchedulerComponent(name_suffix=name_suffix)
 
     def on_load(self) -> None:
         """On load."""

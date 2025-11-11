@@ -9,13 +9,22 @@ from fastapi_factory_utilities.core.utils.log import (
 )
 
 from .fixtures.mongo import (
-    mongodb_async_database_from_container,
-    mongodb_server_as_container,
+    fixture_async_motor_database,
+    fixture_mongodb_database_name,
+    fixture_mongodb_server_as_container,
+    fixture_odm_plugin_factory,
 )
 from .fixtures.rabbitmq_fixture import (
     fixture_aiopika_plugin,
     fixture_rabbitmq_container,
     fixture_vhost,
+)
+from .fixtures.redis import (
+    fixture_redis_container,
+    fixture_scheduler_component,
+    fixture_taskiq_plugin,
+    fixture_taskiq_plugin_factory,
+    fixture_taskiq_suffix_name,
 )
 
 setup_log(
@@ -31,8 +40,15 @@ setup_log(
 
 __all__: list[str] = [
     "fixture_aiopika_plugin",
+    "fixture_async_motor_database",
+    "fixture_mongodb_database_name",
+    "fixture_mongodb_server_as_container",
+    "fixture_odm_plugin_factory",
     "fixture_rabbitmq_container",
+    "fixture_redis_container",
+    "fixture_scheduler_component",
+    "fixture_taskiq_plugin",
+    "fixture_taskiq_plugin_factory",
+    "fixture_taskiq_suffix_name",
     "fixture_vhost",
-    "mongodb_async_database_from_container",
-    "mongodb_server_as_container",
 ]
