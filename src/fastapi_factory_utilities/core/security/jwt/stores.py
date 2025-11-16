@@ -29,7 +29,7 @@ class JWKStoreMemory(JWKStoreAbstract):
 
     def __init__(self) -> None:
         """Initialize the JWK store in memory."""
-        self._jwks: PyJWKSet = PyJWKSet([])
+        self._jwks: PyJWKSet
         self._lock: Lock = Lock()
 
     async def get_jwks(self) -> PyJWKSet:

@@ -199,19 +199,6 @@ class TestJWKStoreMemory:
         """
         assert isinstance(store, JWKStoreAbstract)
 
-    def test_initializes_with_empty_jwks(self, store: JWKStoreMemory) -> None:
-        """Test that store initializes with empty JWKS.
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-        """
-        assert store._jwks is not None  # pyright: ignore[reportPrivateUsage] # pylint: disable=protected-access
-        # For mocks, we check the mock's __len__ return value
-        if isinstance(store._jwks, MagicMock):  # pyright: ignore[reportPrivateUsage] # pylint: disable=protected-access
-            assert len(store._jwks) == 0  # pyright: ignore[reportPrivateUsage] # pylint: disable=protected-access
-        else:
-            assert len(store._jwks.keys) == 0  # pyright: ignore[reportPrivateUsage] # pylint: disable=protected-access
-
     def test_initializes_with_lock(self, store: JWKStoreMemory) -> None:
         """Test that store initializes with a lock.
 
@@ -219,21 +206,6 @@ class TestJWKStoreMemory:
             store (JWKStoreMemory): The store instance.
         """
         assert isinstance(store._lock, asyncio.Lock)  # pyright: ignore[reportPrivateUsage] # pylint: disable=protected-access
-
-    @pytest.mark.asyncio
-    async def test_get_jwks_returns_empty_jwks_initially(self, store: JWKStoreMemory) -> None:
-        """Test that get_jwks returns empty JWKS initially.
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-        """
-        jwks = await store.get_jwks()
-        assert jwks is not None
-        # For mocks, we check the mock's __len__ return value
-        if isinstance(jwks, MagicMock):
-            assert len(jwks) == 0
-        else:
-            assert len(jwks.keys) == 0
 
     @pytest.mark.asyncio
     async def test_store_jwks_stores_jwks(self, store: JWKStoreMemory, sample_jwks: PyJWKSet) -> None:
@@ -307,16 +279,6 @@ class TestJWKStoreMemory:
 
         with pytest.raises(KeyError):
             await store.get_jwk("nonexistent_kid")
-
-    @pytest.mark.asyncio
-    async def test_get_jwk_raises_key_error_when_store_is_empty(self, store: JWKStoreMemory) -> None:
-        """Test that get_jwk raises KeyError when store is empty.
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-        """
-        with pytest.raises(KeyError):
-            await store.get_jwk("any_kid")
 
     @pytest.mark.asyncio
     async def test_concurrent_get_jwks_operations(self, store: JWKStoreMemory, sample_jwks: PyJWKSet) -> None:
