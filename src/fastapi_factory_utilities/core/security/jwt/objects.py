@@ -88,7 +88,7 @@ class JWTPayload(BaseModel):
         frozen=True,
     )
 
-    scope: Annotated[list[OAuth2Scope], BeforeValidator(validate_string_list_field)] = Field(
+    scp: Annotated[list[OAuth2Scope], BeforeValidator(validate_string_list_field)] = Field(
         description="The scope of the JWT token."
     )
     aud: Annotated[list[OAuth2Audience], BeforeValidator(validate_string_list_field)] = Field(

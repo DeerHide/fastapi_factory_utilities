@@ -205,7 +205,7 @@ class TestJWTPayload:
         nbf = now - datetime.timedelta(minutes=5)
 
         payload = JWTPayload(
-            scope="read write",
+            scp="read write",
             aud="api1 api2",
             iss="https://example.com",
             exp=int(exp.timestamp()),
@@ -214,7 +214,7 @@ class TestJWTPayload:
             sub="user123",
         )
 
-        assert payload.scope == ["read", "write"]
+        assert payload.scp == ["read", "write"]
         assert payload.aud == ["api1", "api2"]
         assert payload.iss == "https://example.com"
         assert payload.exp.tzinfo == datetime.UTC
@@ -228,7 +228,7 @@ class TestJWTPayload:
         exp = now + datetime.timedelta(hours=1)
 
         payload = JWTPayload(
-            scope=["read", "write", "admin"],
+            scp=["read", "write", "admin"],
             aud=["api1", "api2"],
             iss="https://example.com",
             exp=exp,
@@ -237,7 +237,7 @@ class TestJWTPayload:
             sub="user123",
         )
 
-        assert payload.scope == ["read", "write", "admin"]
+        assert payload.scp == ["read", "write", "admin"]
         assert payload.aud == ["api1", "api2"]
 
     def test_valid_payload_creation_with_uppercase_fields(self) -> None:
@@ -246,7 +246,7 @@ class TestJWTPayload:
         exp = now + datetime.timedelta(hours=1)
 
         payload = JWTPayload(
-            scope="READ WRITE ADMIN",
+            scp="READ WRITE ADMIN",
             aud="API1 API2",
             iss="https://example.com",
             exp=int(exp.timestamp()),
@@ -255,7 +255,7 @@ class TestJWTPayload:
             sub="user123",
         )
 
-        assert payload.scope == ["read", "write", "admin"]
+        assert payload.scp == ["read", "write", "admin"]
         assert payload.aud == ["api1", "api2"]
 
     def test_payload_creation_with_string_timestamps(self) -> None:
@@ -264,7 +264,7 @@ class TestJWTPayload:
         exp = now + datetime.timedelta(hours=1)
 
         payload = JWTPayload(
-            scope="read",
+            scp="read",
             aud="api1",
             iss="https://example.com",
             exp=str(int(exp.timestamp())),
@@ -284,7 +284,7 @@ class TestJWTPayload:
         exp = now + datetime.timedelta(hours=1)
 
         payload = JWTPayload(
-            scope="read",
+            scp="read",
             aud="api1",
             iss="https://example.com",
             exp=exp,
@@ -303,7 +303,7 @@ class TestJWTPayload:
 
         with pytest.raises(ValidationError):
             JWTPayload(
-                scope="read",
+                scp="read",
                 aud="api1",
                 iss="https://example.com",
                 exp=int(now.timestamp()),
@@ -318,7 +318,7 @@ class TestJWTPayload:
 
         with pytest.raises(ValidationError):
             JWTPayload(
-                scope="",
+                scp="",
                 aud="api1",
                 iss="https://example.com",
                 exp=int(now.timestamp()),
@@ -333,7 +333,7 @@ class TestJWTPayload:
 
         with pytest.raises(ValidationError):
             JWTPayload(
-                scope="read",
+                scp="read",
                 aud="",
                 iss="https://example.com",
                 exp=int(now.timestamp()),
@@ -346,7 +346,7 @@ class TestJWTPayload:
         """Test creating a JWTPayload with invalid timestamp raises ValidationError."""
         with pytest.raises(ValidationError):
             JWTPayload(
-                scope="read",
+                scp="read",
                 aud="api1",
                 iss="https://example.com",
                 exp="invalid-timestamp",
@@ -361,7 +361,7 @@ class TestJWTPayload:
 
         with pytest.raises(ValidationError):
             JWTPayload(
-                scope=123,  # type: ignore[arg-type]
+                scp=123,  # type: ignore[arg-type]
                 aud="api1",
                 iss="https://example.com",
                 exp=int(now.timestamp()),
@@ -375,7 +375,7 @@ class TestJWTPayload:
         now = datetime.datetime.now(tz=datetime.UTC)
 
         payload = JWTPayload(
-            scope="read",
+            scp="read",
             aud="api1",
             iss="https://example.com",
             exp=int(now.timestamp()),
@@ -395,7 +395,7 @@ class TestJWTPayload:
         now = datetime.datetime.now(tz=datetime.UTC)
 
         payload = JWTPayload(
-            scope="read",
+            scp="read",
             aud="api1",
             iss="https://example.com",
             exp=int(now.timestamp()),
@@ -414,7 +414,7 @@ class TestJWTPayload:
         exp = now + datetime.timedelta(hours=1)
 
         data: dict[str, Any] = {
-            "scope": "read write",
+            "scp": "read write",
             "aud": "api1 api2",
             "iss": "https://example.com",
             "exp": int(exp.timestamp()),
@@ -425,7 +425,7 @@ class TestJWTPayload:
 
         payload = JWTPayload.model_validate(data)
 
-        assert payload.scope == ["read", "write"]
+        assert payload.scp == ["read", "write"]
         assert payload.aud == ["api1", "api2"]
         assert payload.iss == "https://example.com"
         assert payload.sub == "user123"
@@ -436,7 +436,7 @@ class TestJWTPayload:
         exp = now + datetime.timedelta(hours=1)
 
         json_data = f"""{{
-            "scope": "read write",
+            "scp": "read write",
             "aud": "api1 api2",
             "iss": "https://example.com",
             "exp": {int(exp.timestamp())},
@@ -447,7 +447,7 @@ class TestJWTPayload:
 
         payload = JWTPayload.model_validate_json(json_data)
 
-        assert payload.scope == ["read", "write"]
+        assert payload.scp == ["read", "write"]
         assert payload.aud == ["api1", "api2"]
         assert payload.iss == "https://example.com"
         assert payload.sub == "user123"
@@ -458,7 +458,7 @@ class TestJWTPayload:
         exp = now + datetime.timedelta(hours=1)
 
         payload = JWTPayload(
-            scope="read write",
+            scp="read write",
             aud="api1 api2",
             iss="https://example.com",
             exp=int(exp.timestamp()),
@@ -470,7 +470,7 @@ class TestJWTPayload:
         dumped = payload.model_dump()
 
         assert isinstance(dumped, dict)
-        assert dumped["scope"] == ["read", "write"]
+        assert dumped["scp"] == ["read", "write"]
         assert dumped["aud"] == ["api1", "api2"]
         assert dumped["iss"] == "https://example.com"
         assert dumped["sub"] == "user123"
@@ -484,7 +484,7 @@ class TestJWTPayload:
         exp = now + datetime.timedelta(hours=1)
 
         payload = JWTPayload(
-            scope="read write",
+            scp="read write",
             aud="api1 api2",
             iss="https://example.com",
             exp=int(exp.timestamp()),
@@ -506,7 +506,7 @@ class TestJWTPayload:
         now = datetime.datetime.now(tz=datetime.UTC)
 
         payload = JWTPayload(
-            scope="read",
+            scp="read",
             aud="api1",
             iss="https://example.com",
             exp=int(now.timestamp()),
@@ -515,14 +515,14 @@ class TestJWTPayload:
             sub="user123",
         )
 
-        assert payload.scope == ["read"]
+        assert payload.scp == ["read"]
 
     def test_payload_with_single_aud(self) -> None:
         """Test creating a JWTPayload with single audience."""
         now = datetime.datetime.now(tz=datetime.UTC)
 
         payload = JWTPayload(
-            scope="read",
+            scp="read",
             aud="api1",
             iss="https://example.com",
             exp=int(now.timestamp()),

@@ -79,7 +79,7 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         nbf = now - datetime.timedelta(minutes=5)
 
         return JWTPayload(  # type: ignore[arg-type]
-            scope="read write",
+            scp="read write",
             aud="api1 api2",
             iss="https://example.com",
             exp=int(exp.timestamp()),
@@ -779,7 +779,7 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
         nbf = now - datetime.timedelta(minutes=5)
 
         jwt_payload = JWTPayload(  # type: ignore[arg-type]
-            scope="read write",
+            scp="read write",
             aud="api1 api2",
             iss="https://example.com",
             exp=int(exp.timestamp()),

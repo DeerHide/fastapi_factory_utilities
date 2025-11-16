@@ -463,7 +463,7 @@ class TestJWTBearerTokenDecoder:
         """
         now = datetime.datetime.now(tz=datetime.UTC)
         return {
-            "scope": "read write",
+            "scp": "read write",
             "aud": "test_audience",
             "iss": "https://example.com",
             "exp": int(now.timestamp()) + 3600,
@@ -499,7 +499,7 @@ class TestJWTBearerTokenDecoder:
                 result = await decoder.decode_payload(jwt_token=jwt_token)
 
                 assert isinstance(result, JWTPayload)
-                assert result.scope == ["read", "write"]
+                assert result.scp == ["read", "write"]
                 assert result.aud == ["test_audience"]
                 assert result.iss == "https://example.com"
                 assert result.sub == "test_subject"
@@ -586,7 +586,7 @@ class TestJWTBearerTokenDecoder:
         mock_jwks_store.get_jwk = AsyncMock(return_value=mock_jwk)
 
         incomplete_payload = {
-            "scope": "read",
+            "scp": "read",
             # Missing other required fields
         }
         with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
@@ -619,7 +619,7 @@ class TestJWTBearerTokenDecoder:
         mock_jwks_store.get_jwk = AsyncMock(return_value=mock_jwk)
 
         invalid_timestamp_payload = {
-            "scope": "read write",
+            "scp": "read write",
             "aud": "test_audience",
             "iss": "https://example.com",
             "exp": "invalid_timestamp",

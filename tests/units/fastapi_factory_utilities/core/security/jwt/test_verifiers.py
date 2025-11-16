@@ -94,7 +94,7 @@ class TestJWTNoneVerifier:
         nbf = now - datetime.timedelta(minutes=5)
 
         return JWTPayload(
-            scope="read write",
+            scp="read write",
             aud="api1 api2",
             iss="https://example.com",
             exp=int(exp.timestamp()),
@@ -187,7 +187,7 @@ class TestJWTNoneVerifier:
         now = datetime.datetime.now(tz=datetime.UTC)
 
         payload1 = JWTPayload(
-            scope="read",
+            scp="read",
             aud="api1",
             iss="https://example.com",
             exp=int((now + datetime.timedelta(hours=1)).timestamp()),
@@ -197,7 +197,7 @@ class TestJWTNoneVerifier:
         )
 
         payload2 = JWTPayload(
-            scope="read write admin",
+            scp="read write admin",
             aud="api1 api2 api3",
             iss="https://another-issuer.com",
             exp=int((now + datetime.timedelta(hours=2)).timestamp()),
@@ -281,7 +281,7 @@ class TestJWTNoneVerifier:
         expired_time = now - datetime.timedelta(hours=1)
 
         expired_payload = JWTPayload(
-            scope="read",
+            scp="read",
             aud="api1",
             iss="https://example.com",
             exp=int(expired_time.timestamp()),  # Expired
