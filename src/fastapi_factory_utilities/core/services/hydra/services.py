@@ -18,6 +18,7 @@ from fastapi_factory_utilities.core.app import (
 
 from .exceptions import HydraOperationError
 from .objects import HydraTokenIntrospectObject
+from .types import HydraAccessToken, HydraClientId, HydraClientSecret
 
 HydraIntrospectObjectGeneric = TypeVar("HydraIntrospectObjectGeneric", bound=HydraTokenIntrospectObject)
 
@@ -45,7 +46,7 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
         self._concreate_introspect_object_class: type[HydraIntrospectObjectGeneric] = generic_args[0]
 
-    async def introspect(self, token: str) -> HydraIntrospectObjectGeneric:
+    async def introspect(self, token: HydraAccessToken) -> HydraIntrospectObjectGeneric:
         """Introspects a token using the Hydra introspect service.
 
         Args:
@@ -117,13 +118,31 @@ class HydraOAuth2ClientCredentialsService:
         """
         self._hydra_public_http_config: HttpServiceDependencyConfig = hydra_public_http_config
 
-    async def oauth2_client_credentials(self, client_id: str, client_secret: str, scope: str) -> str:
+    @classmethod
+    def build_bearer_header(cls, client_id: HydraClientId, client_secret: HydraClientSecret) -> str:
+        """Build the bearer header.
+
+        Args:
+            client_id (str): The client ID.
+            client_secret (str): The client secret.
+
+        Returns:
+            str: The bearer header.
+        """
+        auth_string: str = f"{client_id}:{client_secret}"
+        auth_bytes: bytes = auth_string.encode("utf-8")
+        auth_b64: str = b64encode(auth_bytes).decode("utf-8")
+        return f"Basic {auth_b64}"
+
+    async def oauth2_client_credentials(
+        self, client_id: HydraClientId, client_secret: HydraClientSecret, scopes: list[str]
+    ) -> HydraAccessToken:
         """Get the OAuth2 client credentials.
 
         Args:
             client_id (str): The client ID.
             client_secret (str): The client secret.
-            scope (str): The scope.
+            scopes (list[str]): The scopes
 
         Returns:
             str: The access token.
@@ -131,18 +150,13 @@ class HydraOAuth2ClientCredentialsService:
         Raises:
             HydraOperationError: If the client credentials request fails.
         """
-        # Create base64 encoded Basic Auth header
-        auth_string = f"{client_id}:{client_secret}"
-        auth_bytes = auth_string.encode("utf-8")
-        auth_b64 = b64encode(auth_bytes).decode("utf-8")
-
         async with aiohttp.ClientSession(
             base_url=str(self._hydra_public_http_config.url),
         ) as session:
             async with session.post(
                 url=self.CLIENT_CREDENTIALS_ENDPOINT,
-                headers={"Authorization": f"Basic {auth_b64}"},
-                data={"grant_type": "client_credentials", "scope": scope},
+                headers={"Authorization": self.build_bearer_header(client_id, client_secret)},
+                data={"grant_type": "client_credentials", "scope": " ".join(scopes)},
             ) as response:
                 response_data = await response.json()
                 if response.status != HTTPStatus.OK:
