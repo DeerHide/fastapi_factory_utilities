@@ -1,6 +1,7 @@
 """Unit tests for the Kratos session authentication."""
 
 from http import HTTPStatus
+from typing import TypeAlias
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -8,11 +9,19 @@ from fastapi import HTTPException, Request
 
 from fastapi_factory_utilities.core.security.kratos import KratosSessionAuthenticationService
 from fastapi_factory_utilities.core.services.kratos import (
+    KratosGenericWhoamiService,
+    KratosIdentityObject,
     KratosOperationError,
-    KratosService,
     KratosSessionInvalidError,
     KratosSessionObject,
+    KratosTraitsObject,
+    MetadataObject,
 )
+
+# Type alias for concrete session object used in tests
+ConcreteKratosSessionObject: TypeAlias = KratosSessionObject[
+    KratosIdentityObject[KratosTraitsObject, MetadataObject, MetadataObject]
+]
 
 
 class TestKratosSessionAuthenticationService:
@@ -31,22 +40,24 @@ class TestKratosSessionAuthenticationService:
 
     @pytest.fixture
     def mock_kratos_service(self) -> AsyncMock:
-        """Create a mock KratosService.
+        """Create a mock KratosGenericWhoamiService.
 
         Returns:
-            AsyncMock: A mock KratosService object.
+            AsyncMock: A mock KratosGenericWhoamiService object.
         """
-        return AsyncMock(spec=KratosService)
+        return AsyncMock(spec=KratosGenericWhoamiService)
 
     @pytest.fixture
-    def session_auth(self, mock_kratos_service: AsyncMock) -> KratosSessionAuthenticationService:
+    def session_auth(
+        self, mock_kratos_service: AsyncMock
+    ) -> KratosSessionAuthenticationService[ConcreteKratosSessionObject]:
         """Create a KratosSessionAuthenticationService instance.
 
         Args:
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
 
         Returns:
-            KratosSessionAuthenticationService: A KratosSessionAuthenticationService instance.
+            KratosSessionAuthenticationService[ConcreteKratosSessionObject]: A KratosSessionAuthenticationService instance.
         """
         return KratosSessionAuthenticationService(kratos_service=mock_kratos_service)
 
@@ -54,7 +65,7 @@ class TestKratosSessionAuthenticationService:
         """Test initialization with default values.
 
         Args:
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
         """
         auth = KratosSessionAuthenticationService(kratos_service=mock_kratos_service)
         assert auth._cookie_name == "ory_kratos_session"  # pylint: disable=protected-access
@@ -64,7 +75,7 @@ class TestKratosSessionAuthenticationService:
         """Test initialization with custom values.
 
         Args:
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
         """
         auth = KratosSessionAuthenticationService(
             kratos_service=mock_kratos_service, cookie_name="custom_cookie", raise_exception=False
@@ -77,7 +88,7 @@ class TestKratosSessionAuthenticationService:
 
         Args:
             mock_request (MagicMock): Mock request object.
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
         """
         mock_request.cookies = {"ory_kratos_session": "test_cookie"}
         auth = KratosSessionAuthenticationService(kratos_service=mock_kratos_service)
@@ -89,7 +100,7 @@ class TestKratosSessionAuthenticationService:
 
         Args:
             mock_request (MagicMock): Mock request object.
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
         """
         auth = KratosSessionAuthenticationService(kratos_service=mock_kratos_service)
         cookie = auth._extract_cookie(mock_request)  # pylint: disable=protected-access
@@ -100,13 +111,13 @@ class TestKratosSessionAuthenticationService:
         self,
         mock_request: MagicMock,
         mock_kratos_service: AsyncMock,
-        session_auth: KratosSessionAuthenticationService,
+        session_auth: KratosSessionAuthenticationService[ConcreteKratosSessionObject],
     ) -> None:
         """Test successful session validation.
 
         Args:
             mock_request (MagicMock): Mock request object.
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
             session_auth (KratosSessionAuthenticationService): KratosSessionAuthenticationService instance.
         """
         mock_request.cookies = {"ory_kratos_session": "valid_cookie"}
@@ -122,7 +133,7 @@ class TestKratosSessionAuthenticationService:
     async def test_authenticate_with_missing_cookie_raise_exception(
         self,
         mock_request: MagicMock,
-        session_auth: KratosSessionAuthenticationService,
+        session_auth: KratosSessionAuthenticationService[ConcreteKratosSessionObject],
     ) -> None:
         """Test behavior when cookie is missing and raise_exception is True.
 
@@ -146,7 +157,7 @@ class TestKratosSessionAuthenticationService:
 
         Args:
             mock_request (MagicMock): Mock request object.
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
         """
         auth = KratosSessionAuthenticationService(kratos_service=mock_kratos_service, raise_exception=False)
         await auth.authenticate(mock_request)
@@ -162,13 +173,13 @@ class TestKratosSessionAuthenticationService:
         self,
         mock_request: MagicMock,
         mock_kratos_service: AsyncMock,
-        session_auth: KratosSessionAuthenticationService,
+        session_auth: KratosSessionAuthenticationService[ConcreteKratosSessionObject],
     ) -> None:
         """Test behavior when session is invalid and raise_exception is True.
 
         Args:
             mock_request (MagicMock): Mock request object.
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
             session_auth (KratosSessionAuthenticationService): KratosSessionAuthenticationService instance.
         """
         mock_request.cookies = {"ory_kratos_session": "invalid_cookie"}
@@ -190,7 +201,7 @@ class TestKratosSessionAuthenticationService:
 
         Args:
             mock_request (MagicMock): Mock request object.
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
         """
         auth = KratosSessionAuthenticationService(kratos_service=mock_kratos_service, raise_exception=False)
         mock_request.cookies = {"ory_kratos_session": "invalid_cookie"}
@@ -209,13 +220,13 @@ class TestKratosSessionAuthenticationService:
         self,
         mock_request: MagicMock,
         mock_kratos_service: AsyncMock,
-        session_auth: KratosSessionAuthenticationService,
+        session_auth: KratosSessionAuthenticationService[ConcreteKratosSessionObject],
     ) -> None:
         """Test behavior when operation error occurs and raise_exception is True.
 
         Args:
             mock_request (MagicMock): Mock request object.
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
             session_auth (KratosSessionAuthenticationService): KratosSessionAuthenticationService instance.
         """
         mock_request.cookies = {"ory_kratos_session": "valid_cookie"}
@@ -237,7 +248,7 @@ class TestKratosSessionAuthenticationService:
 
         Args:
             mock_request (MagicMock): Mock request object.
-            mock_kratos_service (AsyncMock): Mock KratosService object.
+            mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
         """
         auth = KratosSessionAuthenticationService(kratos_service=mock_kratos_service, raise_exception=False)
         mock_request.cookies = {"ory_kratos_session": "valid_cookie"}

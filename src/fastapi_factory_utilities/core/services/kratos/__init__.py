@@ -1,13 +1,51 @@
 """Kratos service module."""
 
-from .exceptions import KratosOperationError, KratosSessionInvalidError
-from .objects import KratosSessionObject
-from .services import KratosService, depends_kratos_service
+from .enums import (
+    AuthenticationMethodEnum,
+    AuthenticatorAssuranceLevelEnum,
+    KratosFlowTypeEnum,
+    KratosIdentityPatchOpEnum,
+    KratosIdentityStateEnum,
+)
+from .exceptions import KratosIdentityNotFoundError, KratosOperationError, KratosSessionInvalidError
+from .objects import (
+    KratosIdentityObject,
+    KratosRecoveryAddressObject,
+    KratosSessionObject,
+    KratosTraitsObject,
+    MetadataObject,
+)
+from .services import KratosGenericWhoamiService, KratosIdentityGenericService, KratosIdentityPatchObject
+from .types import (
+    KratosExternalId,
+    KratosIdentityId,
+    KratosProvider,
+    KratosRecoveryCode,
+    KratosRecoveryLink,
+    KratosSchemaId,
+)
 
 __all__: list[str] = [
+    "AuthenticationMethodEnum",
+    "AuthenticatorAssuranceLevelEnum",
+    "KratosExternalId",
+    "KratosFlowTypeEnum",
+    "KratosGenericWhoamiService",
+    "KratosIdentityGenericService",
+    "KratosIdentityId",
+    "KratosIdentityNotFoundError",
+    "KratosIdentityObject",
+    "KratosIdentityPatchObject",
+    "KratosIdentityPatchOpEnum",
+    "KratosIdentityStateEnum",
     "KratosOperationError",
-    "KratosService",
+    "KratosProvider",
+    "KratosRecoveryAddressObject",
+    "KratosRecoveryCode",
+    "KratosRecoveryLink",
+    "KratosSchemaId",
     "KratosSessionInvalidError",
     "KratosSessionObject",
-    "depends_kratos_service",
+    "KratosTraitsObject",
+    "MetadataObject",
 ]
