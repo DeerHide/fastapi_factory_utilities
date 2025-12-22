@@ -12,7 +12,7 @@ from ..exceptions import AiopikaPluginBaseError
 from ..exchange import Exchange
 from ..message import GenericMessage
 
-GenericMessageType = TypeVar("GenericMessaType", bound=GenericMessage[Any])
+GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])  # pylint: disable=invalid-name
 
 
 class AbstractPublisher(AbstractAiopikaResource, Generic[GenericMessageType]):

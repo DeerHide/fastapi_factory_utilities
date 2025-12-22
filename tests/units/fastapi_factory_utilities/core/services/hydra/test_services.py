@@ -38,8 +38,8 @@ class MockIntrospectObject(HydraTokenIntrospectObject):
     pass
 
 
-@pytest.fixture
-def http_config() -> HttpServiceDependencyConfig:
+@pytest.fixture(name="http_config")
+def fixture_http_config() -> HttpServiceDependencyConfig:
     """Create an HttpServiceDependencyConfig for testing.
 
     Returns:
@@ -48,8 +48,8 @@ def http_config() -> HttpServiceDependencyConfig:
     return HttpServiceDependencyConfig(url=HttpUrl("https://hydra.example.com"))
 
 
-@pytest.fixture
-def http_config_admin() -> HttpServiceDependencyConfig:
+@pytest.fixture(name="http_config_admin")
+def fixture_http_config_admin() -> HttpServiceDependencyConfig:
     """Create an admin HttpServiceDependencyConfig for testing.
 
     Returns:
@@ -58,8 +58,8 @@ def http_config_admin() -> HttpServiceDependencyConfig:
     return HttpServiceDependencyConfig(url=HttpUrl("https://hydra-admin.example.com"))
 
 
-@pytest.fixture
-def http_config_public() -> HttpServiceDependencyConfig:
+@pytest.fixture(name="http_config_public")
+def fixture_http_config_public() -> HttpServiceDependencyConfig:
     """Create a public HttpServiceDependencyConfig for testing.
 
     Returns:
@@ -68,8 +68,8 @@ def http_config_public() -> HttpServiceDependencyConfig:
     return HttpServiceDependencyConfig(url=HttpUrl("https://hydra-public.example.com"))
 
 
-@pytest.fixture
-def mock_introspect_data() -> dict[str, Any]:
+@pytest.fixture(name="mock_introspect_data")
+def fixture_mock_introspect_data() -> dict[str, Any]:
     """Create mock introspect data.
 
     Returns:
@@ -90,8 +90,8 @@ def mock_introspect_data() -> dict[str, Any]:
     }
 
 
-@pytest.fixture
-def mock_jwks_data() -> dict[str, Any]:
+@pytest.fixture(name="mock_jwks_data")
+def fixture_mock_jwks_data() -> dict[str, Any]:
     """Create mock JWKS data.
 
     Returns:
@@ -157,9 +157,9 @@ class TestHydraIntrospectGenericService:
             hydra_public_http_config=http_config_public,
         )
 
-        assert service._hydra_admin_http_config == http_config_admin  # type: ignore[attr-defined]
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined]
-        assert service._concreate_introspect_object_class == MockIntrospectObject  # type: ignore[attr-defined]
+        assert service._hydra_admin_http_config == http_config_admin  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access # pylint: disable=protected-access
+        assert service._concreate_introspect_object_class == MockIntrospectObject  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service.INTROSPECT_ENDPOINT == "/admin/oauth2/introspect"
         assert service.WELLKNOWN_JWKS_ENDPOINT == "/.well-known/jwks.json"
 
@@ -481,9 +481,9 @@ class TestHydraIntrospectService:
             hydra_public_http_config=http_config_public,
         )
 
-        assert service._hydra_admin_http_config == http_config_admin  # type: ignore[attr-defined]
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined]
-        assert service._concreate_introspect_object_class == HydraTokenIntrospectObject  # type: ignore[attr-defined]
+        assert service._hydra_admin_http_config == http_config_admin  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access # pylint: disable=protected-access
+        assert service._concreate_introspect_object_class == HydraTokenIntrospectObject  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert isinstance(service, HydraIntrospectGenericService)
 
     @pytest.mark.asyncio
@@ -536,7 +536,7 @@ class TestHydraOAuth2ClientCredentialsService:
         """
         service = HydraOAuth2ClientCredentialsService(hydra_public_http_config=http_config_public)
 
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined]
+        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service.CLIENT_CREDENTIALS_ENDPOINT == "/oauth2/token"
 
     def test_build_bearer_header(self) -> None:
@@ -728,8 +728,8 @@ class TestDependencyInjectionFunctions:
         service = depends_hydra_introspect_service(dependency_config=dependency_config)
 
         assert isinstance(service, HydraIntrospectService)
-        assert service._hydra_admin_http_config == http_config_admin  # type: ignore[attr-defined]
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined]
+        assert service._hydra_admin_http_config == http_config_admin  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access # pylint: disable=protected-access
 
     def test_depends_hydra_introspect_service_missing_admin(
         self, http_config_public: HttpServiceDependencyConfig
@@ -782,7 +782,7 @@ class TestDependencyInjectionFunctions:
         service = depends_hydra_oauth2_client_credentials_service(dependency_config=dependency_config)
 
         assert isinstance(service, HydraOAuth2ClientCredentialsService)
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined]
+        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     def test_depends_hydra_oauth2_client_credentials_service_missing_public(self) -> None:
         """Test depends_hydra_oauth2_client_credentials_service raises error when hydra_public is missing."""

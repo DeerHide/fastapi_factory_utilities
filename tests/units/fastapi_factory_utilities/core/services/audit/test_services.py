@@ -38,8 +38,8 @@ class ConcreteAuditPublisherService(AbstractAuditPublisherService[MockAuditEvent
         return RoutingKey(f"audit.{audit_event.where}.{audit_event.what}.{audit_event.why}")
 
 
-@pytest.fixture
-def mock_publisher() -> AbstractPublisher[GenericMessage[MockAuditEventObject]]:
+@pytest.fixture(name="mock_publisher")
+def fixture_mock_publisher() -> AbstractPublisher[GenericMessage[MockAuditEventObject]]:
     """Create a mock publisher for testing.
 
     Returns:
@@ -48,8 +48,8 @@ def mock_publisher() -> AbstractPublisher[GenericMessage[MockAuditEventObject]]:
     return MagicMock(spec=AbstractPublisher)
 
 
-@pytest.fixture
-def service_name() -> ServiceName:
+@pytest.fixture(name="service_name")
+def fixutre_service_name() -> ServiceName:
     """Create a service name for testing.
 
     Returns:
@@ -58,8 +58,8 @@ def service_name() -> ServiceName:
     return ServiceName("test_service")
 
 
-@pytest.fixture
-def audit_event() -> MockAuditEventObject:
+@pytest.fixture(name="audit_event")
+def fixture_audit_event() -> MockAuditEventObject:
     """Create an audit event for testing.
 
     Returns:
@@ -90,8 +90,8 @@ class TestAbstractAuditPublisherService:
         """
         service = ConcreteAuditPublisherService(sender=service_name, publisher=mock_publisher)
 
-        assert service._sender == service_name  # type: ignore[attr-defined]
-        assert service._publisher == mock_publisher  # type: ignore[attr-defined]
+        assert service._sender == service_name  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._publisher == mock_publisher  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     @pytest.mark.asyncio
     async def test_publish_success(
@@ -226,4 +226,3 @@ class TestAbstractAuditPublisherService:
         assert message.data.where == audit_event.where
         assert message.data.when == audit_event.when
         assert message.data.who == audit_event.who
-

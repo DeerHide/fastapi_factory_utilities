@@ -57,7 +57,8 @@ class TestKratosSessionAuthenticationService:
             mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
 
         Returns:
-            KratosSessionAuthenticationService[ConcreteKratosSessionObject]: A KratosSessionAuthenticationService instance.
+            KratosSessionAuthenticationService[ConcreteKratosSessionObject]: A
+                KratosSessionAuthenticationService instance.
         """
         return KratosSessionAuthenticationService(kratos_service=mock_kratos_service)
 

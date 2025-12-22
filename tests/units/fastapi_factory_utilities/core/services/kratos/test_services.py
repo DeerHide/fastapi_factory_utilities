@@ -1,5 +1,6 @@
 """Unit tests for the Kratos services."""
 
+import datetime
 import json
 import uuid
 from http import HTTPStatus
@@ -43,8 +44,8 @@ class MockIdentityObject(BaseModel):
     data: dict[str, Any]
 
 
-@pytest.fixture
-def http_config() -> HttpServiceDependencyConfig:
+@pytest.fixture(name="http_config")
+def fixture_http_config() -> HttpServiceDependencyConfig:
     """Create an HttpServiceDependencyConfig for testing.
 
     Returns:
@@ -53,8 +54,8 @@ def http_config() -> HttpServiceDependencyConfig:
     return HttpServiceDependencyConfig(url=HttpUrl("https://kratos.example.com"))
 
 
-@pytest.fixture
-def mock_session_data() -> dict[str, Any]:
+@pytest.fixture(name="mock_session_data")
+def fixture_mock_session_data() -> dict[str, Any]:
     """Create mock session data.
 
     Returns:
@@ -67,8 +68,8 @@ def mock_session_data() -> dict[str, Any]:
     }
 
 
-@pytest.fixture
-def mock_identity_data() -> dict[str, Any]:
+@pytest.fixture(name="mock_identity_data")
+def fixture_mock_identity_data() -> dict[str, Any]:
     """Create mock identity data.
 
     Returns:
@@ -81,8 +82,8 @@ def mock_identity_data() -> dict[str, Any]:
     }
 
 
-@pytest.fixture
-def identity_id() -> KratosIdentityId:
+@pytest.fixture(name="identity_id")
+def fixture_identity_id() -> KratosIdentityId:
     """Create a test identity ID.
 
     Returns:
@@ -128,8 +129,8 @@ class TestKratosGenericWhoamiService:
 
         service = ConcreteWhoamiService(kratos_public_http_config=http_config)
 
-        assert service._http_config == http_config  # type: ignore[attr-defined]
-        assert service._concreate_session_object_class == MockSessionObject  # type: ignore[attr-defined]
+        assert service._http_config == http_config  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._concreate_session_object_class == MockSessionObject  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service.COOKIE_NAME == "ory_kratos_session"
 
     @pytest.mark.asyncio
@@ -350,9 +351,9 @@ class TestKratosIdentityGenericService:
 
         service = ConcreteIdentityService(kratos_admin_http_config=http_config)
 
-        assert service._http_config == http_config  # type: ignore[attr-defined]
-        assert service._concreate_identity_object_class == MockIdentityObject  # type: ignore[attr-defined]
-        assert service._concreate_session_object_class == MockSessionObject  # type: ignore[attr-defined]
+        assert service._http_config == http_config  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._concreate_identity_object_class == MockIdentityObject  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._concreate_session_object_class == MockSessionObject  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service.IDENTITY_ENDPOINT == "/admin/identities"
 
     @pytest.mark.asyncio
@@ -365,9 +366,9 @@ class TestKratosIdentityGenericService:
         """Test successful get_identity call.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
-            identity_id (KratosIdentityId): Identity ID fixture.
-            mock_identity_data (dict[str, Any]): Mock identity data.
+            concrete_service: Concrete service fixture.
+            identity_id: Identity ID fixture.
+            mock_identity_data: Mock identity data.
         """
         service = concrete_service
 
@@ -408,7 +409,7 @@ class TestKratosIdentityGenericService:
         """Test get_identity error scenarios.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
             exception_class (type[Exception]): Exception class to raise.
             exception_kwargs (dict[str, Any]): Exception kwargs.
@@ -470,7 +471,7 @@ class TestKratosIdentityGenericService:
         """Test get_identity with ValidationError.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
         """
         service = concrete_service
@@ -511,7 +512,7 @@ class TestKratosIdentityGenericService:
         """Test create_identity raises NotImplementedError.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
         """
         service = concrete_service
 
@@ -525,13 +526,13 @@ class TestKratosIdentityGenericService:
             await service.create_identity(identity=identity)
 
     @pytest.mark.parametrize(
-        "credentials_type,identifier,should_succeed",
+        "credentials_type,identifier",
         [
-            (AuthenticationMethodEnum.PASSWORD, None, True),
-            (AuthenticationMethodEnum.TOTP, None, True),
-            (AuthenticationMethodEnum.WEBAUTHN, None, True),
-            (AuthenticationMethodEnum.OIDC, "test_identifier", True),
-            (AuthenticationMethodEnum.SAML, "test_identifier", True),
+            (AuthenticationMethodEnum.PASSWORD, None),
+            (AuthenticationMethodEnum.TOTP, None),
+            (AuthenticationMethodEnum.WEBAUTHN, None),
+            (AuthenticationMethodEnum.OIDC, "test_identifier"),
+            (AuthenticationMethodEnum.SAML, "test_identifier"),
         ],
     )
     @pytest.mark.asyncio
@@ -541,16 +542,14 @@ class TestKratosIdentityGenericService:
         identity_id: KratosIdentityId,
         credentials_type: AuthenticationMethodEnum,
         identifier: str | None,
-        should_succeed: bool,
     ) -> None:
         """Test successful delete_identity_credentials scenarios.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
             credentials_type (AuthenticationMethodEnum): Credentials type.
             identifier (str | None): Identifier.
-            should_succeed (bool): Whether the operation should succeed.
         """
         service = concrete_service
 
@@ -600,7 +599,7 @@ class TestKratosIdentityGenericService:
         """Test delete_identity_credentials validation error scenarios.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
             credentials_type (AuthenticationMethodEnum): Credentials type.
             identifier (str | None): Identifier.
@@ -624,7 +623,7 @@ class TestKratosIdentityGenericService:
         """Test delete_identity_credentials error scenarios.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
         """
         service = concrete_service
@@ -665,7 +664,7 @@ class TestKratosIdentityGenericService:
         """Test successful delete_identity_sessions call.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
         """
         service = concrete_service
@@ -694,7 +693,7 @@ class TestKratosIdentityGenericService:
         """Test delete_identity_sessions error scenarios.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
         """
         service = concrete_service
@@ -732,7 +731,7 @@ class TestKratosIdentityGenericService:
         """Test successful delete_identity call.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
         """
         service = concrete_service
@@ -761,7 +760,7 @@ class TestKratosIdentityGenericService:
         """Test delete_identity error scenarios.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
         """
         service = concrete_service
@@ -813,7 +812,7 @@ class TestKratosIdentityGenericService:
         ],
     )
     @pytest.mark.asyncio
-    async def test_list_sessions_success(
+    async def test_list_sessions_success(  # noqa: PLR0913
         self,
         concrete_service: KratosIdentityGenericService[MockIdentityObject, MockSessionObject],
         identity_id: KratosIdentityId,
@@ -826,7 +825,7 @@ class TestKratosIdentityGenericService:
         """Test successful list_sessions scenarios.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
             active (bool): Active filter.
             page_size (int): Page size.
@@ -869,7 +868,7 @@ class TestKratosIdentityGenericService:
                 page_token=page_token,
             )
 
-        assert len(sessions) == 2
+        assert len(sessions) == len(sessions_data)
         assert next_token == expected_next_token
 
         # Verify query parameters
@@ -899,7 +898,7 @@ class TestKratosIdentityGenericService:
         """Test list_sessions error scenarios.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
             exception_class (type[Exception]): Exception class to raise.
             exception_kwargs (dict[str, Any]): Exception kwargs.
@@ -959,11 +958,9 @@ class TestKratosIdentityGenericService:
         """Test successful create_recovery_link call.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
         """
-        import datetime
-
         service = concrete_service
 
         expires_in = datetime.timedelta(hours=1)
@@ -1012,13 +1009,11 @@ class TestKratosIdentityGenericService:
         """Test create_recovery_link error scenarios.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
             exception_class (type[Exception]): Exception class to raise.
             exception_kwargs (dict[str, Any]): Exception kwargs.
         """
-        import datetime
-
         service = concrete_service
 
         expires_in = datetime.timedelta(hours=1)
@@ -1081,11 +1076,9 @@ class TestKratosIdentityGenericService:
         """Test that expires_in is correctly converted to seconds string.
 
         Args:
-            concrete_service (KratosIdentityGenericService[MockIdentityObject, MockSessionObject]): Concrete service fixture.
+            concrete_service: Concrete service fixture.
             identity_id (KratosIdentityId): Identity ID fixture.
         """
-        import datetime
-
         service = concrete_service
 
         # Test with different timedelta values

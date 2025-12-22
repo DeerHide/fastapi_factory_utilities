@@ -77,7 +77,6 @@ class KratosGenericWhoamiService(Generic[GenericKratosSessionObject]):
 
 
 GenericKratosIdentityObject = TypeVar("GenericKratosIdentityObject", bound=BaseModel)
-GenericKratosSessionObject = TypeVar("GenericKratosSessionObject", bound=BaseModel)
 
 
 class KratosIdentityPatchObject(BaseModel):

@@ -8,8 +8,6 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from typing import Any
-
 from fastapi_factory_utilities.core.services.audit.objects import (
     AuditableEntity,
     AuditEventObject,
@@ -83,7 +81,7 @@ class TestAuditableEntity:
             updated_at=datetime.datetime.now(datetime.timezone.utc),
         )
         audit_name = EntityName("test_entity")
-        entity._audit_name = audit_name  # type: ignore[attr-defined]
+        entity._audit_name = audit_name  # type: ignore[attr-defined] # pylint: disable=protected-access
 
         # Act
         result = entity.get_audit_name()
@@ -409,4 +407,3 @@ class TestAuditEventObject:
         assert restored.where == original.where
         assert restored.when == original.when
         assert restored.who == original.who
-

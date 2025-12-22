@@ -10,7 +10,7 @@ from ..abstract import AbstractAiopikaResource
 from ..message import GenericMessage
 from ..queue import Queue
 
-GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])
+GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])  # pylint: disable=invalid-name
 
 
 class AbstractListener(AbstractAiopikaResource, Generic[GenericMessageType]):
