@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import jwt
 import pytest
-from pydantic import BaseModel, HttpUrl, ValidationError
+from pydantic import HttpUrl, ValidationError
 
 from fastapi_factory_utilities.core.app import (
     DependencyConfig,
@@ -32,12 +32,10 @@ from fastapi_factory_utilities.core.services.hydra.types import (
 
 
 # Test model class for generic service testing
-class MockIntrospectObject(BaseModel):
+class MockIntrospectObject(HydraTokenIntrospectObject):
     """Mock introspect object for testing."""
 
-    active: bool
-    client_id: str
-    sub: str
+    pass
 
 
 @pytest.fixture
@@ -180,15 +178,10 @@ class TestHydraIntrospectGenericService:
         service = concrete_service
 
         token: HydraAccessToken = HydraAccessToken("test_token")
-        # Adjust mock data to match MockIntrospectObject
-        mock_data = {
-            "active": mock_introspect_data["active"],
-            "client_id": mock_introspect_data["client_id"],
-            "sub": mock_introspect_data["sub"],
-        }
+        # Use full mock data since MockIntrospectObject extends HydraTokenIntrospectObject
         mock_response = AsyncMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_response.json = AsyncMock(return_value=mock_introspect_data)
         mock_response.__aenter__ = AsyncMock(return_value=mock_response)
         mock_response.__aexit__ = AsyncMock(return_value=None)
 
@@ -200,9 +193,9 @@ class TestHydraIntrospectGenericService:
         with patch("aiohttp.ClientSession", return_value=mock_session):
             result: MockIntrospectObject = await service.introspect(token=token)
 
-        assert result.active == mock_data["active"]
-        assert result.client_id == mock_data["client_id"]
-        assert result.sub == mock_data["sub"]
+        assert result.active == mock_introspect_data["active"]
+        assert result.client_id == mock_introspect_data["client_id"]
+        assert result.sub == mock_introspect_data["sub"]
         mock_session.post.assert_called_once_with(url=service.INTROSPECT_ENDPOINT, data={"token": token})
 
     @pytest.mark.parametrize(
@@ -254,7 +247,7 @@ class TestHydraIntrospectGenericService:
                 await service.introspect(token=token)
 
             assert "Failed to introspect the token" in str(exc_info.value)
-            assert exc_info.value.status_code == status_code
+            assert exc_info.value.status_code == status_code  # type: ignore[attr-defined]
             assert exc_info.value.__cause__ == error
 
     @pytest.mark.asyncio
@@ -401,7 +394,7 @@ class TestHydraIntrospectGenericService:
                 await service.get_wellknown_jwks()
 
             assert "Failed to get the JWKS from the Hydra service" in str(exc_info.value)
-            assert exc_info.value.status_code == status_code
+            assert exc_info.value.status_code == status_code  # type: ignore[attr-defined]
             assert exc_info.value.__cause__ == error
 
     @pytest.mark.asyncio
