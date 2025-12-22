@@ -4,7 +4,7 @@ from aio_pika import ExchangeType
 from docker.models.containers import ExecResult
 from testcontainers.rabbitmq import RabbitMqContainer
 
-from fastapi_factory_utilities.core.plugins.aiopika import AiopikaPlugin, Exchange
+from fastapi_factory_utilities.core.plugins.aiopika import AiopikaPlugin, Exchange, ExchangeName
 
 
 def extract_exchange_names_from_output(output: bytes) -> list[str]:
@@ -49,7 +49,7 @@ class TestExchangeRabbitMQ:
     ) -> None:
         """Test the RabbitMQ exchange."""
         # Prepare the exchange
-        exchange: Exchange = Exchange(name="test_exchange", exchange_type=ExchangeType.FANOUT)
+        exchange: Exchange = Exchange(name=ExchangeName("test_exchange"), exchange_type=ExchangeType.FANOUT)
         exchange.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
         await exchange.setup()
 

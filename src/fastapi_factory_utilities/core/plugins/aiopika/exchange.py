@@ -6,6 +6,7 @@ from aio_pika.abc import AbstractExchange, ExchangeType, TimeoutType
 
 from .abstract import AbstractAiopikaResource
 from .exceptions import AiopikaPluginBaseError, AiopikaPluginExchangeNotDeclaredError
+from .types import ExchangeName
 
 
 class Exchange(AbstractAiopikaResource):
@@ -15,7 +16,7 @@ class Exchange(AbstractAiopikaResource):
 
     def __init__(  # pylint: disable=too-many-arguments # noqa: PLR0913
         self,
-        name: str,
+        name: ExchangeName,
         exchange_type: ExchangeType,
         durable: bool = True,
         auto_delete: bool = False,
@@ -25,7 +26,7 @@ class Exchange(AbstractAiopikaResource):
     ) -> None:
         """Initialize the exchange port."""
         super().__init__()
-        self._name: str = name
+        self._name: ExchangeName = name
         self._exchange_type: ExchangeType = exchange_type
         self._durable: bool = durable
         self._auto_delete: bool = auto_delete

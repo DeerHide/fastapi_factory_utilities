@@ -4,7 +4,7 @@ from aio_pika import ExchangeType
 from docker.models.containers import ExecResult
 from testcontainers.rabbitmq import RabbitMqContainer
 
-from fastapi_factory_utilities.core.plugins.aiopika import Exchange, Queue
+from fastapi_factory_utilities.core.plugins.aiopika import Exchange, ExchangeName, Queue, QueueName, RoutingKey
 from fastapi_factory_utilities.core.plugins.aiopika.plugins import AiopikaPlugin
 
 
@@ -51,10 +51,12 @@ class TestQueueRabbitMQ:
     ) -> None:
         """Test the RabbitMQ queue."""
         # Prepare the exchange
-        exchange: Exchange = Exchange(name="test_exchange", exchange_type=ExchangeType.FANOUT)
+        exchange: Exchange = Exchange(name=ExchangeName("test_exchange"), exchange_type=ExchangeType.FANOUT)
         exchange.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
         # Prepare the queue
-        queue: Queue = Queue(name="test_queue", exchange=exchange, routing_key="test_routing_key")
+        queue: Queue = Queue(
+            name=QueueName("test_queue"), exchange=exchange, routing_key=RoutingKey("test_routing_key")
+        )
         queue.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
 
         await exchange.setup()

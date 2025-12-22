@@ -7,6 +7,7 @@ from aio_pika.abc import AbstractQueue, TimeoutType
 from .abstract import AbstractAiopikaResource
 from .exceptions import AiopikaPluginBaseError, AiopikaPluginQueueNotDeclaredError
 from .exchange import Exchange
+from .types import QueueName, RoutingKey
 
 
 class Queue(AbstractAiopikaResource):
@@ -16,9 +17,9 @@ class Queue(AbstractAiopikaResource):
 
     def __init__(  # pylint: disable=too-many-arguments # noqa: PLR0913
         self,
-        name: str,
+        name: QueueName,
         exchange: Exchange,
-        routing_key: str,
+        routing_key: RoutingKey,
         durable: bool = True,
         auto_delete: bool = False,
         exclusive: bool = True,
@@ -27,8 +28,8 @@ class Queue(AbstractAiopikaResource):
         """Initialize the queue."""
         super().__init__()
         # Initialize the queue properties
-        self._name: str = name
-        self._routing_key: str = routing_key
+        self._name: QueueName = name
+        self._routing_key: RoutingKey = routing_key
         self._durable: bool = durable
         self._auto_delete: bool = auto_delete
         self._exclusive: bool = exclusive

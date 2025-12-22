@@ -8,12 +8,14 @@ from pydantic import BaseModel, Field
 
 from fastapi_factory_utilities.core.plugins.aiopika import (
     AbstractListener,
-    AbstractMessage,
     AbstractPublisher,
     AiopikaPlugin,
     Exchange,
+    ExchangeName,
+    GenericMessage,
     Queue,
-    SenderModel,
+    QueueName,
+    RoutingKey,
 )
 
 
@@ -23,7 +25,7 @@ class BodyMessageForTest(BaseModel):
     message: str = Field(description="The message.")
 
 
-class MessageForTest(AbstractMessage[BodyMessageForTest]):
+class MessageForTest(GenericMessage[BodyMessageForTest]):
     """Test message."""
 
 
@@ -57,10 +59,12 @@ class TestListenerRabbitMQ:
         """Test the RabbitMQ listener."""
         assert aiopika_plugin is not None
         # Prepare the exchange
-        exchange: Exchange = Exchange(name="test_exchange", exchange_type=ExchangeType.FANOUT)
+        exchange: Exchange = Exchange(name=ExchangeName("test_exchange"), exchange_type=ExchangeType.FANOUT)
         exchange.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
         # Prepare the queue
-        queue: Queue = Queue(name="test_queue", exchange=exchange, routing_key="test_routing_key")
+        queue: Queue = Queue(
+            name=QueueName("test_queue"), exchange=exchange, routing_key=RoutingKey("test_routing_key")
+        )
         queue.set_robust_connection(robust_connection=aiopika_plugin.robust_connection)
         # Prepare the publisher
         publisher: PublisherForTest = PublisherForTest(exchange=exchange)
@@ -78,10 +82,8 @@ class TestListenerRabbitMQ:
         await asyncio.sleep(1)  # Give listener time to start
         # Publish the message
         await publisher.publish(
-            message=MessageForTest(
-                sender=SenderModel(name="test_sender"), data=BodyMessageForTest(message=str(uuid4()))
-            ),
-            routing_key="test_routing_key",
+            message=MessageForTest(data=BodyMessageForTest(message=str(uuid4()))),
+            routing_key=RoutingKey("test_routing_key"),
         )
         # Wait for the message to be received
         for _ in range(10):

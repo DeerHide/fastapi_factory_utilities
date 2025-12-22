@@ -1,6 +1,5 @@
 """Provides the message for the Aiopika plugin."""
 
-from enum import StrEnum, auto
 from typing import ClassVar, Generic, TypeVar
 
 from aio_pika.abc import AbstractIncomingMessage, DeliveryMode, HeadersType
@@ -10,29 +9,11 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 GenericMessageData = TypeVar("GenericMessageData", bound=BaseModel)
 
 
-class SenderModel(BaseModel):
-    """Sender model."""
-
-    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", frozen=True)
-
-    name: str = Field(description="The name of the sender.")
-
-
-class MessageTypeEnum(StrEnum):
-    """Message type enum."""
-
-    FUNCTIONAL_EVENT = auto()
-
-
-class AbstractMessage(BaseModel, Generic[GenericMessageData]):
+class GenericMessage(BaseModel, Generic[GenericMessageData]):
     """Abstract message."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", frozen=True)
 
-    message_type: MessageTypeEnum = Field(
-        description="The type of the message.", default=MessageTypeEnum.FUNCTIONAL_EVENT
-    )
-    sender: SenderModel = Field(description="The sender of the message.")
     data: GenericMessageData = Field(description="The data of the message.")
 
     _incoming_message: AbstractIncomingMessage | None = PrivateAttr()

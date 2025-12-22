@@ -7,13 +7,13 @@ from typing import Any, ClassVar, Generic, Self, TypeVar, cast, get_args
 from aio_pika.abc import AbstractIncomingMessage, ConsumerTag, TimeoutType
 
 from ..abstract import AbstractAiopikaResource
-from ..message import AbstractMessage
+from ..message import GenericMessage
 from ..queue import Queue
 
-GenericMessage = TypeVar("GenericMessage", bound=AbstractMessage[Any])
+GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])
 
 
-class AbstractListener(AbstractAiopikaResource, Generic[GenericMessage]):
+class AbstractListener(AbstractAiopikaResource, Generic[GenericMessageType]):
     """Abstract class for the listener port for the Aiopika plugin."""
 
     DEFAULT_OPERATION_TIMEOUT: ClassVar[TimeoutType] = 10.0
@@ -25,7 +25,7 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessage]):
         self._queue: Queue = queue
         self._consumer_tag: ConsumerTag | None = None
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
-        self._message_type: type[GenericMessage] = generic_args[0]
+        self._message_type: type[GenericMessageType] = generic_args[0]
 
     async def setup(self) -> Self:
         """Setup the listener."""
@@ -43,7 +43,7 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessage]):
 
     async def _on_message(self, incoming_message: AbstractIncomingMessage) -> None:
         """On message."""
-        message: GenericMessage = self._message_type.model_validate_json(incoming_message.body)
+        message: GenericMessageType = self._message_type.model_validate_json(incoming_message.body)
         message.set_incoming_message(incoming_message=incoming_message)
         await self.on_message(message=message)
 
@@ -60,11 +60,11 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessage]):
             await self._queue.queue.cancel(consumer_tag=self._consumer_tag)
 
     @abstractmethod
-    async def on_message(self, message: GenericMessage) -> None:
+    async def on_message(self, message: GenericMessageType) -> None:
         """On message.
 
         Args:
-            message (GenericMessage): The message.
+            message (GenericMessageType): The message.
 
         Returns:
             - None: The message is processed.

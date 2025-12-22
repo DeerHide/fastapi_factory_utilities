@@ -10,12 +10,12 @@ from pamqp.commands import Basic
 from ..abstract import AbstractAiopikaResource
 from ..exceptions import AiopikaPluginBaseError
 from ..exchange import Exchange
-from ..message import AbstractMessage
+from ..message import GenericMessage
 
-GenericMessage = TypeVar("GenericMessage", bound=AbstractMessage[Any])
+GenericMessageType = TypeVar("GenericMessaType", bound=GenericMessage[Any])
 
 
-class AbstractPublisher(AbstractAiopikaResource, Generic[GenericMessage]):
+class AbstractPublisher(AbstractAiopikaResource, Generic[GenericMessageType]):
     """Abstract class for the publisher port for the Aiopika plugin."""
 
     DEFAULT_OPERATION_TIMEOUT: ClassVar[TimeoutType] = 10.0
@@ -32,7 +32,7 @@ class AbstractPublisher(AbstractAiopikaResource, Generic[GenericMessage]):
         await self._exchange.setup()
         return self
 
-    async def publish(self, message: GenericMessage, routing_key: str) -> None:
+    async def publish(self, message: GenericMessageType, routing_key: str) -> None:
         """Publish a message."""
         # Transform the message to an Aiopika message
         aiopika_message: Message
