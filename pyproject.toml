@@ -45,7 +45,7 @@ url = "https://pypi.velmios.io/simple"
 priority = "explicit"
 
 [tool.poetry.dependencies]
-python = "~3.12"
+python = ">=3.12,<4.0"
 structlog = ">=24.1,<26.0"
 typer = "^0"
 pydantic = "^2.8.2"
