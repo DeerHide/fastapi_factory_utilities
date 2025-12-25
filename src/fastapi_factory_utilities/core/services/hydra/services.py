@@ -10,11 +10,7 @@ import jwt
 from fastapi import Depends
 from pydantic import ValidationError
 
-from fastapi_factory_utilities.core.app import (
-    DependencyConfig,
-    HttpServiceDependencyConfig,
-    depends_dependency_config,
-)
+from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource, AioHttpResourceDepends
 
 from .exceptions import HydraOperationError
 from .objects import HydraTokenIntrospectObject
@@ -31,17 +27,17 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
 
     def __init__(
         self,
-        hydra_admin_http_config: HttpServiceDependencyConfig,
-        hydra_public_http_config: HttpServiceDependencyConfig,
+        hydra_admin_http_resource: AioHttpClientResource,
+        hydra_public_http_resource: AioHttpClientResource,
     ) -> None:
         """Instanciate the Hydra introspect service.
 
         Args:
-            hydra_admin_http_config (HttpServiceDependencyConfig): The Hydra admin HTTP configuration.
-            hydra_public_http_config (HttpServiceDependencyConfig): The Hydra public HTTP configuration.
+            hydra_admin_http_resource (AioHttpClientResource): The Hydra admin HTTP resource.
+            hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
         """
-        self._hydra_admin_http_config: HttpServiceDependencyConfig = hydra_admin_http_config
-        self._hydra_public_http_config: HttpServiceDependencyConfig = hydra_public_http_config
+        self._hydra_admin_http_resource: AioHttpClientResource = hydra_admin_http_resource
+        self._hydra_public_http_resource: AioHttpClientResource = hydra_public_http_resource
         # Retrieve the concrete introspect object class
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
         self._concreate_introspect_object_class: type[HydraIntrospectObjectGeneric] = generic_args[0]
@@ -53,9 +49,7 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
             token (str): The token to introspect.
         """
         try:
-            async with aiohttp.ClientSession(
-                base_url=str(self._hydra_admin_http_config.url),
-            ) as session:
+            async with self._hydra_admin_http_resource.acquire_client_session() as session:
                 async with session.post(
                     url=self.INTROSPECT_ENDPOINT,
                     data={"token": token},
@@ -76,9 +70,7 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
     async def get_wellknown_jwks(self) -> jwt.PyJWKSet:
         """Get the JWKS from the Hydra service."""
         try:
-            async with aiohttp.ClientSession(
-                base_url=str(self._hydra_public_http_config.url),
-            ) as session:
+            async with self._hydra_public_http_resource.acquire_client_session() as session:
                 async with session.get(
                     url=self.WELLKNOWN_JWKS_ENDPOINT,
                 ) as response:
@@ -108,15 +100,14 @@ class HydraOAuth2ClientCredentialsService:
 
     def __init__(
         self,
-        hydra_public_http_config: HttpServiceDependencyConfig,
+        hydra_public_http_resource: AioHttpClientResource,
     ) -> None:
         """Instanciate the Hydra service.
 
         Args:
-            hydra_admin_http_config (HttpServiceDependencyConfig): The Hydra admin HTTP configuration.
-            hydra_public_http_config (HttpServiceDependencyConfig): The Hydra public HTTP configuration.
+            hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
         """
-        self._hydra_public_http_config: HttpServiceDependencyConfig = hydra_public_http_config
+        self._hydra_public_http_resource: AioHttpClientResource = hydra_public_http_resource
 
     @classmethod
     def build_bearer_header(cls, client_id: HydraClientId, client_secret: HydraClientSecret) -> str:
@@ -150,9 +141,7 @@ class HydraOAuth2ClientCredentialsService:
         Raises:
             HydraOperationError: If the client credentials request fails.
         """
-        async with aiohttp.ClientSession(
-            base_url=str(self._hydra_public_http_config.url),
-        ) as session:
+        async with self._hydra_public_http_resource.acquire_client_session() as session:
             async with session.post(
                 url=self.CLIENT_CREDENTIALS_ENDPOINT,
                 headers={"Authorization": self.build_bearer_header(client_id, client_secret)},
@@ -166,12 +155,12 @@ class HydraOAuth2ClientCredentialsService:
 
 
 def depends_hydra_oauth2_client_credentials_service(
-    dependency_config: Annotated[DependencyConfig, Depends(depends_dependency_config)],
+    hydra_public_http_resource: Annotated[AioHttpClientResource, Depends(AioHttpResourceDepends("hydra_public"))],
 ) -> HydraOAuth2ClientCredentialsService:
     """Dependency injection for the Hydra OAuth2 client credentials service.
 
     Args:
-        dependency_config (DependencyConfig): The dependency configuration.
+        hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
 
     Returns:
         HydraOAuth2ClientCredentialsService: The Hydra OAuth2 client credentials service instance.
@@ -179,21 +168,20 @@ def depends_hydra_oauth2_client_credentials_service(
     Raises:
         HydraOperationError: If the Hydra public dependency is not configured.
     """
-    if dependency_config.hydra_public is None:
-        raise HydraOperationError(message="Hydra public dependency not configured")
-
     return HydraOAuth2ClientCredentialsService(
-        hydra_public_http_config=dependency_config.hydra_public,
+        hydra_public_http_resource=hydra_public_http_resource,
     )
 
 
 def depends_hydra_introspect_service(
-    dependency_config: Annotated[DependencyConfig, Depends(depends_dependency_config)],
+    hydra_admin_http_resource: Annotated[AioHttpClientResource, Depends(AioHttpResourceDepends("hydra_admin"))],
+    hydra_public_http_resource: Annotated[AioHttpClientResource, Depends(AioHttpResourceDepends("hydra_public"))],
 ) -> HydraIntrospectService:
     """Dependency injection for the Hydra introspect service.
 
     Args:
-        dependency_config (DependencyConfig): The dependency configuration.
+        hydra_admin_http_resource (AioHttpClientResource): The Hydra admin HTTP resource.
+        hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
 
     Returns:
         HydraIntrospectService: The Hydra introspect service instance.
@@ -201,14 +189,7 @@ def depends_hydra_introspect_service(
     Raises:
         HydraOperationError: If the Hydra admin dependency is not configured.
     """
-    if getattr(dependency_config, "hydra_admin", None) is None:
-        raise HydraOperationError(message="Hydra admin dependency not configured")
-    assert dependency_config.hydra_admin is not None
-    if getattr(dependency_config, "hydra_public", None) is None:
-        raise HydraOperationError(message="Hydra public dependency not configured")
-    assert dependency_config.hydra_public is not None
-
     return HydraIntrospectService(
-        hydra_admin_http_config=dependency_config.hydra_admin,
-        hydra_public_http_config=dependency_config.hydra_public,
+        hydra_admin_http_resource=hydra_admin_http_resource,
+        hydra_public_http_resource=hydra_public_http_resource,
     )
