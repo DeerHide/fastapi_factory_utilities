@@ -12,11 +12,12 @@ from typing import Any
 
 import aiohttp
 import certifi
-from fastapi_factory_utilities.core.services.http.configs import HttpServiceDependencyConfig
-from fastapi_factory_utilities.core.services.http.exceptions import HttpServiceDependencyConfigError
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.trace import TracerProvider
 from structlog.stdlib import BoundLogger, get_logger
+
+from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
+from fastapi_factory_utilities.core.plugins.aiohttp.exceptions import AioHttpClientError
 
 _logger: BoundLogger = get_logger()
 
@@ -50,7 +51,7 @@ class AioHttpClientResource:
         # If the SSL CA path is provided, use it to create the SSL context.
         if dependency_config.ssl_ca_path is not None:
             if not os.path.exists(dependency_config.ssl_ca_path):
-                raise HttpServiceDependencyConfigError(f"SSL CA path {dependency_config.ssl_ca_path} does not exist.")
+                raise AioHttpClientError(f"SSL CA path {dependency_config.ssl_ca_path} does not exist.")
             ssl_context = ssl.create_default_context(cafile=dependency_config.ssl_ca_path)
         else:
             # If no SSL CA path is provided, use the default SSL CA path from certifi.
@@ -60,11 +61,9 @@ class AioHttpClientResource:
             return ssl_context
 
         if not os.path.exists(dependency_config.ssl_certfile):
-            raise HttpServiceDependencyConfigError(
-                f"SSL certificate file {dependency_config.ssl_certfile} does not exist."
-            )
+            raise AioHttpClientError(f"SSL certificate file {dependency_config.ssl_certfile} does not exist.")
         if not os.path.exists(dependency_config.ssl_keyfile):
-            raise HttpServiceDependencyConfigError(f"SSL key file {dependency_config.ssl_keyfile} does not exist.")
+            raise AioHttpClientError(f"SSL key file {dependency_config.ssl_keyfile} does not exist.")
 
         # Load the SSL certificate and key files into the SSL context.
         if dependency_config.ssl_keyfile_password is not None:

@@ -9,9 +9,7 @@ import aiohttp
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from structlog.stdlib import BoundLogger, get_logger
 
-from fastapi_factory_utilities.core.app import (
-    HttpServiceDependencyConfig,
-)
+from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource
 from fastapi_factory_utilities.core.utils.ory import get_next_page_token_from_link_header
 
 from .enums import AuthenticationMethodEnum, KratosFlowTypeEnum, KratosIdentityPatchOpEnum
@@ -28,13 +26,13 @@ class KratosGenericWhoamiService(Generic[GenericKratosSessionObject]):
 
     COOKIE_NAME: str = "ory_kratos_session"
 
-    def __init__(self, kratos_public_http_config: HttpServiceDependencyConfig) -> None:
+    def __init__(self, kratos_public_http_resource: AioHttpClientResource) -> None:
         """Initialize the KratosService class.
 
         Args:
-            kratos_public_http_config (HttpServiceDependencyConfig): Kratos public HTTP configuration.
+            kratos_public_http_resource (AioHttpClientResource): Kratos public HTTP resource.
         """
-        self._http_config: HttpServiceDependencyConfig = kratos_public_http_config
+        self._kratos_public_http_resource: AioHttpClientResource = kratos_public_http_resource
         # Retrieve the concrete introspect object class
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
         self._concreate_session_object_class: type[GenericKratosSessionObject] = generic_args[0]
@@ -53,7 +51,7 @@ class KratosGenericWhoamiService(Generic[GenericKratosSessionObject]):
             KratosSessionInvalidError: If the Kratos session is invalid.
         """
         cookies: dict[str, str] = {self.COOKIE_NAME: cookie_value}
-        async with aiohttp.ClientSession(base_url=str(self._http_config.url), cookies=cookies) as session:
+        async with self._kratos_public_http_resource.acquire_client_session(cookies=cookies) as session:
             async with session.get(
                 url="/sessions/whoami",
             ) as response:
@@ -96,13 +94,13 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
     IDENTITY_ENDPOINT: str = "/admin/identities"
     ADMIN_ENDPOINT: str = "/admin"
 
-    def __init__(self, kratos_admin_http_config: HttpServiceDependencyConfig) -> None:
+    def __init__(self, kratos_admin_http_resource: AioHttpClientResource) -> None:
         """Initialize the KratosIdentityGenericService class.
 
         Args:
-            kratos_admin_http_config (HttpServiceDependencyConfig): Kratos admin HTTP configuration.
+            kratos_admin_http_resource (AioHttpClientResource): Kratos admin HTTP resource.
         """
-        self._http_config: HttpServiceDependencyConfig = kratos_admin_http_config
+        self._kratos_admin_http_resource: AioHttpClientResource = kratos_admin_http_resource
         # Retrieve the concrete introspect object class
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
         self._concreate_identity_object_class: type[GenericKratosIdentityObject] = generic_args[0]
@@ -118,7 +116,7 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
             GenericKratosIdentityObject: Kratos identity object.
         """
         try:
-            async with aiohttp.ClientSession(base_url=str(self._http_config.url)) as session:
+            async with self._kratos_admin_http_resource.acquire_client_session() as session:
                 async with session.get(url=f"{self.IDENTITY_ENDPOINT}/{identity_id}") as response:
                     response.raise_for_status()
                     return self._concreate_identity_object_class.model_validate(await response.json())
@@ -150,7 +148,7 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
             GenericKratosIdentityObject: The updated identity.
         """
         try:
-            async with aiohttp.ClientSession(base_url=str(self._http_config.url)) as session:
+            async with self._kratos_admin_http_resource.acquire_client_session() as session:
                 async with session.patch(url=f"{self.IDENTITY_ENDPOINT}/{identity_id}", json=patches) as response:
                     response.raise_for_status()
                     identity: GenericKratosIdentityObject = self._concreate_identity_object_class.model_validate(
@@ -202,7 +200,7 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
             query_params["identifier"] = identifier
 
         try:
-            async with aiohttp.ClientSession(base_url=str(self._http_config.url)) as session:
+            async with self._kratos_admin_http_resource.acquire_client_session() as session:
                 async with session.delete(
                     url=f"{self.IDENTITY_ENDPOINT}/{identity_id}/credentials", params=query_params
                 ) as response:
@@ -234,7 +232,7 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
             None: If the sessions are deleted successfully.
         """
         try:
-            async with aiohttp.ClientSession(base_url=str(self._http_config.url)) as session:
+            async with self._kratos_admin_http_resource.acquire_client_session() as session:
                 async with session.delete(url=f"{self.IDENTITY_ENDPOINT}/{identity_id}/sessions") as response:
                     response.raise_for_status()
         except (aiohttp.ClientResponseError, json.JSONDecodeError, ValidationError) as e:
@@ -260,7 +258,7 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
             None: If the identity is deleted successfully.
         """
         try:
-            async with aiohttp.ClientSession(base_url=str(self._http_config.url)) as session:
+            async with self._kratos_admin_http_resource.acquire_client_session() as session:
                 async with session.delete(url=f"{self.IDENTITY_ENDPOINT}/{identity_id}") as response:
                     response.raise_for_status()
         except (aiohttp.ClientResponseError, json.JSONDecodeError, ValidationError) as e:
@@ -300,7 +298,7 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
             query_params["page_token"] = page_token
 
         try:
-            async with aiohttp.ClientSession(base_url=str(self._http_config.url)) as session:
+            async with self._kratos_admin_http_resource.acquire_client_session() as session:
                 async with session.get(
                     url=f"{self.IDENTITY_ENDPOINT}/{identity_id}/sessions", params=query_params
                 ) as response:
@@ -341,7 +339,7 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
             KratosRecoveryCode: The recovery code.
         """
         try:
-            async with aiohttp.ClientSession(base_url=str(self._http_config.url)) as session:
+            async with self._kratos_admin_http_resource.acquire_client_session() as session:
                 async with session.post(
                     url=f"{self.ADMIN_ENDPOINT}/recovery/code",
                     json={
@@ -389,7 +387,7 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
             KratosOperationError: If the Kratos service returns an error.
         """
         try:
-            async with aiohttp.ClientSession(base_url=str(self._http_config.url)) as session:
+            async with self._kratos_admin_http_resource.acquire_client_session() as session:
                 async with session.post(
                     url=f"{self.ADMIN_ENDPOINT}/recovery/link",
                     json={
