@@ -11,18 +11,14 @@ import jwt
 import pytest
 from pydantic import HttpUrl, ValidationError
 
-from fastapi_factory_utilities.core.app import (
-    DependencyConfig,
-    HttpServiceDependencyConfig,
-)
+from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource
+from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
 from fastapi_factory_utilities.core.services.hydra.exceptions import HydraOperationError
 from fastapi_factory_utilities.core.services.hydra.objects import HydraTokenIntrospectObject
 from fastapi_factory_utilities.core.services.hydra.services import (
     HydraIntrospectGenericService,
     HydraIntrospectService,
     HydraOAuth2ClientCredentialsService,
-    depends_hydra_introspect_service,
-    depends_hydra_oauth2_client_credentials_service,
 )
 from fastapi_factory_utilities.core.services.hydra.types import (
     HydraAccessToken,
@@ -68,6 +64,32 @@ def fixture_http_config_public() -> HttpServiceDependencyConfig:
     return HttpServiceDependencyConfig(url=HttpUrl("https://hydra-public.example.com"))
 
 
+@pytest.fixture(name="http_resource_admin")
+def fixture_http_resource_admin(http_config_admin: HttpServiceDependencyConfig) -> AioHttpClientResource:
+    """Create an admin AioHttpClientResource for testing.
+
+    Args:
+        http_config_admin (HttpServiceDependencyConfig): Admin HTTP config fixture.
+
+    Returns:
+        AioHttpClientResource: A test admin HTTP resource.
+    """
+    return AioHttpClientResource(dependency_config=http_config_admin)
+
+
+@pytest.fixture(name="http_resource_public")
+def fixture_http_resource_public(http_config_public: HttpServiceDependencyConfig) -> AioHttpClientResource:
+    """Create a public AioHttpClientResource for testing.
+
+    Args:
+        http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
+
+    Returns:
+        AioHttpClientResource: A test public HTTP resource.
+    """
+    return AioHttpClientResource(dependency_config=http_config_public)
+
+
 @pytest.fixture(name="mock_introspect_data")
 def fixture_mock_introspect_data() -> dict[str, Any]:
     """Create mock introspect data.
@@ -110,18 +132,33 @@ def fixture_mock_jwks_data() -> dict[str, Any]:
     }
 
 
+def mock_acquire_client_session(mock_session: AsyncMock) -> AsyncMock:
+    """Mock acquire_client_session context manager.
+
+    Args:
+        mock_session (AsyncMock): The mocked session to yield.
+
+    Returns:
+        AsyncMock: An async context manager that yields the mocked session.
+    """
+    mock_context_manager = AsyncMock()
+    mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+    return mock_context_manager
+
+
 class TestHydraIntrospectGenericService:
     """Various tests for the HydraIntrospectGenericService class."""
 
     @pytest.fixture
     def concrete_service(
-        self, http_config_admin: HttpServiceDependencyConfig, http_config_public: HttpServiceDependencyConfig
+        self, http_resource_admin: AioHttpClientResource, http_resource_public: AioHttpClientResource
     ) -> HydraIntrospectGenericService[MockIntrospectObject]:
         """Create a concrete implementation for testing.
 
         Args:
-            http_config_admin (HttpServiceDependencyConfig): Admin HTTP config fixture.
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
+            http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
 
         Returns:
             HydraIntrospectGenericService[MockIntrospectObject]: Concrete service instance.
@@ -133,18 +170,18 @@ class TestHydraIntrospectGenericService:
             pass
 
         return ConcreteIntrospectService(
-            hydra_admin_http_config=http_config_admin,
-            hydra_public_http_config=http_config_public,
+            hydra_admin_http_resource=http_resource_admin,
+            hydra_public_http_resource=http_resource_public,
         )
 
     def test_init(
-        self, http_config_admin: HttpServiceDependencyConfig, http_config_public: HttpServiceDependencyConfig
+        self, http_resource_admin: AioHttpClientResource, http_resource_public: AioHttpClientResource
     ) -> None:
         """Test that __init__ properly initializes the service.
 
         Args:
-            http_config_admin (HttpServiceDependencyConfig): Admin HTTP config fixture.
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
+            http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
         """
 
         class ConcreteIntrospectService(HydraIntrospectGenericService[MockIntrospectObject]):
@@ -153,12 +190,12 @@ class TestHydraIntrospectGenericService:
             pass
 
         service = ConcreteIntrospectService(
-            hydra_admin_http_config=http_config_admin,
-            hydra_public_http_config=http_config_public,
+            hydra_admin_http_resource=http_resource_admin,
+            hydra_public_http_resource=http_resource_public,
         )
 
-        assert service._hydra_admin_http_config == http_config_admin  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access # pylint: disable=protected-access
+        assert service._hydra_admin_http_resource == http_resource_admin  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._hydra_public_http_resource == http_resource_public  # type: ignore[attr-defined] # pylint: disable=protected-access # pylint: disable=protected-access
         assert service._concreate_introspect_object_class == MockIntrospectObject  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service.INTROSPECT_ENDPOINT == "/admin/oauth2/introspect"
         assert service.WELLKNOWN_JWKS_ENDPOINT == "/.well-known/jwks.json"
@@ -190,8 +227,10 @@ class TestHydraIntrospectGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            result: MockIntrospectObject = await service.introspect(token=token)
+        service._hydra_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        result: MockIntrospectObject = await service.introspect(token=token)
 
         assert result.active == mock_introspect_data["active"]
         assert result.client_id == mock_introspect_data["client_id"]
@@ -242,13 +281,15 @@ class TestHydraIntrospectGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(HydraOperationError) as exc_info:
-                await service.introspect(token=token)
+        service._hydra_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(HydraOperationError) as exc_info:
+            await service.introspect(token=token)
 
-            assert "Failed to introspect the token" in str(exc_info.value)
-            assert exc_info.value.status_code == status_code  # type: ignore[attr-defined]
-            assert exc_info.value.__cause__ == error
+        assert "Failed to introspect the token" in str(exc_info.value)
+        assert exc_info.value.status_code == status_code  # type: ignore[attr-defined]
+        assert exc_info.value.__cause__ == error
 
     @pytest.mark.asyncio
     async def test_introspect_json_decode_error(
@@ -276,12 +317,14 @@ class TestHydraIntrospectGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(HydraOperationError) as exc_info:
-                await service.introspect(token=token)
+        service._hydra_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(HydraOperationError) as exc_info:
+            await service.introspect(token=token)
 
-            assert "Failed to decode the introspect response" in str(exc_info.value)
-            assert exc_info.value.__cause__ == error
+        assert "Failed to decode the introspect response" in str(exc_info.value)
+        assert exc_info.value.__cause__ == error
 
     @pytest.mark.asyncio
     async def test_introspect_validation_error(
@@ -308,12 +351,14 @@ class TestHydraIntrospectGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(HydraOperationError) as exc_info:
-                await service.introspect(token=token)
+        service._hydra_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(HydraOperationError) as exc_info:
+            await service.introspect(token=token)
 
-            assert "Failed to validate the introspect response" in str(exc_info.value)
-            assert isinstance(exc_info.value.__cause__, ValidationError)
+        assert "Failed to validate the introspect response" in str(exc_info.value)
+        assert isinstance(exc_info.value.__cause__, ValidationError)
 
     @pytest.mark.asyncio
     async def test_get_wellknown_jwks_success(
@@ -340,8 +385,10 @@ class TestHydraIntrospectGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            result: jwt.PyJWKSet = await service.get_wellknown_jwks()
+        service._hydra_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        result: jwt.PyJWKSet = await service.get_wellknown_jwks()
 
         assert isinstance(result, jwt.PyJWKSet)
         mock_session.get.assert_called_once_with(url=service.WELLKNOWN_JWKS_ENDPOINT)
@@ -389,13 +436,15 @@ class TestHydraIntrospectGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(HydraOperationError) as exc_info:
-                await service.get_wellknown_jwks()
+        service._hydra_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(HydraOperationError) as exc_info:
+            await service.get_wellknown_jwks()
 
-            assert "Failed to get the JWKS from the Hydra service" in str(exc_info.value)
-            assert exc_info.value.status_code == status_code  # type: ignore[attr-defined]
-            assert exc_info.value.__cause__ == error
+        assert "Failed to get the JWKS from the Hydra service" in str(exc_info.value)
+        assert exc_info.value.status_code == status_code  # type: ignore[attr-defined]
+        assert exc_info.value.__cause__ == error
 
     @pytest.mark.asyncio
     async def test_get_wellknown_jwks_json_decode_error(
@@ -422,12 +471,14 @@ class TestHydraIntrospectGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(HydraOperationError) as exc_info:
-                await service.get_wellknown_jwks()
+        service._hydra_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(HydraOperationError) as exc_info:
+            await service.get_wellknown_jwks()
 
-            assert "Failed to decode the JWKS from the Hydra service" in str(exc_info.value)
-            assert exc_info.value.__cause__ == error
+        assert "Failed to decode the JWKS from the Hydra service" in str(exc_info.value)
+        assert exc_info.value.__cause__ == error
 
     @pytest.mark.asyncio
     async def test_get_wellknown_jwks_validation_error(
@@ -455,54 +506,56 @@ class TestHydraIntrospectGenericService:
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
         # Mock jwt.PyJWKSet.from_dict to raise ValidationError
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with patch("jwt.PyJWKSet.from_dict", side_effect=ValidationError.from_exception_data("TestModel", [])):
-                with pytest.raises(HydraOperationError) as exc_info:
-                    await service.get_wellknown_jwks()
+        service._hydra_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with patch("jwt.PyJWKSet.from_dict", side_effect=ValidationError.from_exception_data("TestModel", [])):
+            with pytest.raises(HydraOperationError) as exc_info:
+                await service.get_wellknown_jwks()
 
-                assert "Failed to validate the JWKS from the Hydra service" in str(exc_info.value)
-                assert isinstance(exc_info.value.__cause__, ValidationError)
+            assert "Failed to validate the JWKS from the Hydra service" in str(exc_info.value)
+            assert isinstance(exc_info.value.__cause__, ValidationError)
 
 
 class TestHydraIntrospectService:
     """Various tests for the HydraIntrospectService class."""
 
     def test_init(
-        self, http_config_admin: HttpServiceDependencyConfig, http_config_public: HttpServiceDependencyConfig
+        self, http_resource_admin: AioHttpClientResource, http_resource_public: AioHttpClientResource
     ) -> None:
         """Test that __init__ properly initializes the service.
 
         Args:
-            http_config_admin (HttpServiceDependencyConfig): Admin HTTP config fixture.
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
+            http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
         """
         service = HydraIntrospectService(
-            hydra_admin_http_config=http_config_admin,
-            hydra_public_http_config=http_config_public,
+            hydra_admin_http_resource=http_resource_admin,
+            hydra_public_http_resource=http_resource_public,
         )
 
-        assert service._hydra_admin_http_config == http_config_admin  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access # pylint: disable=protected-access
+        assert service._hydra_admin_http_resource == http_resource_admin  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._hydra_public_http_resource == http_resource_public  # type: ignore[attr-defined] # pylint: disable=protected-access # pylint: disable=protected-access
         assert service._concreate_introspect_object_class == HydraTokenIntrospectObject  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert isinstance(service, HydraIntrospectGenericService)
 
     @pytest.mark.asyncio
     async def test_introspect_with_default_object(
         self,
-        http_config_admin: HttpServiceDependencyConfig,
-        http_config_public: HttpServiceDependencyConfig,
+        http_resource_admin: AioHttpClientResource,
+        http_resource_public: AioHttpClientResource,
         mock_introspect_data: dict[str, Any],
     ) -> None:
         """Test introspect with default HydraTokenIntrospectObject.
 
         Args:
-            http_config_admin (HttpServiceDependencyConfig): Admin HTTP config fixture.
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
+            http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
             mock_introspect_data (dict[str, Any]): Mock introspect data.
         """
         service = HydraIntrospectService(
-            hydra_admin_http_config=http_config_admin,
-            hydra_public_http_config=http_config_public,
+            hydra_admin_http_resource=http_resource_admin,
+            hydra_public_http_resource=http_resource_public,
         )
 
         token: HydraAccessToken = HydraAccessToken("test_token")
@@ -517,8 +570,10 @@ class TestHydraIntrospectService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            result: HydraTokenIntrospectObject = await service.introspect(token=token)
+        service._hydra_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        result: HydraTokenIntrospectObject = await service.introspect(token=token)
 
         assert result.active == mock_introspect_data["active"]
         assert result.client_id == mock_introspect_data["client_id"]
@@ -528,15 +583,15 @@ class TestHydraIntrospectService:
 class TestHydraOAuth2ClientCredentialsService:
     """Various tests for the HydraOAuth2ClientCredentialsService class."""
 
-    def test_init(self, http_config_public: HttpServiceDependencyConfig) -> None:
+    def test_init(self, http_resource_public: AioHttpClientResource) -> None:
         """Test that __init__ properly initializes the service.
 
         Args:
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
         """
-        service = HydraOAuth2ClientCredentialsService(hydra_public_http_config=http_config_public)
+        service = HydraOAuth2ClientCredentialsService(hydra_public_http_resource=http_resource_public)
 
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._hydra_public_http_resource == http_resource_public  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service.CLIENT_CREDENTIALS_ENDPOINT == "/oauth2/token"
 
     def test_build_bearer_header(self) -> None:
@@ -581,13 +636,13 @@ class TestHydraOAuth2ClientCredentialsService:
         assert result == f"Basic {expected_b64}"
 
     @pytest.mark.asyncio
-    async def test_oauth2_client_credentials_success(self, http_config_public: HttpServiceDependencyConfig) -> None:
+    async def test_oauth2_client_credentials_success(self, http_resource_public: AioHttpClientResource) -> None:
         """Test successful oauth2_client_credentials call.
 
         Args:
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
         """
-        service = HydraOAuth2ClientCredentialsService(hydra_public_http_config=http_config_public)
+        service = HydraOAuth2ClientCredentialsService(hydra_public_http_resource=http_resource_public)
 
         client_id: HydraClientId = HydraClientId("test_client_id")
         client_secret: HydraClientSecret = HydraClientSecret("test_client_secret")
@@ -607,10 +662,12 @@ class TestHydraOAuth2ClientCredentialsService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            result: HydraAccessToken = await service.oauth2_client_credentials(
-                client_id=client_id, client_secret=client_secret, scopes=scopes
-            )
+        service._hydra_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        result: HydraAccessToken = await service.oauth2_client_credentials(
+            client_id=client_id, client_secret=client_secret, scopes=scopes
+        )
 
         assert result == access_token
 
@@ -622,15 +679,13 @@ class TestHydraOAuth2ClientCredentialsService:
         assert call_kwargs["data"]["scope"] == " ".join(scopes)
 
     @pytest.mark.asyncio
-    async def test_oauth2_client_credentials_single_scope(
-        self, http_config_public: HttpServiceDependencyConfig
-    ) -> None:
+    async def test_oauth2_client_credentials_single_scope(self, http_resource_public: AioHttpClientResource) -> None:
         """Test oauth2_client_credentials with single scope.
 
         Args:
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
         """
-        service = HydraOAuth2ClientCredentialsService(hydra_public_http_config=http_config_public)
+        service = HydraOAuth2ClientCredentialsService(hydra_public_http_resource=http_resource_public)
 
         client_id: HydraClientId = HydraClientId("test_client_id")
         client_secret: HydraClientSecret = HydraClientSecret("test_client_secret")
@@ -650,10 +705,12 @@ class TestHydraOAuth2ClientCredentialsService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            result: HydraAccessToken = await service.oauth2_client_credentials(
-                client_id=client_id, client_secret=client_secret, scopes=scopes
-            )
+        service._hydra_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        result: HydraAccessToken = await service.oauth2_client_credentials(
+            client_id=client_id, client_secret=client_secret, scopes=scopes
+        )
 
         assert result == access_token
 
@@ -673,15 +730,15 @@ class TestHydraOAuth2ClientCredentialsService:
     )
     @pytest.mark.asyncio
     async def test_oauth2_client_credentials_error_status(
-        self, http_config_public: HttpServiceDependencyConfig, status_code: int
+        self, http_resource_public: AioHttpClientResource, status_code: int
     ) -> None:
         """Test oauth2_client_credentials raises HydraOperationError on non-200 status.
 
         Args:
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
             status_code (int): HTTP status code.
         """
-        service = HydraOAuth2ClientCredentialsService(hydra_public_http_config=http_config_public)
+        service = HydraOAuth2ClientCredentialsService(hydra_public_http_resource=http_resource_public)
 
         client_id: HydraClientId = HydraClientId("test_client_id")
         client_secret: HydraClientSecret = HydraClientSecret("test_client_secret")
@@ -700,97 +757,11 @@ class TestHydraOAuth2ClientCredentialsService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(HydraOperationError) as exc_info:
-                await service.oauth2_client_credentials(client_id=client_id, client_secret=client_secret, scopes=scopes)
-
-            assert "Failed to get client credentials" in str(exc_info.value)
-            assert str(response_data) in str(exc_info.value)
-
-
-class TestDependencyInjectionFunctions:
-    """Various tests for dependency injection functions."""
-
-    def test_depends_hydra_introspect_service_success(
-        self, http_config_admin: HttpServiceDependencyConfig, http_config_public: HttpServiceDependencyConfig
-    ) -> None:
-        """Test depends_hydra_introspect_service with valid configuration.
-
-        Args:
-            http_config_admin (HttpServiceDependencyConfig): Admin HTTP config fixture.
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
-        """
-        dependency_config = DependencyConfig(
-            hydra_admin=http_config_admin,
-            hydra_public=http_config_public,
+        service._hydra_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
         )
-
-        service = depends_hydra_introspect_service(dependency_config=dependency_config)
-
-        assert isinstance(service, HydraIntrospectService)
-        assert service._hydra_admin_http_config == http_config_admin  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access # pylint: disable=protected-access
-
-    def test_depends_hydra_introspect_service_missing_admin(
-        self, http_config_public: HttpServiceDependencyConfig
-    ) -> None:
-        """Test depends_hydra_introspect_service raises error when hydra_admin is missing.
-
-        Args:
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
-        """
-        dependency_config = DependencyConfig(
-            hydra_admin=None,
-            hydra_public=http_config_public,
-        )
-
         with pytest.raises(HydraOperationError) as exc_info:
-            depends_hydra_introspect_service(dependency_config=dependency_config)
+            await service.oauth2_client_credentials(client_id=client_id, client_secret=client_secret, scopes=scopes)
 
-        assert "Hydra admin dependency not configured" in str(exc_info.value)
-
-    def test_depends_hydra_introspect_service_missing_public(
-        self, http_config_admin: HttpServiceDependencyConfig
-    ) -> None:
-        """Test depends_hydra_introspect_service raises error when hydra_public is missing.
-
-        Args:
-            http_config_admin (HttpServiceDependencyConfig): Admin HTTP config fixture.
-        """
-        dependency_config = DependencyConfig(
-            hydra_admin=http_config_admin,
-            hydra_public=None,
-        )
-
-        with pytest.raises(HydraOperationError) as exc_info:
-            depends_hydra_introspect_service(dependency_config=dependency_config)
-
-        assert "Hydra public dependency not configured" in str(exc_info.value)
-
-    def test_depends_hydra_oauth2_client_credentials_service_success(
-        self, http_config_public: HttpServiceDependencyConfig
-    ) -> None:
-        """Test depends_hydra_oauth2_client_credentials_service with valid configuration.
-
-        Args:
-            http_config_public (HttpServiceDependencyConfig): Public HTTP config fixture.
-        """
-        dependency_config = DependencyConfig(
-            hydra_public=http_config_public,
-        )
-
-        service = depends_hydra_oauth2_client_credentials_service(dependency_config=dependency_config)
-
-        assert isinstance(service, HydraOAuth2ClientCredentialsService)
-        assert service._hydra_public_http_config == http_config_public  # type: ignore[attr-defined] # pylint: disable=protected-access
-
-    def test_depends_hydra_oauth2_client_credentials_service_missing_public(self) -> None:
-        """Test depends_hydra_oauth2_client_credentials_service raises error when hydra_public is missing."""
-        dependency_config = DependencyConfig(
-            hydra_public=None,
-        )
-
-        with pytest.raises(HydraOperationError) as exc_info:
-            depends_hydra_oauth2_client_credentials_service(dependency_config=dependency_config)
-
-        assert "Hydra public dependency not configured" in str(exc_info.value)
+        assert "Failed to get client credentials" in str(exc_info.value)
+        assert str(response_data) in str(exc_info.value)

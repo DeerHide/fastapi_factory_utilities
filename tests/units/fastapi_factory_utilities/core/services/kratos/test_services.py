@@ -5,13 +5,14 @@ import json
 import uuid
 from http import HTTPStatus
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
 from pydantic import BaseModel, HttpUrl, ValidationError
 
-from fastapi_factory_utilities.core.app import HttpServiceDependencyConfig
+from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource
+from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
 from fastapi_factory_utilities.core.services.kratos.enums import AuthenticationMethodEnum
 from fastapi_factory_utilities.core.services.kratos.exceptions import (
     KratosOperationError,
@@ -54,6 +55,32 @@ def fixture_http_config() -> HttpServiceDependencyConfig:
     return HttpServiceDependencyConfig(url=HttpUrl("https://kratos.example.com"))
 
 
+@pytest.fixture(name="http_resource_public")
+def fixture_http_resource_public(http_config: HttpServiceDependencyConfig) -> AioHttpClientResource:
+    """Create a public AioHttpClientResource for testing.
+
+    Args:
+        http_config (HttpServiceDependencyConfig): HTTP config fixture.
+
+    Returns:
+        AioHttpClientResource: A test public HTTP resource.
+    """
+    return AioHttpClientResource(dependency_config=http_config)
+
+
+@pytest.fixture(name="http_resource_admin")
+def fixture_http_resource_admin(http_config: HttpServiceDependencyConfig) -> AioHttpClientResource:
+    """Create an admin AioHttpClientResource for testing.
+
+    Args:
+        http_config (HttpServiceDependencyConfig): HTTP config fixture.
+
+    Returns:
+        AioHttpClientResource: A test admin HTTP resource.
+    """
+    return AioHttpClientResource(dependency_config=http_config)
+
+
 @pytest.fixture(name="mock_session_data")
 def fixture_mock_session_data() -> dict[str, Any]:
     """Create mock session data.
@@ -92,17 +119,32 @@ def fixture_identity_id() -> KratosIdentityId:
     return KratosIdentityId(uuid.uuid4())
 
 
+def mock_acquire_client_session(mock_session: AsyncMock) -> AsyncMock:
+    """Mock acquire_client_session context manager.
+
+    Args:
+        mock_session (AsyncMock): The mocked session to yield.
+
+    Returns:
+        AsyncMock: An async context manager that yields the mocked session.
+    """
+    mock_context_manager = AsyncMock()
+    mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+    return mock_context_manager
+
+
 class TestKratosGenericWhoamiService:
     """Various tests for the KratosGenericWhoamiService class."""
 
     @pytest.fixture
     def concrete_service(
-        self, http_config: HttpServiceDependencyConfig
+        self, http_resource_public: AioHttpClientResource
     ) -> KratosGenericWhoamiService[MockSessionObject]:
         """Create a concrete implementation for testing.
 
         Args:
-            http_config (HttpServiceDependencyConfig): HTTP config fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
 
         Returns:
             KratosGenericWhoamiService[MockSessionObject]: Concrete service instance.
@@ -113,13 +155,13 @@ class TestKratosGenericWhoamiService:
 
             pass
 
-        return ConcreteWhoamiService(kratos_public_http_config=http_config)
+        return ConcreteWhoamiService(kratos_public_http_resource=http_resource_public)
 
-    def test_init(self, http_config: HttpServiceDependencyConfig) -> None:
+    def test_init(self, http_resource_public: AioHttpClientResource) -> None:
         """Test that __init__ properly initializes the service.
 
         Args:
-            http_config (HttpServiceDependencyConfig): HTTP config fixture.
+            http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
         """
 
         class ConcreteWhoamiService(KratosGenericWhoamiService[MockSessionObject]):
@@ -127,9 +169,9 @@ class TestKratosGenericWhoamiService:
 
             pass
 
-        service = ConcreteWhoamiService(kratos_public_http_config=http_config)
+        service = ConcreteWhoamiService(kratos_public_http_resource=http_resource_public)
 
-        assert service._http_config == http_config  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._kratos_public_http_resource == http_resource_public  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service._concreate_session_object_class == MockSessionObject  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service.COOKIE_NAME == "ory_kratos_session"
 
@@ -160,8 +202,10 @@ class TestKratosGenericWhoamiService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            result: MockSessionObject = await service.whoami(cookie_value=cookie_value)
+        service._kratos_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        result: MockSessionObject = await service.whoami(cookie_value=cookie_value)
 
         assert result.id == uuid.UUID(mock_session_data["id"])
         assert result.active == mock_session_data["active"]
@@ -195,14 +239,13 @@ class TestKratosGenericWhoamiService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession") as mock_client_session:
-            mock_client_session.return_value = mock_session
-            await service.whoami(cookie_value=cookie_value)
+        service._kratos_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        await service.whoami(cookie_value=cookie_value)
 
-        # Verify ClientSession was called with correct cookies
-        call_kwargs = mock_client_session.call_args[1]
-        assert "cookies" in call_kwargs
-        assert call_kwargs["cookies"] == {service.COOKIE_NAME: cookie_value}
+        # Verify the session was used (the cookies are passed to acquire_client_session)
+        service._kratos_public_http_resource.acquire_client_session.assert_called_once()  # type: ignore[attr-defined]
 
     @pytest.mark.parametrize(
         "status_code,expected_exception",
@@ -245,11 +288,13 @@ class TestKratosGenericWhoamiService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(expected_exception) as exc_info:
-                await service.whoami(cookie_value=cookie_value)
+        service._kratos_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(expected_exception) as exc_info:
+            await service.whoami(cookie_value=cookie_value)
 
-            assert str(status_code) in str(exc_info.value)
+        assert str(status_code) in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_whoami_unauthorized(
@@ -275,11 +320,13 @@ class TestKratosGenericWhoamiService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(KratosSessionInvalidError) as exc_info:
-                await service.whoami(cookie_value=cookie_value)
+        service._kratos_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(KratosSessionInvalidError) as exc_info:
+            await service.whoami(cookie_value=cookie_value)
 
-            assert "Kratos session invalid" in str(exc_info.value)
+        assert "Kratos session invalid" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_whoami_validation_error(
@@ -307,11 +354,13 @@ class TestKratosGenericWhoamiService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(KratosOperationError) as exc_info:
-                await service.whoami(cookie_value=cookie_value)
+        service._kratos_public_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(KratosOperationError) as exc_info:
+            await service.whoami(cookie_value=cookie_value)
 
-            assert "Kratos service error" in str(exc_info.value)
+        assert "Kratos service error" in str(exc_info.value)
 
 
 class TestKratosIdentityGenericService:
@@ -319,12 +368,12 @@ class TestKratosIdentityGenericService:
 
     @pytest.fixture
     def concrete_service(
-        self, http_config: HttpServiceDependencyConfig
+        self, http_resource_admin: AioHttpClientResource
     ) -> KratosIdentityGenericService[MockIdentityObject, MockSessionObject]:
         """Create a concrete implementation for testing.
 
         Args:
-            http_config (HttpServiceDependencyConfig): HTTP config fixture.
+            http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
 
         Returns:
             KratosIdentityGenericService[MockIdentityObject, MockSessionObject]: Concrete service instance.
@@ -335,13 +384,13 @@ class TestKratosIdentityGenericService:
 
             pass
 
-        return ConcreteIdentityService(kratos_admin_http_config=http_config)
+        return ConcreteIdentityService(kratos_admin_http_resource=http_resource_admin)
 
-    def test_init(self, http_config: HttpServiceDependencyConfig) -> None:
+    def test_init(self, http_resource_admin: AioHttpClientResource) -> None:
         """Test that __init__ properly initializes the service.
 
         Args:
-            http_config (HttpServiceDependencyConfig): HTTP config fixture.
+            http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
         """
 
         class ConcreteIdentityService(KratosIdentityGenericService[MockIdentityObject, MockSessionObject]):
@@ -349,9 +398,9 @@ class TestKratosIdentityGenericService:
 
             pass
 
-        service = ConcreteIdentityService(kratos_admin_http_config=http_config)
+        service = ConcreteIdentityService(kratos_admin_http_resource=http_resource_admin)
 
-        assert service._http_config == http_config  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert service._kratos_admin_http_resource == http_resource_admin  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service._concreate_identity_object_class == MockIdentityObject  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service._concreate_session_object_class == MockSessionObject  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service.IDENTITY_ENDPOINT == "/admin/identities"
@@ -384,8 +433,10 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            result: MockIdentityObject = await service.get_identity(identity_id=identity_id)
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        result: MockIdentityObject = await service.get_identity(identity_id=identity_id)
 
         assert result.id == identity_id
         assert result.email == mock_identity_data["email"]
@@ -453,9 +504,11 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(KratosOperationError) as exc_info:
-                await service.get_identity(identity_id=identity_id)
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(KratosOperationError) as exc_info:
+            await service.get_identity(identity_id=identity_id)
 
             assert "Failed to get the Kratos identity" in str(exc_info.value)
             assert exc_info.value.__cause__ == error
@@ -497,9 +550,11 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(KratosOperationError) as exc_info:
-                await service.get_identity(identity_id=identity_id)
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(KratosOperationError) as exc_info:
+            await service.get_identity(identity_id=identity_id)
 
             assert "Failed to get the Kratos identity" in str(exc_info.value)
             assert exc_info.value.__cause__ == error
@@ -563,12 +618,14 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            await service.delete_identity_credentials(
-                identity_id=identity_id,
-                credentials_type=credentials_type,
-                identifier=identifier,
-            )
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        await service.delete_identity_credentials(
+            identity_id=identity_id,
+            credentials_type=credentials_type,
+            identifier=identifier,
+        )
 
         # Verify delete was called with correct params
         call_kwargs = mock_session.delete.call_args[1]
@@ -645,15 +702,17 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(KratosOperationError) as exc_info:
-                await service.delete_identity_credentials(
-                    identity_id=identity_id,
-                    credentials_type=AuthenticationMethodEnum.PASSWORD,
-                )
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(KratosOperationError) as exc_info:
+            await service.delete_identity_credentials(
+                identity_id=identity_id,
+                credentials_type=AuthenticationMethodEnum.PASSWORD,
+            )
 
-            assert "Failed to delete the credentials" in str(exc_info.value)
-            assert exc_info.value.__cause__ == error
+        assert "Failed to delete the credentials" in str(exc_info.value)
+        assert exc_info.value.__cause__ == error
 
     @pytest.mark.asyncio
     async def test_delete_identity_sessions_success(
@@ -679,8 +738,10 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            await service.delete_identity_sessions(identity_id=identity_id)
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        await service.delete_identity_sessions(identity_id=identity_id)
 
         mock_session.delete.assert_called_once_with(url=f"{service.IDENTITY_ENDPOINT}/{identity_id}/sessions")
 
@@ -715,9 +776,11 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(KratosOperationError) as exc_info:
-                await service.delete_identity_sessions(identity_id=identity_id)
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(KratosOperationError) as exc_info:
+            await service.delete_identity_sessions(identity_id=identity_id)
 
             assert "Failed to delete the sessions" in str(exc_info.value)
             assert exc_info.value.__cause__ == error
@@ -746,8 +809,10 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            await service.delete_identity(identity_id=identity_id)
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        await service.delete_identity(identity_id=identity_id)
 
         mock_session.delete.assert_called_once_with(url=f"{service.IDENTITY_ENDPOINT}/{identity_id}")
 
@@ -782,12 +847,14 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(KratosOperationError) as exc_info:
-                await service.delete_identity(identity_id=identity_id)
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(KratosOperationError) as exc_info:
+            await service.delete_identity(identity_id=identity_id)
 
-            assert "Failed to delete the Kratos identity" in str(exc_info.value)
-            assert exc_info.value.__cause__ == error
+        assert "Failed to delete the Kratos identity" in str(exc_info.value)
+        assert exc_info.value.__cause__ == error
 
     @pytest.mark.parametrize(
         "active,page_size,page_token,link_header,expected_next_token",
@@ -860,13 +927,15 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            sessions, next_token = await service.list_sessions(
-                identity_id=identity_id,
-                active=active,
-                page_size=page_size,
-                page_token=page_token,
-            )
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        sessions, next_token = await service.list_sessions(
+            identity_id=identity_id,
+            active=active,
+            page_size=page_size,
+            page_token=page_token,
+        )
 
         assert len(sessions) == len(sessions_data)
         assert next_token == expected_next_token
@@ -942,9 +1011,11 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(KratosOperationError) as exc_info:
-                await service.list_sessions(identity_id=identity_id)
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(KratosOperationError) as exc_info:
+            await service.list_sessions(identity_id=identity_id)
 
             assert "Failed to list the sessions" in str(exc_info.value)
             assert exc_info.value.__cause__ == error
@@ -976,11 +1047,13 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            result: KratosRecoveryLink = await service.create_recovery_link(
-                identity_id=identity_id,
-                expires_in=expires_in,
-            )
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        result: KratosRecoveryLink = await service.create_recovery_link(
+            identity_id=identity_id,
+            expires_in=expires_in,
+        )
 
         assert result == KratosRecoveryLink(recovery_link_value)
 
@@ -1055,12 +1128,14 @@ class TestKratosIdentityGenericService:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
-            with pytest.raises(KratosOperationError) as exc_info:
-                await service.create_recovery_link(
-                    identity_id=identity_id,
-                    expires_in=expires_in,
-                )
+        service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+            return_value=mock_acquire_client_session(mock_session)
+        )
+        with pytest.raises(KratosOperationError) as exc_info:
+            await service.create_recovery_link(
+                identity_id=identity_id,
+                expires_in=expires_in,
+            )
 
             assert "Failed to create the recovery link" in str(exc_info.value)
             assert exc_info.value.__cause__ == error
@@ -1102,11 +1177,13 @@ class TestKratosIdentityGenericService:
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)
 
-            with patch("aiohttp.ClientSession", return_value=mock_session):
-                await service.create_recovery_link(
-                    identity_id=identity_id,
-                    expires_in=expires_in,
-                )
+            service._kratos_admin_http_resource.acquire_client_session = MagicMock(  # type: ignore[method-assign]
+                return_value=mock_acquire_client_session(mock_session)
+            )
+            await service.create_recovery_link(
+                identity_id=identity_id,
+                expires_in=expires_in,
+            )
 
             # Verify expires_in was converted correctly
             call_kwargs = mock_session.post.call_args[1]

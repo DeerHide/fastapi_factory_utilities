@@ -3,8 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from fastapi_factory_utilities.core.services.http.configs import HttpServiceDependencyConfig
-
+from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
 from fastapi_factory_utilities.core.utils.yaml_reader import UnableToReadYamlFileError, YamlFileReader
 
 from .exceptions import UnableToReadHttpDependencyConfigError
