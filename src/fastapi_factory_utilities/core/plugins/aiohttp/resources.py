@@ -98,17 +98,19 @@ class AioHttpClientResource:
 
     @classmethod
     def build_trace_config(
-        cls, tracer_provider: TracerProvider, meter_provider: MeterProvider
+        cls, tracer_provider: TracerProvider | None, meter_provider: MeterProvider | None
     ) -> aiohttp.TraceConfig | None:
         """Build the trace config.
 
         Args:
-            tracer_provider (TracerProvider): The tracer provider.
-            meter_provider (MeterProvider): The meter provider.
+            tracer_provider: The tracer provider. If None, OpenTelemetry tracing is disabled.
+            meter_provider: The meter provider. If None, OpenTelemetry metrics are disabled.
 
         Returns:
-            aiohttp.TraceConfig: The trace config.
+            aiohttp.TraceConfig: The trace config, or None if providers are not available.
         """
+        if tracer_provider is None or meter_provider is None:
+            return None
         if find_spec(name="opentelemetry.instrumentation.aiohttp_client"):
             from opentelemetry.instrumentation.aiohttp_client import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
                 create_trace_config,
@@ -139,12 +141,14 @@ class AioHttpClientResource:
         Currently, no initialization is required at load time.
         """
 
-    async def on_startup(self, tracer_provider: TracerProvider, meter_provider: MeterProvider) -> None:
+    async def on_startup(
+        self, tracer_provider: TracerProvider | None = None, meter_provider: MeterProvider | None = None
+    ) -> None:
         """On startup.
 
         Args:
-            tracer_provider (TracerProvider): The tracer provider.
-            meter_provider (MeterProvider): The meter provider.
+            tracer_provider: The tracer provider. If None, OpenTelemetry tracing is disabled.
+            meter_provider: The meter provider. If None, OpenTelemetry metrics are disabled.
 
         Returns:
             None
@@ -172,7 +176,7 @@ class AioHttpClientResource:
         for session in self._client_sessions:
             try:
                 await session.close()
-            except Exception as exception:
+            except (OSError, aiohttp.ClientError) as exception:
                 _logger.log(
                     level=logging.WARNING,
                     event="Failed to close client session during shutdown",
@@ -182,7 +186,7 @@ class AioHttpClientResource:
         if self._tcp_connector is not None:
             try:
                 await self._tcp_connector.close()
-            except Exception as exception:
+            except (OSError, aiohttp.ClientError) as exception:
                 _logger.log(
                     level=logging.WARNING,
                     event="Failed to close TCP connector during shutdown",

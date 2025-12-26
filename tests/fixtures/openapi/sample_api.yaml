@@ -1,0 +1,371 @@
+openapi: "3.1.0"
+info:
+  title: Sample API
+  description: Sample API for testing aiohttp client integration with Microcks
+  version: "1.0"
+servers:
+  - url: http://localhost:8080/rest/Sample+API/1.0
+    description: Microcks mock server
+
+paths:
+  /api/users/{id}:
+    get:
+      operationId: getUserById
+      summary: Get a user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            user1:
+              value: "1"
+            user2:
+              value: "2"
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              examples:
+                user1:
+                  value:
+                    id: "1"
+                    name: "John Doe"
+                    email: "john.doe@example.com"
+                    active: true
+                user2:
+                  value:
+                    id: "2"
+                    name: "Jane Smith"
+                    email: "jane.smith@example.com"
+                    active: true
+    put:
+      operationId: updateUserById
+      summary: Update a user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            update1:
+              value: "1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+            examples:
+              update1:
+                value:
+                  name: "John Updated"
+                  email: "john.updated@example.com"
+      responses:
+        "200":
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              examples:
+                update1:
+                  value:
+                    id: "1"
+                    name: "John Updated"
+                    email: "john.updated@example.com"
+                    active: true
+    delete:
+      operationId: deleteUserById
+      summary: Delete a user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            delete1:
+              value: "1"
+      responses:
+        "200":
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                  id:
+                    type: string
+              examples:
+                delete1:
+                  value:
+                    deleted: true
+                    id: "1"
+
+  /api/users:
+    get:
+      operationId: listUsers
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+              examples:
+                default:
+                  value:
+                    - id: "1"
+                      name: "John Doe"
+                      email: "john.doe@example.com"
+                      active: true
+                    - id: "2"
+                      name: "Jane Smith"
+                      email: "jane.smith@example.com"
+                      active: true
+    post:
+      operationId: createUser
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+            examples:
+              newUser:
+                value:
+                  name: "New User"
+                  email: "new.user@example.com"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              examples:
+                newUser:
+                  value:
+                    id: "3"
+                    name: "New User"
+                    email: "new.user@example.com"
+                    active: true
+
+  /api/errors/not-found:
+    get:
+      operationId: getNotFound
+      summary: Endpoint that returns 404 Not Found
+      responses:
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                notFound:
+                  value:
+                    error: "Not Found"
+                    message: "The requested resource was not found"
+                    status: 404
+
+  /api/errors/server-error:
+    get:
+      operationId: getServerError
+      summary: Endpoint that returns 500 Internal Server Error
+      responses:
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                serverError:
+                  value:
+                    error: "Internal Server Error"
+                    message: "An unexpected error occurred"
+                    status: 500
+
+  /api/errors/bad-request:
+    post:
+      operationId: postBadRequest
+      summary: Endpoint that returns 400 Bad Request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+            examples:
+              invalid:
+                value:
+                  invalid_field: "test"
+      responses:
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                invalid:
+                  value:
+                    error: "Bad Request"
+                    message: "Invalid request body"
+                    status: 400
+
+  /api/health:
+    get:
+      operationId: healthCheck
+      summary: Health check endpoint
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              examples:
+                healthy:
+                  value:
+                    status: "healthy"
+                    timestamp: "2024-01-01T00:00:00Z"
+
+  /api/headers:
+    get:
+      operationId: getWithHeaders
+      summary: Endpoint that returns custom headers
+      responses:
+        "200":
+          description: Response with custom headers
+          headers:
+            X-Custom-Header:
+              description: Custom header value
+              schema:
+                type: string
+              example: "custom-value"
+            X-Request-Id:
+              description: Request ID
+              schema:
+                type: string
+              example: "req-12345"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                default:
+                  value:
+                    message: "Response with custom headers"
+
+  /api/binary:
+    get:
+      operationId: getBinaryContent
+      summary: Endpoint that returns binary content
+      responses:
+        "200":
+          description: Binary content response
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+              examples:
+                default:
+                  value: "Binary content data"
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - active
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the user
+        name:
+          type: string
+          description: Full name of the user
+        email:
+          type: string
+          format: email
+          description: Email address of the user
+        active:
+          type: boolean
+          description: Whether the user is active
+
+    UserCreate:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          description: Full name of the user
+        email:
+          type: string
+          format: email
+          description: Email address of the user
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Full name of the user
+        email:
+          type: string
+          format: email
+          description: Email address of the user
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+        - status
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Error message
+        status:
+          type: integer
+          description: HTTP status code
+
+    Health:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          description: Health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the health check

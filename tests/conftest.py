@@ -8,6 +8,9 @@ from fastapi_factory_utilities.core.utils.log import (
     setup_log,
 )
 
+from .fixtures.microcks import (
+    fixture_microcks_container,
+)
 from .fixtures.mongo import (
     fixture_async_motor_database,
     fixture_mongodb_database_name,
@@ -41,6 +44,7 @@ setup_log(
 __all__: list[str] = [
     "fixture_aiopika_plugin",
     "fixture_async_motor_database",
+    "fixture_microcks_container",
     "fixture_mongodb_database_name",
     "fixture_mongodb_server_as_container",
     "fixture_odm_plugin_factory",
