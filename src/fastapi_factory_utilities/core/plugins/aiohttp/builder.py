@@ -18,13 +18,15 @@ class AioHttpClientBuilder:
 
     def build_configs(self) -> Self:
         """Build the HTTP dependency configs."""
-        return [build_http_dependency_config(key=key) for key in self._keys]
+        for key in self._keys:
+            self._configs[key] = build_http_dependency_config(key=key)
+        return self
 
     def build_resources(self) -> Self:
         """Build the Aiohttp client."""
         for key, config in self._configs.items():
             self._resources[key] = AioHttpClientResource(dependency_config=config)
-        return list(self._resources.values())
+        return self
 
     @property
     def resources(self) -> dict[str, AioHttpClientResource]:

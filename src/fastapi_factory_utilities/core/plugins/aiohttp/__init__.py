@@ -7,7 +7,7 @@ from .exceptions import AioHttpClientError, AioHttpClientResourceNotFoundError, 
 from .plugins import AioHttpClientPlugin
 from .resources import AioHttpClientResource
 
-__all__: list[str] = []
+__all__: list[str] = []  # pylint: disable=invalid-name
 
 # Add mockers helpers only if pytest is installed
 if find_spec(name="pytest"):
