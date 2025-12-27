@@ -1,8 +1,15 @@
 """FastAPI Factory Utilities exceptions."""
 
 import logging
+import traceback
 from typing import Any, cast
 
+from opentelemetry.semconv.attributes.error_attributes import ERROR_TYPE
+from opentelemetry.semconv.attributes.exception_attributes import (
+    EXCEPTION_MESSAGE,
+    EXCEPTION_STACKTRACE,
+    EXCEPTION_TYPE,
+)
 from opentelemetry.trace import Span, get_current_span
 from opentelemetry.util.types import AttributeValue
 from structlog.stdlib import BoundLogger, get_logger
@@ -59,7 +66,7 @@ class FastAPIFactoryUtilitiesError(Exception):
             # If not otel is setup, INVALID_SPAN is retrieved from get_current_span
             # and it will respond False to the is_recording method
             if span.is_recording():
-                span.record_exception(self)
+                # Set the kwargs attributes
                 for key, value in kwargs.items():
                     if key in self.FILTERED_ATTRIBUTES:
                         continue
@@ -69,6 +76,14 @@ class FastAPIFactoryUtilitiesError(Exception):
                     else:
                         attribute_value = value
                     span.set_attribute(key, attribute_value)
+
+                # Record official Attributes last to avoid overriding them
+                span.record_exception(self)
+                # Set the exception and error attributes
+                span.set_attribute(ERROR_TYPE, self.__class__.__name__)
+                span.set_attribute(EXCEPTION_MESSAGE, self.message)
+                span.set_attribute(EXCEPTION_STACKTRACE, traceback.format_exc())
+                span.set_attribute(EXCEPTION_TYPE, self.__class__.__name__)
         except Exception:  # pylint: disable=broad-exception-caught
             # Suppress any errors that occur while propagating the exception
             pass

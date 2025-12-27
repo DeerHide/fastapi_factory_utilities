@@ -130,7 +130,15 @@ class TestFastAPIFactoryUtilitiesError:
                 )
 
                 mock_span.record_exception.assert_called_once_with(exception)
-                mock_span.set_attribute.assert_called_once_with("custom_attr", custom_attr)
+                # Custom attribute should be set
+                mock_span.set_attribute.assert_any_call("custom_attr", custom_attr)
+                # OTEL semantic attributes should also be set
+                mock_span.set_attribute.assert_any_call("error.type", "FastAPIFactoryUtilitiesError")
+                mock_span.set_attribute.assert_any_call("exception.message", message)
+                mock_span.set_attribute.assert_any_call("exception.type", "FastAPIFactoryUtilitiesError")
+                # 1 custom attr + 4 OTEL attributes
+                # (error.type, exception.message, exception.stacktrace, exception.type)
+                assert mock_span.set_attribute.call_count == 5  # noqa: PLR2004
 
     def test_otel_span_recording_with_invalid_span(self) -> None:
         """Test OpenTelemetry span recording when span is not recording."""
@@ -168,8 +176,8 @@ class TestFastAPIFactoryUtilitiesError:
                     },
                 )
 
-                # Check that all attributes were set
-                expected_calls = [
+                # Check that all custom attributes were set
+                expected_custom_calls = [
                     ("str_attr", "string_value"),
                     ("int_attr", 42),
                     ("float_attr", 3.14),
@@ -179,9 +187,16 @@ class TestFastAPIFactoryUtilitiesError:
                     ("complex_attr", "(1+2j)"),  # Complex converted to string
                 ]
 
-                assert mock_span.set_attribute.call_count == len(expected_calls)
-                for expected_call in expected_calls:
+                for expected_call in expected_custom_calls:
                     mock_span.set_attribute.assert_any_call(*expected_call)
+
+                # OTEL semantic attributes should also be set (4 additional: error.type, exception.message,
+                # exception.stacktrace, exception.type)
+                mock_span.set_attribute.assert_any_call("error.type", "FastAPIFactoryUtilitiesError")
+                mock_span.set_attribute.assert_any_call("exception.message", message)
+                mock_span.set_attribute.assert_any_call("exception.type", "FastAPIFactoryUtilitiesError")
+                # Total: 7 custom attrs + 4 OTEL attrs = 11
+                assert mock_span.set_attribute.call_count == len(expected_custom_calls) + 4
 
     def test_inheritance_from_exception(self) -> None:
         """Test that FastAPIFactoryUtilitiesError properly inherits from Exception."""
@@ -529,7 +544,15 @@ class TestExceptionForTestError:
                 )
 
                 mock_span.record_exception.assert_called_once_with(exception)
-                mock_span.set_attribute.assert_called_once_with("custom_attr", custom_attr)
+                # Custom attribute should be set
+                mock_span.set_attribute.assert_any_call("custom_attr", custom_attr)
+                # OTEL semantic attributes should also be set
+                mock_span.set_attribute.assert_any_call("error.type", "ExceptionForTestError")
+                mock_span.set_attribute.assert_any_call("exception.message", message)
+                mock_span.set_attribute.assert_any_call("exception.type", "ExceptionForTestError")
+                # 1 custom attr + 4 OTEL attributes
+                # (error.type, exception.message, exception.stacktrace, exception.type)
+                assert mock_span.set_attribute.call_count == 5  # noqa: PLR2004
 
     def test_otel_span_recording_with_invalid_span(self) -> None:
         """Test OpenTelemetry span recording when span is not recording."""
