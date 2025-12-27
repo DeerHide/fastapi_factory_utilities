@@ -480,8 +480,8 @@ class TestAioHttpClientResourceAcquireClientSession:
 
                 # Verify trace_config was passed
                 call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
-                assert "trace_config" in call_kwargs
-                assert call_kwargs["trace_config"] == mock_trace_config
+                assert "trace_configs" in call_kwargs
+                assert call_kwargs["trace_configs"] == [mock_trace_config]
 
     async def test_acquire_client_session_passes_additional_kwargs(self) -> None:
         """Test acquire_client_session passes additional kwargs to ClientSession."""

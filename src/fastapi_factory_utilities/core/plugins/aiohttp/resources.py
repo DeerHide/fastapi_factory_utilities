@@ -219,7 +219,7 @@ class AioHttpClientResource:
         )
 
         if trace_config is not None:
-            kwargs["trace_config"] = trace_config
+            kwargs["trace_configs"] = [trace_config]
 
         async with aiohttp.ClientSession(**kwargs) as session:
             self._client_sessions.append(session)
