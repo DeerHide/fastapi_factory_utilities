@@ -213,6 +213,8 @@ class AioHttpClientResource:
             raise ValueError("The connector is already provided.")
 
         kwargs["connector"] = self._tcp_connector
+        if self._dependency_config.url is not None:
+            kwargs["base_url"] = str(self._dependency_config.url)
 
         trace_config: aiohttp.TraceConfig | None = self.build_trace_config(
             tracer_provider=self._tracer_provider, meter_provider=self._meter_provider

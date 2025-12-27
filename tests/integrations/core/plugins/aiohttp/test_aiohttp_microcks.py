@@ -13,6 +13,7 @@ from typing import Any
 
 import aiohttp
 import pytest
+from pydantic import HttpUrl
 
 from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
 from fastapi_factory_utilities.core.plugins.aiohttp.resources import AioHttpClientResource
@@ -492,6 +493,79 @@ class TestAioHttpIntegrationScenarios:
             # Delete a user
             async with session.delete(f"{base_url}/api/users/1") as delete_response:
                 assert delete_response.status == HTTPStatus.OK
+
+    async def test_base_url_with_relative_paths(
+        self,
+        microcks_with_sample_api: MicrocksFixture,
+    ) -> None:
+        """Test using base_url configuration with relative paths.
+
+        This test verifies that when a base_url is configured in the
+        HttpServiceDependencyConfig, the client session can use relative
+        paths for requests instead of absolute URLs.
+        """
+        # Get the base URL from Microcks and ensure it has a trailing slash
+        base_url_str = microcks_with_sample_api.container.get_mock_endpoint(SAMPLE_API_NAME, SAMPLE_API_VERSION)
+        if not base_url_str.endswith("/"):
+            base_url_str += "/"
+
+        # Create config with base_url set
+        config = HttpServiceDependencyConfig(
+            url=HttpUrl(base_url_str),
+            limit=10,
+            limit_per_host=5,
+            use_dns_cache=True,
+            ttl_dns_cache=300,
+            verify_ssl=False,
+            graceful_shutdown_timeout=5,
+        )
+
+        # Create resource with base_url configured
+        resource = AioHttpClientResource(dependency_config=config)
+        await resource.on_startup()
+
+        try:
+            async with resource.acquire_client_session() as session:
+                # Test GET with relative path
+                async with session.get("api/users/1") as response:
+                    assert response.status == HTTPStatus.OK
+                    data: dict[str, Any] = await response.json()
+                    assert "id" in data
+                    assert data["id"] == "1"
+
+                # Test GET all users with relative path
+                async with session.get("api/users") as response:
+                    assert response.status == HTTPStatus.OK
+                    users: list[dict[str, Any]] = await response.json()
+                    assert isinstance(users, list)
+                    assert len(users) > 0
+
+                # Test POST with relative path
+                async with session.post(
+                    "api/users", json={"name": "Test User", "email": "test@example.com"}
+                ) as response:
+                    assert response.status == HTTPStatus.CREATED
+                    created_user: dict[str, Any] = await response.json()
+                    assert "id" in created_user
+
+                # Test PUT with relative path
+                async with session.put(
+                    "api/users/1", json={"name": "Updated User", "email": "updated@example.com"}
+                ) as response:
+                    assert response.status == HTTPStatus.OK
+
+                # Test DELETE with relative path
+                async with session.delete("api/users/1") as response:
+                    assert response.status == HTTPStatus.OK
+
+                # Test health check with relative path
+                async with session.get("api/health") as response:
+                    assert response.status == HTTPStatus.OK
+                    health: dict[str, Any] = await response.json()
+                    assert health.get("status") == "healthy"
+
+        finally:
+            await resource.on_shutdown()
 
     async def test_error_handling_workflow(
         self,

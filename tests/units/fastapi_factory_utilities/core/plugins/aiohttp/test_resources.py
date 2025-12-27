@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
+from pydantic import HttpUrl
 
 from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
 from fastapi_factory_utilities.core.plugins.aiohttp.exceptions import AioHttpClientError
@@ -532,3 +533,52 @@ class TestAioHttpClientResourceAcquireClientSession:
                         raise ValueError("Test error")
 
                 assert mock_session not in resource._client_sessions  # pyright: ignore[reportPrivateUsage]
+
+    async def test_acquire_client_session_without_base_url(self) -> None:
+        """Test acquire_client_session does not set base_url when url is None."""
+        config = HttpServiceDependencyConfig()
+        resource = AioHttpClientResource(dependency_config=config)
+
+        mock_connector = MagicMock()
+        resource._tcp_connector = mock_connector  # pyright: ignore[reportPrivateUsage]
+
+        with patch.object(AioHttpClientResource, "build_trace_config", return_value=None):
+            with patch(
+                "fastapi_factory_utilities.core.plugins.aiohttp.resources.aiohttp.ClientSession"
+            ) as mock_session_class:
+                mock_session = MagicMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session_class.return_value = mock_session
+
+                async with resource.acquire_client_session():
+                    pass
+
+                call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
+                assert "base_url" not in call_kwargs
+                assert call_kwargs["connector"] == mock_connector
+
+    async def test_acquire_client_session_with_base_url(self) -> None:
+        """Test acquire_client_session sets base_url when url is provided."""
+        config = HttpServiceDependencyConfig(url=HttpUrl("http://example.com"))
+        resource = AioHttpClientResource(dependency_config=config)
+
+        mock_connector = MagicMock()
+        resource._tcp_connector = mock_connector  # pyright: ignore[reportPrivateUsage]
+
+        with patch.object(AioHttpClientResource, "build_trace_config", return_value=None):
+            with patch(
+                "fastapi_factory_utilities.core.plugins.aiohttp.resources.aiohttp.ClientSession"
+            ) as mock_session_class:
+                mock_session = MagicMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session_class.return_value = mock_session
+
+                async with resource.acquire_client_session():
+                    pass
+
+                call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
+                assert "base_url" in call_kwargs
+                assert call_kwargs["base_url"] == "http://example.com/"
+                assert call_kwargs["connector"] == mock_connector

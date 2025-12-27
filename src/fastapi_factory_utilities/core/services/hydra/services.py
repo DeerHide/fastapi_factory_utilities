@@ -10,7 +10,10 @@ import jwt
 from fastapi import Depends
 from pydantic import ValidationError
 
-from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource, AioHttpResourceDepends
+from fastapi_factory_utilities.core.plugins.aiohttp import (
+    AioHttpClientResource,
+    AioHttpResourceDepends,
+)
 
 from .exceptions import HydraOperationError
 from .objects import HydraTokenIntrospectObject
@@ -86,6 +89,8 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
             raise HydraOperationError("Failed to decode the JWKS from the Hydra service") from error
         except ValidationError as error:
             raise HydraOperationError("Failed to validate the JWKS from the Hydra service") from error
+        except Exception as error:
+            raise HydraOperationError("Failed to get the JWKS from the Hydra service") from error
 
 
 class HydraIntrospectService(HydraIntrospectGenericService[HydraTokenIntrospectObject]):
