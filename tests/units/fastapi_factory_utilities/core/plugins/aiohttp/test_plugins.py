@@ -26,14 +26,23 @@ class TestAioHttpClientPlugin:
             assert isinstance(plugin, PluginAbstract)
 
     def test_init_creates_builder(self) -> None:
-        """Test that __init__ creates and initializes a builder."""
+        """Test that on_load creates and initializes a builder."""
         with patch("fastapi_factory_utilities.core.plugins.aiohttp.plugins.AioHttpClientBuilder") as mock_builder_class:
             mock_builder = MagicMock(spec=AioHttpClientBuilder)
             mock_builder_class.return_value = mock_builder
 
             plugin = AioHttpClientPlugin(keys=["service1", "service2"])
 
-            mock_builder_class.assert_called_once_with(keys=["service1", "service2"])
+            # Builder should not be created in __init__
+            assert not hasattr(plugin, "_builder") or plugin._builder is None  # pyright: ignore[reportPrivateUsage]
+
+            # Set up application and call on_load
+            mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
+            plugin._application = mock_app  # pyright: ignore[reportPrivateUsage]
+            plugin.on_load()
+
+            mock_builder_class.assert_called_once_with(keys=["service1", "service2"], application=mock_app)
             assert plugin._builder is not None  # pyright: ignore[reportPrivateUsage]
             mock_builder.build_configs.assert_called_once()
             assert plugin._builder == mock_builder
@@ -44,20 +53,37 @@ class TestAioHttpClientPlugin:
             mock_builder = MagicMock(spec=AioHttpClientBuilder)
             mock_builder_class.return_value = mock_builder
 
-            AioHttpClientPlugin(keys=[])
+            plugin = AioHttpClientPlugin(keys=[])
 
-            mock_builder_class.assert_called_once_with(keys=[])
+            # Builder should not be created in __init__
+            mock_builder_class.assert_not_called()
+
+            # Set up application and call on_load
+            mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
+            plugin._application = mock_app  # pyright: ignore[reportPrivateUsage]
+            plugin.on_load()
+
+            mock_builder_class.assert_called_once_with(keys=[], application=mock_app)
 
     def test_on_load(self) -> None:
-        """Test on_load method does nothing."""
+        """Test on_load method creates builder and builds configs."""
         with patch("fastapi_factory_utilities.core.plugins.aiohttp.plugins.AioHttpClientBuilder") as mock_builder_class:
             mock_builder = MagicMock(spec=AioHttpClientBuilder)
             mock_builder_class.return_value = mock_builder
 
             plugin = AioHttpClientPlugin(keys=["service1"])
 
+            # Set up application
+            mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
+            plugin._application = mock_app  # pyright: ignore[reportPrivateUsage]
+
             # Should not raise
             plugin.on_load()
+
+            mock_builder_class.assert_called_once_with(keys=["service1"], application=mock_app)
+            mock_builder.build_configs.assert_called_once()
 
     async def test_on_startup_builds_resources(self) -> None:
         """Test on_startup builds resources and starts them."""
@@ -72,12 +98,16 @@ class TestAioHttpClientPlugin:
             # Set up mock application (required for _add_to_state)
             # Use spec=[] to prevent MagicMock from auto-creating attributes
             mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
             mock_state = MagicMock(spec=[])
             # Set tracer_provider and meter_provider to None explicitly
             mock_state.tracer_provider = None
             mock_state.meter_provider = None
             mock_app.get_asgi_app.return_value.state = mock_state
             plugin._application = mock_app  # pyright: ignore[reportPrivateUsage]
+
+            # Call on_load first to create builder
+            plugin.on_load()
 
             await plugin.on_startup()
 
@@ -96,11 +126,15 @@ class TestAioHttpClientPlugin:
 
             # Set up mock application with OpenTelemetry providers
             mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
             mock_tracer = MagicMock()
             mock_meter = MagicMock()
             mock_app.get_asgi_app.return_value.state.tracer_provider = mock_tracer
             mock_app.get_asgi_app.return_value.state.meter_provider = mock_meter
             plugin._application = mock_app
+
+            # Call on_load first to create builder
+            plugin.on_load()
 
             await plugin.on_startup()
 
@@ -118,15 +152,20 @@ class TestAioHttpClientPlugin:
 
             # Set up mock application
             mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
             mock_state = MagicMock()
             mock_app.get_asgi_app.return_value.state = mock_state
             plugin._application = mock_app
+
+            # Call on_load first to create builder
+            plugin.on_load()
 
             await plugin.on_startup()
 
             # Verify resource was added to state with correct key
             expected_key = f"{STATE_PREFIX_KEY}service1"
-            setattr(mock_state, expected_key, mock_resource)
+            assert hasattr(mock_state, expected_key)
+            assert getattr(mock_state, expected_key) == mock_resource
 
     async def test_on_startup_multiple_resources(self) -> None:
         """Test on_startup handles multiple resources."""
@@ -144,9 +183,13 @@ class TestAioHttpClientPlugin:
 
             # Set up mock application (required for _add_to_state)
             mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
             mock_state = MagicMock()
             mock_app.get_asgi_app.return_value.state = mock_state
             plugin._application = mock_app  # pyright: ignore[reportPrivateUsage]
+
+            # Call on_load first to create builder
+            plugin.on_load()
 
             await plugin.on_startup()
 
@@ -167,6 +210,12 @@ class TestAioHttpClientPlugin:
 
             plugin = AioHttpClientPlugin(keys=["service1", "service2"])
 
+            # Set up application and call on_load to create builder
+            mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
+            plugin._application = mock_app  # pyright: ignore[reportPrivateUsage]
+            plugin.on_load()
+
             await plugin.on_shutdown()
 
             mock_resource1.on_shutdown.assert_called_once()
@@ -181,6 +230,12 @@ class TestAioHttpClientPlugin:
 
             plugin = AioHttpClientPlugin(keys=[])
 
+            # Set up application and call on_load to create builder
+            mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
+            plugin._application = mock_app  # pyright: ignore[reportPrivateUsage]
+            plugin.on_load()
+
             # Should not raise
             await plugin.on_shutdown()
 
@@ -194,16 +249,18 @@ class TestAioHttpClientPlugin:
 
             # Init
             plugin = AioHttpClientPlugin(keys=["service1"])
-            assert plugin._builder is not None
 
-            # on_load
-            plugin.on_load()
-
-            # on_startup
+            # Set up application
             mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
             mock_app.get_asgi_app.return_value.state = MagicMock()
             plugin._application = mock_app
 
+            # on_load
+            plugin.on_load()
+            assert plugin._builder is not None
+
+            # on_startup
             await plugin.on_startup()
             mock_builder.build_resources.assert_called_once()
             mock_resource.on_startup.assert_called_once()
@@ -227,6 +284,14 @@ class TestAioHttpClientPluginIntegration:
 
             plugin = AioHttpClientPlugin(keys=["test_service"])
 
+            # Set up application
+            mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
+            plugin._application = mock_app
+
+            # Call on_load to create builder
+            plugin.on_load()
+
             # Verify builder was created and config was built
             assert plugin._builder is not None
             assert "test_service" in plugin._builder._configs
@@ -249,6 +314,14 @@ class TestAioHttpClientPluginIntegration:
             mock_factory.return_value = mock_config
 
             plugin = AioHttpClientPlugin(keys=keys)
+
+            # Set up application
+            mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
+            plugin._application = mock_app
+
+            # Call on_load to create builder
+            plugin.on_load()
 
             assert len(plugin._builder._configs) == len(keys)
             for key in keys:

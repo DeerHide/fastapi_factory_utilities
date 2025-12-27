@@ -10,15 +10,23 @@ from fastapi_factory_utilities.core.plugins.aiohttp.resources import AioHttpClie
 # Test constants
 EXPECTED_SERVICE_COUNT_TWO: int = 2
 EXPECTED_SERVICE_COUNT_THREE: int = 3
+TEST_PACKAGE_NAME: str = "test_package"
 
 
 class TestAioHttpClientBuilder:
     """Test cases for AioHttpClientBuilder class."""
 
+    def _create_mock_application(self) -> MagicMock:
+        """Create a mock application for testing."""
+        mock_app = MagicMock()
+        mock_app.PACKAGE_NAME = TEST_PACKAGE_NAME
+        return mock_app
+
     def test_init(self) -> None:
         """Test AioHttpClientBuilder initialization."""
         keys = ["service1", "service2"]
-        builder = AioHttpClientBuilder(keys=keys)
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=keys, application=mock_app)
 
         assert builder._keys == keys  # pylint: disable=protected-access
         assert not builder._configs  # pylint: disable=protected-access
@@ -26,7 +34,8 @@ class TestAioHttpClientBuilder:
 
     def test_init_with_empty_keys(self) -> None:
         """Test AioHttpClientBuilder initialization with empty keys list."""
-        builder = AioHttpClientBuilder(keys=[])
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=[], application=mock_app)
 
         assert builder._keys == []  # pylint: disable=protected-access
         assert not builder._configs  # pylint: disable=protected-access
@@ -35,7 +44,8 @@ class TestAioHttpClientBuilder:
     def test_build_configs(self) -> None:
         """Test build_configs method creates configs for each key."""
         keys = ["service1", "service2"]
-        builder = AioHttpClientBuilder(keys=keys)
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=keys, application=mock_app)
 
         mock_config1 = MagicMock(spec=HttpServiceDependencyConfig)
         mock_config2 = MagicMock(spec=HttpServiceDependencyConfig)
@@ -51,12 +61,13 @@ class TestAioHttpClientBuilder:
             assert builder._configs["service1"] == mock_config1
             assert builder._configs["service2"] == mock_config2
             assert mock_factory.call_count == EXPECTED_SERVICE_COUNT_TWO
-            mock_factory.assert_any_call(key="service1")
-            mock_factory.assert_any_call(key="service2")
+            mock_factory.assert_any_call(key="service1", application_package=TEST_PACKAGE_NAME)
+            mock_factory.assert_any_call(key="service2", application_package=TEST_PACKAGE_NAME)
 
     def test_build_configs_with_empty_keys(self) -> None:
         """Test build_configs with empty keys list."""
-        builder = AioHttpClientBuilder(keys=[])
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=[], application=mock_app)
 
         with patch(
             "fastapi_factory_utilities.core.plugins.aiohttp.builder.build_http_dependency_config"
@@ -70,7 +81,8 @@ class TestAioHttpClientBuilder:
     def test_build_resources(self) -> None:
         """Test build_resources method creates resources for each config."""
         keys = ["service1", "service2"]
-        builder = AioHttpClientBuilder(keys=keys)
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=keys, application=mock_app)
 
         # Manually set up configs
         mock_config1 = MagicMock(spec=HttpServiceDependencyConfig)
@@ -87,7 +99,8 @@ class TestAioHttpClientBuilder:
 
     def test_build_resources_with_empty_configs(self) -> None:
         """Test build_resources with empty configs."""
-        builder = AioHttpClientBuilder(keys=[])
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=[], application=mock_app)
         builder._configs = {}
 
         result = builder.build_resources()
@@ -97,7 +110,8 @@ class TestAioHttpClientBuilder:
 
     def test_resources_property(self) -> None:
         """Test resources property returns the resources dictionary."""
-        builder = AioHttpClientBuilder(keys=[])
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=[], application=mock_app)
         mock_resource = MagicMock(spec=AioHttpClientResource)
         builder._resources = {"service1": mock_resource}
 
@@ -108,7 +122,8 @@ class TestAioHttpClientBuilder:
     def test_full_build_flow(self) -> None:
         """Test the complete build flow: build_configs -> build_resources."""
         keys = ["api_service"]
-        builder = AioHttpClientBuilder(keys=keys)
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=keys, application=mock_app)
 
         mock_config = HttpServiceDependencyConfig(
             limit=50,
@@ -129,7 +144,8 @@ class TestAioHttpClientBuilder:
     def test_method_chaining(self) -> None:
         """Test that build methods support chaining."""
         keys = ["service"]
-        builder = AioHttpClientBuilder(keys=keys)
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=keys, application=mock_app)
 
         with patch(
             "fastapi_factory_utilities.core.plugins.aiohttp.builder.build_http_dependency_config"
@@ -144,7 +160,8 @@ class TestAioHttpClientBuilder:
     def test_multiple_services(self) -> None:
         """Test building with multiple services."""
         keys = ["service_a", "service_b", "service_c"]
-        builder = AioHttpClientBuilder(keys=keys)
+        mock_app = self._create_mock_application()
+        builder = AioHttpClientBuilder(keys=keys, application=mock_app)
 
         configs = {
             "service_a": HttpServiceDependencyConfig(limit=10),
@@ -155,7 +172,7 @@ class TestAioHttpClientBuilder:
         with patch(
             "fastapi_factory_utilities.core.plugins.aiohttp.builder.build_http_dependency_config"
         ) as mock_factory:
-            mock_factory.side_effect = lambda key: configs[key]
+            mock_factory.side_effect = lambda key, application_package: configs[key]
 
             builder.build_configs().build_resources()
 

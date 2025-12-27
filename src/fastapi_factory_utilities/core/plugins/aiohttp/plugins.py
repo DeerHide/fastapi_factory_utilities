@@ -19,11 +19,15 @@ class AioHttpClientPlugin(PluginAbstract):
             keys (list[str]): The keys of the dependencies configurations.
         """
         super().__init__()
-        self._builder: AioHttpClientBuilder = AioHttpClientBuilder(keys=keys)
-        self._builder.build_configs()
+        self._keys: list[str] = keys
 
     def on_load(self) -> None:
         """On load."""
+        if self._application is None or self._application.PACKAGE_NAME == "":
+            raise ValueError("The application package name is not set")
+
+        self._builder: AioHttpClientBuilder = AioHttpClientBuilder(keys=self._keys, application=self._application)
+        self._builder.build_configs()
 
     async def on_startup(self) -> None:
         """On startup."""
