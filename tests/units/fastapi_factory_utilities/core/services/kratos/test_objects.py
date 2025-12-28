@@ -32,6 +32,8 @@ from fastapi_factory_utilities.core.services.kratos.types import (
 class CustomTraitsObject(KratosTraitsObject):
     """Custom traits object extending KratosTraitsObject."""
 
+    email: str
+    realm_id: uuid.UUID
     first_name: str
     last_name: str
 
@@ -62,126 +64,60 @@ class TestKratosTraitsObject:
     """Unit tests for KratosTraitsObject."""
 
     def test_valid_creation(self) -> None:
-        """Test valid creation with all required fields."""
-        # Arrange
-        email = "user@example.com"
-        realm_id = uuid.uuid4()
-
+        """Test valid creation - KratosTraitsObject is now a base class with no required fields."""
         # Act
-        traits = KratosTraitsObject(email=email, realm_id=realm_id)
+        traits = KratosTraitsObject()
 
         # Assert
-        assert traits.email == email
-        assert traits.realm_id == realm_id
-
-    def test_missing_email_raises_validation_error(self) -> None:
-        """Test that missing email raises ValidationError."""
-        with pytest.raises(ValidationError) as exc_info:
-            KratosTraitsObject(realm_id=uuid.uuid4())  # type: ignore[call-arg]
-
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert errors[0]["loc"] == ("email",)
-
-    def test_missing_realm_id_raises_validation_error(self) -> None:
-        """Test that missing realm_id raises ValidationError."""
-        with pytest.raises(ValidationError) as exc_info:
-            KratosTraitsObject(email="user@example.com")  # type: ignore[call-arg]
-
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert errors[0]["loc"] == ("realm_id",)
-
-    def test_invalid_email_type_raises_validation_error(self) -> None:
-        """Test that invalid email type raises ValidationError."""
-        with pytest.raises(ValidationError) as exc_info:
-            KratosTraitsObject(email=123, realm_id=uuid.uuid4())  # type: ignore[arg-type]
-
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert errors[0]["loc"] == ("email",)
-
-    def test_invalid_realm_id_type_raises_validation_error(self) -> None:
-        """Test that invalid realm_id type raises ValidationError."""
-        with pytest.raises(ValidationError) as exc_info:
-            KratosTraitsObject(email="user@example.com", realm_id="not-a-uuid")  # type: ignore[arg-type]
-
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert errors[0]["loc"] == ("realm_id",)
+        assert isinstance(traits, KratosTraitsObject)
 
     def test_extra_fields_are_ignored(self) -> None:
         """Test that extra fields are ignored due to extra='ignore' config."""
-        email = "user@example.com"
-        realm_id = uuid.uuid4()
-
         traits = KratosTraitsObject(
-            email=email,
-            realm_id=realm_id,
             extra_field="should be ignored",  # type: ignore[call-arg]
         )
 
-        assert traits.email == email
-        assert traits.realm_id == realm_id
+        assert isinstance(traits, KratosTraitsObject)
         assert not hasattr(traits, "extra_field")
 
     def test_model_dump(self) -> None:
         """Test model serialization using model_dump."""
-        email = "user@example.com"
-        realm_id = uuid.uuid4()
-
-        traits = KratosTraitsObject(email=email, realm_id=realm_id)
+        traits = KratosTraitsObject()
         dumped = traits.model_dump()
 
-        assert dumped["email"] == email
-        assert dumped["realm_id"] == realm_id
+        assert dumped == {}
 
     def test_model_dump_json(self) -> None:
         """Test model serialization using model_dump_json."""
-        email = "user@example.com"
-        realm_id = uuid.uuid4()
-
-        traits = KratosTraitsObject(email=email, realm_id=realm_id)
+        traits = KratosTraitsObject()
         json_str = traits.model_dump_json()
 
         assert isinstance(json_str, str)
         data = json.loads(json_str)
-        assert data["email"] == email
-        assert data["realm_id"] == str(realm_id)
+        assert data == {}
 
     def test_model_validate(self) -> None:
         """Test model deserialization using model_validate."""
-        email = "user@example.com"
-        realm_id = uuid.uuid4()
-
-        data: dict[str, Any] = {"email": email, "realm_id": str(realm_id)}
+        data: dict[str, Any] = {}
         traits = KratosTraitsObject.model_validate(data)
 
-        assert traits.email == email
-        assert traits.realm_id == realm_id
+        assert isinstance(traits, KratosTraitsObject)
 
     def test_model_validate_json(self) -> None:
         """Test model deserialization using model_validate_json."""
-        email = "user@example.com"
-        realm_id = uuid.uuid4()
-
-        json_str = json.dumps({"email": email, "realm_id": str(realm_id)})
+        json_str = json.dumps({})
         traits = KratosTraitsObject.model_validate_json(json_str)
 
-        assert traits.email == email
-        assert traits.realm_id == realm_id
+        assert isinstance(traits, KratosTraitsObject)
 
     def test_round_trip_serialization(self) -> None:
         """Test round-trip serialization: create → serialize → deserialize."""
-        email = "user@example.com"
-        realm_id = uuid.uuid4()
-
-        original = KratosTraitsObject(email=email, realm_id=realm_id)
+        original = KratosTraitsObject()
         dumped = original.model_dump()
         restored = KratosTraitsObject.model_validate(dumped)
 
-        assert restored.email == original.email
-        assert restored.realm_id == original.realm_id
+        assert isinstance(restored, KratosTraitsObject)
+        assert dumped == {}
 
 
 class TestMetadataObject:
@@ -515,7 +451,7 @@ class TestKratosIdentityObject:
 
     def _create_valid_traits(self) -> KratosTraitsObject:
         """Create a valid KratosTraitsObject for testing."""
-        return KratosTraitsObject(email="user@example.com", realm_id=uuid.uuid4())
+        return KratosTraitsObject()
 
     def _create_valid_recovery_address(self) -> KratosRecoveryAddressObject:
         """Create a valid KratosRecoveryAddressObject for testing."""
@@ -834,9 +770,8 @@ class TestKratosIdentityObject:
         # Note: Pydantic deserializes to the base class, not the custom subclass
         # This is expected behavior - the generic type parameter is for type hints only
         assert isinstance(restored.traits, KratosTraitsObject)
-        assert restored.traits.email == "user@example.com"
-        # Custom fields are lost during deserialization because Pydantic doesn't know
-        # to use CustomTraitsObject - this is expected behavior
+        # Custom fields are preserved because the base class accepts extra fields with extra='ignore'
+        # but we can't access them as attributes since they weren't defined in the base class
 
     def test_custom_identity_object_creation(self) -> None:
         """Test creating CustomIdentityObject with declared generic types."""
@@ -1141,7 +1076,7 @@ class TestKratosSessionObject:
 
     def _create_valid_traits(self) -> KratosTraitsObject:
         """Create a valid KratosTraitsObject for testing."""
-        return KratosTraitsObject(email="user@example.com", realm_id=uuid.uuid4())
+        return KratosTraitsObject()
 
     def _create_valid_identity(
         self,

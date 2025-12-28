@@ -46,7 +46,6 @@ class MockIdentityObject(BaseModel):
     """Mock identity object for testing."""
 
     id: KratosIdentityId
-    email: str
     data: dict[str, Any]
 
 
@@ -109,7 +108,6 @@ def fixture_mock_identity_data() -> dict[str, Any]:
     """
     return {
         "id": str(uuid.uuid4()),
-        "email": "test@example.com",
         "data": {"test": "value"},
     }
 
@@ -385,7 +383,7 @@ class TestKratosIdentityGenericService:
         result: MockIdentityObject = await service.get_identity(identity_id=identity_id)
 
         assert result.id == identity_id
-        assert result.email == mock_identity_data["email"]
+        assert result.data == mock_identity_data["data"]
 
     @pytest.mark.asyncio
     async def test_get_identity_client_response_error(
@@ -475,7 +473,6 @@ class TestKratosIdentityGenericService:
 
         identity = MockIdentityObject(
             id=KratosIdentityId(uuid.uuid4()),
-            email="test@example.com",
             data={},
         )
 

@@ -21,9 +21,6 @@ class KratosTraitsObject(BaseModel):
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
 
-    email: str
-    realm_id: uuid.UUID
-
 
 class MetadataObject(BaseModel):
     """Metadata for Kratos."""
