@@ -1,0 +1,189 @@
+---
+description: Guide for mocking ODM repository operations in tests using fastapi_factory_utilities mockers
+globs: tests/**/*.py
+alwaysApply: false
+---
+# ODM Repository Mocker Utilities
+
+Use `fastapi_factory_utilities.core.plugins.odm_plugin.mockers` to mock database repository operations in tests without requiring a real MongoDB connection.
+
+## Available Class
+
+### `AbstractRepositoryInMemory`
+
+An in-memory implementation of the repository pattern for testing. Subclass it with your document and entity types.
+
+```python
+from fastapi_factory_utilities.core.plugins.odm_plugin.mockers import AbstractRepositoryInMemory
+from myapp.documents import UserDocument
+from myapp.entities import UserEntity
+
+class UserRepositoryInMemory(AbstractRepositoryInMemory[UserDocument, UserEntity]):
+    """In-memory repository for User entities."""
+    pass
+```
+
+## Creating a Repository
+
+```python
+from uuid import uuid4
+from myapp.entities import UserEntity
+
+# Empty repository
+repository = UserRepositoryInMemory()
+
+# Pre-populated repository
+users = [
+    UserEntity(id=uuid4(), name="Alice", email="alice@example.com"),
+    UserEntity(id=uuid4(), name="Bob", email="bob@example.com"),
+]
+repository = UserRepositoryInMemory(entities=users)
+```
+
+## Available Methods
+
+### `insert(entity)` - Create a new entity
+
+```python
+user = UserEntity(id=uuid4(), name="Charlie", email="charlie@example.com")
+created_user = await repository.insert(user)
+# created_user has created_at and updated_at timestamps set
+```
+
+**Raises:** `UnableToCreateEntityDueToDuplicateKeyError` if entity with same ID exists.
+
+### `update(entity)` - Update an existing entity
+
+```python
+user.name = "Charlie Updated"
+updated_user = await repository.update(user)
+# updated_user has updated_at timestamp refreshed
+```
+
+**Raises:** `OperationError` if entity does not exist.
+
+### `get_one_by_id(entity_id)` - Retrieve by ID
+
+```python
+user = await repository.get_one_by_id(user_id)
+# Returns None if not found
+```
+
+### `delete_one_by_id(entity_id, raise_if_not_found=False)` - Delete by ID
+
+```python
+# Silent if not found
+await repository.delete_one_by_id(user_id)
+
+# Raises OperationError if not found
+await repository.delete_one_by_id(user_id, raise_if_not_found=True)
+```
+
+### `find(*args, skip, limit, sort)` - Query entities
+
+```python
+from beanie import SortDirection
+
+# Find all
+all_users = await repository.find()
+
+# Find with filters (dict format)
+filtered = await repository.find({"name": "Alice"})
+
+# Find with pagination
+paginated = await repository.find(skip=10, limit=5)
+
+# Find with sorting
+sorted_users = await repository.find(
+    sort=[("name", SortDirection.ASCENDING)]
+)
+
+# Combined
+result = await repository.find(
+    {"active": True},
+    skip=0,
+    limit=10,
+    sort=[("created_at", SortDirection.DESCENDING)],
+)
+```
+
+## Usage Pattern in Tests
+
+```python
+import pytest
+from uuid import uuid4
+
+class TestUserService:
+    """Tests for UserService."""
+
+    async def test_create_user_success(self) -> None:
+        """Test successful user creation."""
+        # Arrange
+        repository = UserRepositoryInMemory()
+        service = UserService(repository=repository)
+        user_data = UserEntity(id=uuid4(), name="Test", email="test@example.com")
+
+        # Act
+        result = await service.create_user(user_data)
+
+        # Assert
+        assert result.name == "Test"
+        assert result.created_at is not None
+
+    async def test_get_user_not_found(self) -> None:
+        """Test user not found scenario."""
+        # Arrange
+        repository = UserRepositoryInMemory()
+        service = UserService(repository=repository)
+
+        # Act
+        result = await service.get_user(uuid4())
+
+        # Assert
+        assert result is None
+
+    async def test_update_user_success(self) -> None:
+        """Test successful user update."""
+        # Arrange
+        user = UserEntity(id=uuid4(), name="Original", email="test@example.com")
+        repository = UserRepositoryInMemory(entities=[user])
+        service = UserService(repository=repository)
+
+        # Act
+        user.name = "Updated"
+        result = await service.update_user(user)
+
+        # Assert
+        assert result.name == "Updated"
+        assert result.updated_at > result.created_at
+
+    async def test_duplicate_key_error(self) -> None:
+        """Test duplicate key error handling."""
+        # Arrange
+        user_id = uuid4()
+        existing_user = UserEntity(id=user_id, name="Existing", email="existing@example.com")
+        repository = UserRepositoryInMemory(entities=[existing_user])
+        service = UserService(repository=repository)
+
+        # Act & Assert
+        duplicate_user = UserEntity(id=user_id, name="Duplicate", email="duplicate@example.com")
+        with pytest.raises(UnableToCreateEntityDueToDuplicateKeyError):
+            await service.create_user(duplicate_user)
+```
+
+## Session Context Manager
+
+The repository provides a no-op session context manager for API compatibility:
+
+```python
+async with repository.get_session() as session:
+    # session is None for in-memory implementation
+    await repository.insert(entity, session=session)
+```
+
+## Important Notes
+
+- Entities are stored by their `id` (UUID)
+- `find()` returns deep copies to prevent accidental modification
+- Timestamps (`created_at`, `updated_at`) are automatically managed
+- The repository is not thread-safe (suitable for single-threaded test execution)

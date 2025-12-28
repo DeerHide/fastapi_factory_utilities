@@ -1,0 +1,146 @@
+---
+description: Guide for mocking aiohttp HTTP client in tests using fastapi_factory_utilities mockers
+globs: tests/**/*.py
+alwaysApply: false
+---
+# Aiohttp Mocker Utilities
+
+Use `fastapi_factory_utilities.core.plugins.aiohttp.mockers` to mock HTTP client operations in tests.
+
+## Available Functions
+
+### `build_mocked_aiohttp_response()`
+
+Creates a mock `aiohttp.ClientResponse` with configurable properties.
+
+```python
+from http import HTTPStatus
+from fastapi_factory_utilities.core.plugins.aiohttp.mockers import build_mocked_aiohttp_response
+
+# Basic JSON response
+response = build_mocked_aiohttp_response(
+    status=HTTPStatus.OK,
+    json={"message": "Success"},
+)
+
+# Response with headers and cookies
+response = build_mocked_aiohttp_response(
+    status=HTTPStatus.OK,
+    json={"data": "value"},
+    headers={"Content-Type": "application/json"},
+    cookies={"session": "abc123"},
+)
+
+# Error response
+response = build_mocked_aiohttp_response(
+    status=HTTPStatus.NOT_FOUND,
+    error_message="Resource not found",
+)
+
+# Binary content response
+response = build_mocked_aiohttp_response(
+    status=HTTPStatus.OK,
+    read=b"binary data",
+)
+```
+
+**Parameters:**
+- `status`: HTTP status code (required)
+- `json`: JSON data for `response.json()`
+- `text`: Text data for `response.text()`
+- `read`: Binary content for `response.read()`
+- `headers`: HTTP headers dict
+- `cookies`: Cookies dict
+- `error_message`: Custom error message for `ClientResponseError`
+- `reason`: HTTP reason phrase
+- `url`: Response URL
+- `method`: HTTP method used
+
+### `build_mocked_aiohttp_resource()`
+
+Creates a mock `AioHttpClientResource` with configurable HTTP method responses.
+
+```python
+from http import HTTPStatus
+from fastapi_factory_utilities.core.plugins.aiohttp.mockers import (
+    build_mocked_aiohttp_resource,
+    build_mocked_aiohttp_response,
+)
+
+# Static response for GET requests
+get_response = build_mocked_aiohttp_response(
+    status=HTTPStatus.OK,
+    json={"users": []},
+)
+resource = build_mocked_aiohttp_resource(get=get_response)
+
+# Multiple HTTP methods
+resource = build_mocked_aiohttp_resource(
+    get=build_mocked_aiohttp_response(status=HTTPStatus.OK, json={"id": 1}),
+    post=build_mocked_aiohttp_response(status=HTTPStatus.CREATED, json={"id": 2}),
+    delete=build_mocked_aiohttp_response(status=HTTPStatus.NO_CONTENT),
+)
+
+# Dynamic response based on request
+def dynamic_get(url: str, **kwargs) -> aiohttp.ClientResponse:
+    if "page=1" in url:
+        return build_mocked_aiohttp_response(status=HTTPStatus.OK, json={"page": 1})
+    return build_mocked_aiohttp_response(status=HTTPStatus.NOT_FOUND)
+
+resource = build_mocked_aiohttp_resource(get=dynamic_get)
+```
+
+**Parameters:**
+- `get`, `post`, `put`, `patch`, `delete`, `head`, `options`: Mock responses for each HTTP method
+- Each can be a `ClientResponse`, `None`, or a callable returning a response
+
+## Usage Pattern in Tests
+
+```python
+class TestMyService:
+    """Tests for MyService."""
+
+    async def test_fetch_data_success(self) -> None:
+        """Test successful data fetch."""
+        # Arrange
+        response = build_mocked_aiohttp_response(
+            status=HTTPStatus.OK,
+            json={"data": "expected"},
+        )
+        resource = build_mocked_aiohttp_resource(get=response)
+        service = MyService(aiohttp_resource=resource)
+
+        # Act
+        result = await service.fetch_data()
+
+        # Assert
+        assert result == {"data": "expected"}
+
+    async def test_fetch_data_error(self) -> None:
+        """Test error handling."""
+        # Arrange
+        response = build_mocked_aiohttp_response(
+            status=HTTPStatus.INTERNAL_SERVER_ERROR,
+            error_message="Server error",
+        )
+        resource = build_mocked_aiohttp_resource(get=response)
+        service = MyService(aiohttp_resource=resource)
+
+        # Act & Assert
+        with pytest.raises(ServiceError):
+            await service.fetch_data()
+```
+
+## Context Manager Support
+
+The mocked response supports both usage patterns:
+
+```python
+# Direct await pattern
+response = await session.get(url)
+data = await response.json()
+
+# Context manager pattern
+async with session.get(url) as response:
+    data = await response.json()
+```
