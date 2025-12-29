@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import pytest
 from beanie import SortDirection
+from beanie.operators import Exists, In, NotIn, RegEx
 from pydantic import Field
 
 from fastapi_factory_utilities.core.plugins.odm_plugin.documents import BaseDocument
@@ -88,7 +89,7 @@ class TestManagedSession:
         class MockRepo:
             """Mock repository for testing."""
 
-            @asynccontextmanager  # type: ignore[misc]
+            @asynccontextmanager
             async def get_session(self) -> Any:
                 """Mock get_session."""
                 yield None
@@ -119,7 +120,7 @@ class TestManagedSession:
         class MockRepo:
             """Mock repository for testing."""
 
-            @asynccontextmanager  # type: ignore[misc]
+            @asynccontextmanager
             async def get_session(self) -> Any:
                 """Mock get_session."""
                 yield None
@@ -145,7 +146,7 @@ class TestManagedSession:
         class MockRepo:
             """Mock repository for testing."""
 
-            @asynccontextmanager  # type: ignore[misc]
+            @asynccontextmanager
             async def get_session(self) -> Any:
                 """Mock get_session."""
                 yield None
@@ -682,3 +683,89 @@ class TestAbstractRepositoryInMemory:
 
         # Assert
         assert len(results) == EXPECTED_ENTITY_COUNT_2
+
+    async def test_find_normal_usage(self) -> None:
+        """Test find normal usage with Beanie query expression syntax."""
+        # Arrange
+        repository = ConcreteRepositoryInMemory()
+        entity1 = ConcreteEntity(name="Entity 1", value=TEST_VALUE_10)
+        entity2 = ConcreteEntity(name="Entity 2", value=TEST_VALUE_20)
+        await repository.insert(entity=entity1)
+        await repository.insert(entity=entity2)
+
+        # Act
+        results = await repository.find(ConcreteDocument.value == TEST_VALUE_10)
+
+        # Assert
+        assert len(results) == 1
+        assert results[0].id == entity1.id
+
+    async def test_find_with_beanie_in_operator(self) -> None:
+        """Test find with Beanie's In operator."""
+        # Arrange
+        repository = ConcreteRepositoryInMemory()
+        entity1 = ConcreteEntity(name="Entity 1", category="A", value=TEST_VALUE_10)
+        entity2 = ConcreteEntity(name="Entity 2", category="B", value=TEST_VALUE_20)
+        entity3 = ConcreteEntity(name="Entity 3", category="C", value=TEST_VALUE_30)
+        await repository.insert(entity=entity1)
+        await repository.insert(entity=entity2)
+        await repository.insert(entity=entity3)
+
+        # Act
+        results = await repository.find(In(ConcreteDocument.category, ["A", "C"]))
+
+        # Assert
+        assert len(results) == EXPECTED_ENTITY_COUNT_2
+        assert {r.id for r in results} == {entity1.id, entity3.id}
+
+    async def test_find_with_beanie_notin_operator(self) -> None:
+        """Test find with Beanie's NotIn operator."""
+        # Arrange
+        repository = ConcreteRepositoryInMemory()
+        entity1 = ConcreteEntity(name="Entity 1", category="A", value=TEST_VALUE_10)
+        entity2 = ConcreteEntity(name="Entity 2", category="B", value=TEST_VALUE_20)
+        entity3 = ConcreteEntity(name="Entity 3", category="C", value=TEST_VALUE_30)
+        await repository.insert(entity=entity1)
+        await repository.insert(entity=entity2)
+        await repository.insert(entity=entity3)
+
+        # Act
+        results = await repository.find(NotIn(ConcreteDocument.category, ["B"]))
+
+        # Assert
+        assert len(results) == EXPECTED_ENTITY_COUNT_2
+        assert {r.id for r in results} == {entity1.id, entity3.id}
+
+    async def test_find_with_beanie_regex_operator(self) -> None:
+        """Test find with Beanie's RegEx operator."""
+        # Arrange
+        repository = ConcreteRepositoryInMemory()
+        entity1 = ConcreteEntity(name="Entity One", value=TEST_VALUE_10)
+        entity2 = ConcreteEntity(name="Entity Two", value=TEST_VALUE_20)
+        entity3 = ConcreteEntity(name="Something Else", value=TEST_VALUE_30)
+        await repository.insert(entity=entity1)
+        await repository.insert(entity=entity2)
+        await repository.insert(entity=entity3)
+
+        # Act
+        results = await repository.find(RegEx(ConcreteDocument.name, "^Entity", "i"))
+
+        # Assert
+        assert len(results) == EXPECTED_ENTITY_COUNT_2
+        assert {r.id for r in results} == {entity1.id, entity2.id}
+
+    async def test_find_with_beanie_exists_operator(self) -> None:
+        """Test find with Beanie's Exists operator."""
+        # Arrange
+        repository = ConcreteRepositoryInMemory()
+        entity1 = ConcreteEntity(name="Entity 1", category="A", value=TEST_VALUE_10)
+        entity2 = ConcreteEntity(name="Entity 2", category=None, value=TEST_VALUE_20)
+        await repository.insert(entity=entity1)
+        await repository.insert(entity=entity2)
+
+        # Act
+        results = await repository.find(Exists(ConcreteDocument.category, True))
+
+        # Assert
+        assert len(results) == 1
+        assert results[0].id == entity1.id
