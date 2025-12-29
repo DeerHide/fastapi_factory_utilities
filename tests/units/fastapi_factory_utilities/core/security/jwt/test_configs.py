@@ -35,8 +35,10 @@ class TestJWTBearerAuthenticationConfig:
         )
         assert config.audience == "test-audience"
         assert config.authorized_algorithms == ["RS256", "ES256"]
-        assert config.authorized_audiences == ["aud1", "aud2"]
-        assert config.authorized_issuers == ["iss1", "iss2"]
+        assert config.authorized_audiences is not None
+        assert set(config.authorized_audiences) == {"aud1", "aud2"}
+        assert config.authorized_issuers is not None
+        assert set(config.authorized_issuers) == {"iss1", "iss2"}
 
     def test_can_be_initialized_with_optional_fields(self) -> None:
         """Test that the config can be initialized with optional fields."""
@@ -196,8 +198,10 @@ class TestJWTBearerAuthenticationConfig:
 
         assert config.audience == "test-audience"
         assert config.authorized_algorithms == ["RS256", "ES256"]
-        assert config.authorized_audiences == ["aud1", "aud2"]
-        assert config.authorized_issuers == ["iss1", "iss2"]
+        assert config.authorized_audiences is not None
+        assert set(config.authorized_audiences) == {"aud1", "aud2"}
+        assert config.authorized_issuers is not None
+        assert set(config.authorized_issuers) == {"iss1", "iss2"}
 
     def test_model_validate_with_minimal_fields(self) -> None:
         """Test creating config using model_validate with minimal fields."""
@@ -233,3 +237,291 @@ class TestJWTBearerAuthenticationConfig:
             authorized_algorithms=[],
         )
         assert config.authorized_algorithms == []
+
+    def test_validate_authorized_audiences_accepts_comma_separated_string(self) -> None:
+        """Test that comma-separated string is converted to list."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_audiences="aud1,aud2,aud3",  # type: ignore[arg-type]
+        )
+        assert config.authorized_audiences is not None
+        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
+        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+
+    def test_validate_authorized_audiences_strips_whitespace(self) -> None:
+        """Test that whitespace is stripped from comma-separated values."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_audiences=" aud1 , aud2 , aud3 ",  # type: ignore[arg-type]
+        )
+        assert config.authorized_audiences is not None
+        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
+        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+
+    def test_validate_authorized_audiences_strips_whitespace_from_single_value(self) -> None:
+        """Test that whitespace is stripped from single value."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_audiences=" aud1 ",  # type: ignore[arg-type]
+        )
+        assert config.authorized_audiences == ["aud1"]
+
+    def test_validate_authorized_audiences_removes_duplicates_from_string(self) -> None:
+        """Test that duplicate values are removed from comma-separated string."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_audiences="aud1,aud2,aud1",  # type: ignore[arg-type]
+        )
+        assert config.authorized_audiences is not None
+        assert set(config.authorized_audiences) == {"aud1", "aud2"}
+        assert len(config.authorized_audiences) == 2  # noqa: PLR2004
+
+    def test_validate_authorized_audiences_removes_duplicates_from_list(self) -> None:
+        """Test that duplicate values are removed from list."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_audiences=["aud1", "aud2", "aud1"],
+        )
+        assert config.authorized_audiences is not None
+        assert set(config.authorized_audiences) == {"aud1", "aud2"}
+        assert len(config.authorized_audiences) == 2  # noqa: PLR2004
+
+    def test_validate_authorized_audiences_filters_empty_strings_from_comma_separated(
+        self,
+    ) -> None:
+        """Test that empty strings are filtered from comma-separated string."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_audiences="aud1,,aud2, ,aud3",  # type: ignore[arg-type]
+        )
+        assert config.authorized_audiences is not None
+        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
+        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+
+    def test_validate_authorized_audiences_filters_empty_strings_from_list(self) -> None:
+        """Test that empty strings are filtered from list."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_audiences=["aud1", "", "aud2", " ", "aud3"],
+        )
+        assert config.authorized_audiences is not None
+        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
+        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+
+    def test_validate_authorized_audiences_raises_error_for_empty_string(self) -> None:
+        """Test that empty string raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_audiences="",  # type: ignore[arg-type]
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_audiences",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+    def test_validate_authorized_audiences_raises_error_for_whitespace_only_string(
+        self,
+    ) -> None:
+        """Test that whitespace-only string raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_audiences="   ",  # type: ignore[arg-type]
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_audiences",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+    def test_validate_authorized_audiences_raises_error_for_comma_only_string(self) -> None:
+        """Test that comma-only string raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_audiences=",,,",  # type: ignore[arg-type]
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_audiences",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+    def test_validate_authorized_audiences_raises_error_for_empty_list(self) -> None:
+        """Test that empty list raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_audiences=[],
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_audiences",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+    def test_validate_authorized_audiences_raises_error_for_list_with_only_empty_strings(
+        self,
+    ) -> None:
+        """Test that list with only empty strings raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_audiences=["", " ", "  "],
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_audiences",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+    def test_validate_authorized_issuers_accepts_comma_separated_string(self) -> None:
+        """Test that comma-separated string is converted to list."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_issuers="iss1,iss2,iss3",  # type: ignore[arg-type]
+        )
+        assert config.authorized_issuers is not None
+        assert set(config.authorized_issuers) == {"iss1", "iss2", "iss3"}
+        assert len(config.authorized_issuers) == 3  # noqa: PLR2004
+
+    def test_validate_authorized_issuers_strips_whitespace(self) -> None:
+        """Test that whitespace is stripped from comma-separated values."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_issuers=" iss1 , iss2 , iss3 ",  # type: ignore[arg-type]
+        )
+        assert config.authorized_issuers is not None
+        assert set(config.authorized_issuers) == {"iss1", "iss2", "iss3"}
+        assert len(config.authorized_issuers) == 3  # noqa: PLR2004
+
+    def test_validate_authorized_issuers_strips_whitespace_from_single_value(self) -> None:
+        """Test that whitespace is stripped from single value."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_issuers=" iss1 ",  # type: ignore[arg-type]
+        )
+        assert config.authorized_issuers == ["iss1"]
+
+    def test_validate_authorized_issuers_removes_duplicates_from_string(self) -> None:
+        """Test that duplicate values are removed from comma-separated string."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_issuers="iss1,iss2,iss1",  # type: ignore[arg-type]
+        )
+        assert config.authorized_issuers is not None
+        assert set(config.authorized_issuers) == {"iss1", "iss2"}
+        assert len(config.authorized_issuers) == 2  # noqa: PLR2004
+
+    def test_validate_authorized_issuers_removes_duplicates_from_list(self) -> None:
+        """Test that duplicate values are removed from list."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_issuers=["iss1", "iss2", "iss1"],
+        )
+        assert config.authorized_issuers is not None
+        assert set(config.authorized_issuers) == {"iss1", "iss2"}
+        assert len(config.authorized_issuers) == 2  # noqa: PLR2004
+
+    def test_validate_authorized_issuers_filters_empty_strings_from_comma_separated(
+        self,
+    ) -> None:
+        """Test that empty strings are filtered from comma-separated string."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_issuers="iss1,,iss2, ,iss3",  # type: ignore[arg-type]
+        )
+        assert config.authorized_issuers is not None
+        assert set(config.authorized_issuers) == {"iss1", "iss2", "iss3"}
+        assert len(config.authorized_issuers) == 3  # noqa: PLR2004
+
+    def test_validate_authorized_issuers_filters_empty_strings_from_list(self) -> None:
+        """Test that empty strings are filtered from list."""
+        config = JWTBearerAuthenticationConfig(
+            audience="test-audience",
+            authorized_issuers=["iss1", "", "iss2", " ", "iss3"],
+        )
+        assert config.authorized_issuers is not None
+        assert set(config.authorized_issuers) == {"iss1", "iss2", "iss3"}
+        assert len(config.authorized_issuers) == 3  # noqa: PLR2004
+
+    def test_validate_authorized_issuers_raises_error_for_empty_string(self) -> None:
+        """Test that empty string raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_issuers="",  # type: ignore[arg-type]
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_issuers",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+    def test_validate_authorized_issuers_raises_error_for_whitespace_only_string(
+        self,
+    ) -> None:
+        """Test that whitespace-only string raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_issuers="   ",  # type: ignore[arg-type]
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_issuers",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+    def test_validate_authorized_issuers_raises_error_for_comma_only_string(self) -> None:
+        """Test that comma-only string raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_issuers=",,,",  # type: ignore[arg-type]
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_issuers",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+    def test_validate_authorized_issuers_raises_error_for_empty_list(self) -> None:
+        """Test that empty list raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_issuers=[],
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_issuers",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+    def test_validate_authorized_issuers_raises_error_for_list_with_only_empty_strings(
+        self,
+    ) -> None:
+        """Test that list with only empty strings raises ValueError."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(
+                audience="test-audience",
+                authorized_issuers=["", " ", "  "],
+            )
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("authorized_issuers",)
+        assert errors[0]["type"] == "value_error"
+        assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
