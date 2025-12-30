@@ -2,7 +2,6 @@
 
 import json
 from base64 import b64encode
-from http import HTTPStatus
 from typing import Annotated, Any, Generic, TypeVar, get_args
 
 import aiohttp
@@ -62,11 +61,15 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
                         await response.json()
                     )
         except aiohttp.ClientResponseError as error:
-            raise HydraOperationError("Failed to introspect the token", status_code=error.status) from error
+            raise HydraOperationError(
+                "An error occurred while introspecting the token", status_code=error.status
+            ) from error
         except json.JSONDecodeError as error:
-            raise HydraOperationError("Failed to decode the introspect response") from error
+            raise HydraOperationError("An error occurred while decoding the introspect response") from error
         except ValidationError as error:
-            raise HydraOperationError("Failed to validate the introspect response") from error
+            raise HydraOperationError("An error occurred while validating the introspect response") from error
+        except Exception as error:
+            raise HydraOperationError("An error occurred while introspecting the token") from error
 
         return instrospect
 
@@ -146,17 +149,32 @@ class HydraOAuth2ClientCredentialsService:
         Raises:
             HydraOperationError: If the client credentials request fails.
         """
-        async with self._hydra_public_http_resource.acquire_client_session() as session:
-            async with session.post(
-                url=self.CLIENT_CREDENTIALS_ENDPOINT,
-                headers={"Authorization": self.build_bearer_header(client_id, client_secret)},
-                data={"grant_type": "client_credentials", "scope": " ".join(scopes)},
-            ) as response:
-                response_data = await response.json()
-                if response.status != HTTPStatus.OK:
-                    raise HydraOperationError(f"Failed to get client credentials: {response_data}")
-
-                return response_data["access_token"]
+        try:
+            async with self._hydra_public_http_resource.acquire_client_session() as session:
+                async with session.post(
+                    url=self.CLIENT_CREDENTIALS_ENDPOINT,
+                    headers={"Authorization": self.build_bearer_header(client_id, client_secret)},
+                    data={"grant_type": "client_credentials", "scope": " ".join(scopes)},
+                ) as response:
+                    response.raise_for_status()
+                    response_data = await response.json()
+                    return response_data["access_token"]
+        except aiohttp.ClientResponseError as error:
+            raise HydraOperationError(
+                "An error occurred while getting the client credentials", status_code=error.status
+            ) from error
+        except json.JSONDecodeError as error:
+            raise HydraOperationError(
+                "An error occurred while getting the client credentials, invalid JSON response"
+            ) from error
+        except ValidationError as error:
+            raise HydraOperationError(
+                "An error occurred while getting the client credentials, invalid response"
+            ) from error
+        except Exception as error:
+            raise HydraOperationError(
+                "An error occurred while getting the client credentials, unknown error"
+            ) from error
 
 
 def depends_hydra_oauth2_client_credentials_service(

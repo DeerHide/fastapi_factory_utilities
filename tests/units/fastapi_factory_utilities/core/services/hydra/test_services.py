@@ -255,7 +255,7 @@ class TestHydraIntrospectGenericService:
         with pytest.raises(HydraOperationError) as exc_info:
             await service.introspect(token=token)
 
-        assert "Failed to introspect the token" in str(exc_info.value)
+        assert "An error occurred while introspecting the token" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_introspect_json_decode_error(
@@ -280,7 +280,7 @@ class TestHydraIntrospectGenericService:
         with pytest.raises(HydraOperationError) as exc_info:
             await service.introspect(token=token)
 
-        assert "Failed to decode the introspect response" in str(exc_info.value)
+        assert "An error occurred while decoding the introspect response" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_introspect_validation_error(
@@ -306,7 +306,7 @@ class TestHydraIntrospectGenericService:
         with pytest.raises(HydraOperationError) as exc_info:
             await service.introspect(token=token)
 
-        assert "Failed to validate the introspect response" in str(exc_info.value)
+        assert "An error occurred while validating the introspect response" in str(exc_info.value)
         assert isinstance(exc_info.value.__cause__, ValidationError)
 
     @pytest.mark.asyncio
@@ -632,4 +632,4 @@ class TestHydraOAuth2ClientCredentialsService:
         with pytest.raises(HydraOperationError) as exc_info:
             await service.oauth2_client_credentials(client_id=client_id, client_secret=client_secret, scopes=scopes)
 
-        assert "Failed to get client credentials" in str(exc_info.value)
+        assert "An error occurred while getting the client credentials" in str(exc_info.value)
