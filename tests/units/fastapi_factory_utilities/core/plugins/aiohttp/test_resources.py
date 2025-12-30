@@ -438,7 +438,7 @@ class TestAioHttpClientResourceAcquireClientSession:
         config = HttpServiceDependencyConfig()
         resource = AioHttpClientResource(dependency_config=config)
 
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(AioHttpClientError) as exc_info:
             async with resource.acquire_client_session():
                 pass
 
@@ -483,6 +483,7 @@ class TestAioHttpClientResourceAcquireClientSession:
                 call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
                 assert "trace_configs" in call_kwargs
                 assert call_kwargs["trace_configs"] == [mock_trace_config]
+                assert call_kwargs["connector_owner"] is False
 
     async def test_acquire_client_session_passes_additional_kwargs(self) -> None:
         """Test acquire_client_session passes additional kwargs to ClientSession."""
@@ -490,6 +491,7 @@ class TestAioHttpClientResourceAcquireClientSession:
         resource = AioHttpClientResource(dependency_config=config)
 
         mock_connector = MagicMock()
+        mock_connector.closed = False
         resource._tcp_connector = mock_connector  # pyright: ignore[reportPrivateUsage]
 
         custom_timeout = aiohttp.ClientTimeout(total=30)
@@ -509,6 +511,7 @@ class TestAioHttpClientResourceAcquireClientSession:
                 call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
                 assert call_kwargs["timeout"] == custom_timeout
                 assert call_kwargs["connector"] == mock_connector
+                assert call_kwargs["connector_owner"] is False
 
     async def test_acquire_client_session_removes_session_on_exception(self) -> None:
         """Test acquire_client_session removes session from list on exception."""
@@ -540,6 +543,7 @@ class TestAioHttpClientResourceAcquireClientSession:
         resource = AioHttpClientResource(dependency_config=config)
 
         mock_connector = MagicMock()
+        mock_connector.closed = False
         resource._tcp_connector = mock_connector  # pyright: ignore[reportPrivateUsage]
 
         with patch.object(AioHttpClientResource, "build_trace_config", return_value=None):
@@ -557,6 +561,7 @@ class TestAioHttpClientResourceAcquireClientSession:
                 call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
                 assert "base_url" not in call_kwargs
                 assert call_kwargs["connector"] == mock_connector
+                assert call_kwargs["connector_owner"] is False
 
     async def test_acquire_client_session_with_base_url(self) -> None:
         """Test acquire_client_session sets base_url when url is provided."""
@@ -564,6 +569,7 @@ class TestAioHttpClientResourceAcquireClientSession:
         resource = AioHttpClientResource(dependency_config=config)
 
         mock_connector = MagicMock()
+        mock_connector.closed = False
         resource._tcp_connector = mock_connector  # pyright: ignore[reportPrivateUsage]
 
         with patch.object(AioHttpClientResource, "build_trace_config", return_value=None):
@@ -582,3 +588,114 @@ class TestAioHttpClientResourceAcquireClientSession:
                 assert "base_url" in call_kwargs
                 assert call_kwargs["base_url"] == "http://example.com/"
                 assert call_kwargs["connector"] == mock_connector
+                assert call_kwargs["connector_owner"] is False
+
+    async def test_acquire_client_session_sets_connector_owner_to_false(self) -> None:
+        """Test acquire_client_session sets connector_owner to False."""
+        config = HttpServiceDependencyConfig()
+        resource = AioHttpClientResource(dependency_config=config)
+
+        mock_connector = MagicMock()
+        mock_connector.closed = False
+        resource._tcp_connector = mock_connector  # pyright: ignore[reportPrivateUsage]
+
+        with patch.object(AioHttpClientResource, "build_trace_config", return_value=None):
+            with patch(
+                "fastapi_factory_utilities.core.plugins.aiohttp.resources.aiohttp.ClientSession"
+            ) as mock_session_class:
+                mock_session = MagicMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session_class.return_value = mock_session
+
+                async with resource.acquire_client_session():
+                    pass
+
+                call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
+                assert "connector_owner" in call_kwargs
+                assert call_kwargs["connector_owner"] is False
+                assert call_kwargs["connector"] == mock_connector
+
+    async def test_acquire_client_session_sets_connector_owner_with_trace_config(self) -> None:
+        """Test acquire_client_session sets connector_owner to False when trace config is provided."""
+        config = HttpServiceDependencyConfig()
+        resource = AioHttpClientResource(dependency_config=config)
+
+        mock_connector = MagicMock()
+        mock_connector.closed = False
+        mock_trace_config = MagicMock()
+        resource._tcp_connector = mock_connector  # pyright: ignore[reportPrivateUsage]
+
+        with patch.object(AioHttpClientResource, "build_trace_config", return_value=mock_trace_config):
+            with patch(
+                "fastapi_factory_utilities.core.plugins.aiohttp.resources.aiohttp.ClientSession"
+            ) as mock_session_class:
+                mock_session = MagicMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session_class.return_value = mock_session
+
+                async with resource.acquire_client_session():
+                    pass
+
+                call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
+                assert "connector_owner" in call_kwargs
+                assert call_kwargs["connector_owner"] is False
+                assert call_kwargs["connector"] == mock_connector
+                assert "trace_configs" in call_kwargs
+
+    async def test_acquire_client_session_sets_connector_owner_with_base_url(self) -> None:
+        """Test acquire_client_session sets connector_owner to False when base_url is provided."""
+        config = HttpServiceDependencyConfig(url=HttpUrl("https://api.example.com"))
+        resource = AioHttpClientResource(dependency_config=config)
+
+        mock_connector = MagicMock()
+        mock_connector.closed = False
+        resource._tcp_connector = mock_connector  # pyright: ignore[reportPrivateUsage]
+
+        with patch.object(AioHttpClientResource, "build_trace_config", return_value=None):
+            with patch(
+                "fastapi_factory_utilities.core.plugins.aiohttp.resources.aiohttp.ClientSession"
+            ) as mock_session_class:
+                mock_session = MagicMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session_class.return_value = mock_session
+
+                async with resource.acquire_client_session():
+                    pass
+
+                call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
+                assert "connector_owner" in call_kwargs
+                assert call_kwargs["connector_owner"] is False
+                assert call_kwargs["connector"] == mock_connector
+                assert "base_url" in call_kwargs
+
+    async def test_acquire_client_session_connector_not_closed_when_session_closes(self) -> None:
+        """Test that connector is not closed when session closes due to connector_owner=False."""
+        config = HttpServiceDependencyConfig()
+        resource = AioHttpClientResource(dependency_config=config)
+
+        mock_connector = MagicMock()
+        mock_connector.closed = False
+        resource._tcp_connector = mock_connector  # pyright: ignore[reportPrivateUsage]
+
+        with patch.object(AioHttpClientResource, "build_trace_config", return_value=None):
+            with patch(
+                "fastapi_factory_utilities.core.plugins.aiohttp.resources.aiohttp.ClientSession"
+            ) as mock_session_class:
+                mock_session = MagicMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session_class.return_value = mock_session
+
+                async with resource.acquire_client_session():
+                    pass
+
+                # Verify connector_owner was set to False
+                call_kwargs: dict[str, Any] = mock_session_class.call_args.kwargs
+                assert call_kwargs["connector_owner"] is False
+
+                # Verify the connector's close method was not called when session closed
+                # (This is the expected behavior when connector_owner=False)
+                mock_connector.close.assert_not_called()

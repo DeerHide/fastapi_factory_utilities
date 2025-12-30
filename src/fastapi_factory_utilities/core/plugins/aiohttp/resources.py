@@ -133,6 +133,7 @@ class AioHttpClientResource:
         self._client_sessions: list[aiohttp.ClientSession] = []
         self._tracer_provider: TracerProvider | None = None
         self._meter_provider: MeterProvider | None = None
+        self._must_be_closed: bool = False
 
     def on_load(self) -> None:
         """On load.
@@ -169,6 +170,7 @@ class AioHttpClientResource:
         """
         # Wait for all client sessions to be released.
         initial_time = time.time()
+        self._must_be_closed = True
         # Wait for all client sessions to be released or the timeout is reached.
         while self._client_sessions and time.time() - initial_time < self._dependency_config.graceful_shutdown_timeout:
             await asyncio.sleep(0.5)
@@ -208,11 +210,21 @@ class AioHttpClientResource:
             ValueError: If the connector is already provided in kwargs.
         """
         if self._tcp_connector is None:
-            raise RuntimeError("TCP connector is not initialized. Call on_startup() first.")
+            raise AioHttpClientError("TCP connector is not initialized. Call on_startup() first.")
+        if self._tcp_connector.closed and self._must_be_closed:
+            raise AioHttpClientError("TCP connector is closed.")
+        if self._tcp_connector.closed and not self._must_be_closed:
+            _logger.warning(
+                "TCP connector has been closed but the resource is not being shutdown. Rebuilding the TCP connector.",
+            )
+            self._tcp_connector = self.build_tcp_connector(dependency_config=self._dependency_config)
         if "connector" in kwargs:
             raise ValueError("The connector is already provided.")
 
         kwargs["connector"] = self._tcp_connector
+        # Set the connector owner to False to avoid closing the connector when the session is closed.
+        kwargs["connector_owner"] = False
+
         if self._dependency_config.url is not None:
             kwargs["base_url"] = str(self._dependency_config.url)
 
