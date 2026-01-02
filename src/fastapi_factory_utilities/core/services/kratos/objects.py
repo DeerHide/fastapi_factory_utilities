@@ -58,7 +58,7 @@ class KratosIdentityObject(
     traits: GenericTraitsObject
     created_at: datetime.datetime
     updated_at: datetime.datetime
-    external_id: KratosExternalId
+    external_id: KratosExternalId | None = None
     metadata_admin: GenericMetadataAdminObject | None = None
     metadata_public: GenericMetadataPublicObject | None = None
     recovery_addresses: list[KratosRecoveryAddressObject]
