@@ -1,7 +1,7 @@
 """Tests for aiohttp plugin factories."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -100,7 +100,9 @@ class TestBuildHttpDependencyConfig:
         ) as mock_get_path:
             mock_get_path.side_effect = FileNotFoundError("File not found")
 
-            with patch("fastapi_factory_utilities.core.exceptions._logger"):
+            mock_logger = Mock()
+            mock_logger.log = Mock()
+            with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
                 with patch("fastapi_factory_utilities.core.exceptions.get_current_span", MagicMock()):
                     with pytest.raises(UnableToReadHttpDependencyConfigError) as exc_info:
                         build_http_dependency_config(key=key, application_package=TEST_PACKAGE_NAME)
@@ -117,7 +119,9 @@ class TestBuildHttpDependencyConfig:
         ) as mock_get_path:
             mock_get_path.side_effect = ImportError("Import failed")
 
-            with patch("fastapi_factory_utilities.core.exceptions._logger"):
+            mock_logger = Mock()
+            mock_logger.log = Mock()
+            with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
                 with patch("fastapi_factory_utilities.core.exceptions.get_current_span", MagicMock()):
                     with pytest.raises(UnableToReadHttpDependencyConfigError) as exc_info:
                         build_http_dependency_config(key=key, application_package=TEST_PACKAGE_NAME)
@@ -134,7 +138,9 @@ class TestBuildHttpDependencyConfig:
         ) as mock_get_path:
             mock_get_path.side_effect = UnableToReadYamlFileError(file_path=Path("test.yaml"), message="YAML error")
 
-            with patch("fastapi_factory_utilities.core.exceptions._logger"):
+            mock_logger = Mock()
+            mock_logger.log = Mock()
+            with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
                 with patch("fastapi_factory_utilities.core.exceptions.get_current_span", MagicMock()):
                     with pytest.raises(UnableToReadHttpDependencyConfigError) as exc_info:
                         build_http_dependency_config(key=key, application_package=TEST_PACKAGE_NAME)
@@ -155,7 +161,9 @@ class TestBuildHttpDependencyConfig:
                 mock_reader_instance.read.side_effect = ValueError("Invalid YAML")
                 mock_yaml_reader.return_value = mock_reader_instance
 
-                with patch("fastapi_factory_utilities.core.exceptions._logger"):
+                mock_logger = Mock()
+                mock_logger.log = Mock()
+                with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
                     with patch("fastapi_factory_utilities.core.exceptions.get_current_span", MagicMock()):
                         with pytest.raises(UnableToReadHttpDependencyConfigError) as exc_info:
                             build_http_dependency_config(key=key, application_package=TEST_PACKAGE_NAME)

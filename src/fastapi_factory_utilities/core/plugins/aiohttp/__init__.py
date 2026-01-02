@@ -2,6 +2,7 @@
 
 from importlib.util import find_spec
 
+from .configs import HttpServiceDependencyConfig
 from .depends import AioHttpResourceDepends
 from .exceptions import AioHttpClientError, AioHttpClientResourceNotFoundError, UnableToReadHttpDependencyConfigError
 from .plugins import AioHttpClientPlugin
@@ -24,5 +25,6 @@ __all__ += [
     "AioHttpClientResource",
     "AioHttpClientResourceNotFoundError",
     "AioHttpResourceDepends",
+    "HttpServiceDependencyConfig",
     "UnableToReadHttpDependencyConfigError",
 ]

@@ -3,7 +3,7 @@
 
 import ssl
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import aiohttp
 import pytest
@@ -98,7 +98,9 @@ class TestAioHttpClientResourceBuildSslContext:
         with patch("os.path.exists") as mock_exists:
             mock_exists.return_value = False
 
-            with patch("fastapi_factory_utilities.core.exceptions._logger"):
+            mock_logger = Mock()
+            mock_logger.log = Mock()
+            with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
                 with patch("fastapi_factory_utilities.core.exceptions.get_current_span", MagicMock()):
                     with pytest.raises(AioHttpClientError) as exc_info:
                         AioHttpClientResource.build_ssl_context(dependency_config=config)
@@ -166,7 +168,9 @@ class TestAioHttpClientResourceBuildSslContext:
             with patch("fastapi_factory_utilities.core.plugins.aiohttp.resources.certifi") as mock_certifi:
                 mock_certifi.where.return_value = "/path/to/certifi/cacert.pem"
                 with patch("ssl.create_default_context"):
-                    with patch("fastapi_factory_utilities.core.exceptions._logger"):
+                    mock_logger = Mock()
+                    mock_logger.log = Mock()
+                    with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
                         with patch("fastapi_factory_utilities.core.exceptions.get_current_span", MagicMock()):
                             with pytest.raises(AioHttpClientError):
                                 AioHttpClientResource.build_ssl_context(dependency_config=config)
@@ -187,7 +191,9 @@ class TestAioHttpClientResourceBuildSslContext:
             with patch("fastapi_factory_utilities.core.plugins.aiohttp.resources.certifi") as mock_certifi:
                 mock_certifi.where.return_value = "/path/to/certifi/cacert.pem"
                 with patch("ssl.create_default_context"):
-                    with patch("fastapi_factory_utilities.core.exceptions._logger"):
+                    mock_logger = Mock()
+                    mock_logger.log = Mock()
+                    with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
                         with patch("fastapi_factory_utilities.core.exceptions.get_current_span", MagicMock()):
                             with pytest.raises(AioHttpClientError):
                                 AioHttpClientResource.build_ssl_context(dependency_config=config)

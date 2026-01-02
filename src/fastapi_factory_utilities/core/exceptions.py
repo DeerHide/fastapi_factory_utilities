@@ -14,8 +14,6 @@ from opentelemetry.trace import Span, get_current_span
 from opentelemetry.util.types import AttributeValue
 from structlog.stdlib import BoundLogger, get_logger
 
-_logger: BoundLogger = get_logger()
-
 
 class FastAPIFactoryUtilitiesError(Exception):
     """Base exception for the FastAPI Factory Utilities."""
@@ -50,9 +48,10 @@ class FastAPIFactoryUtilitiesError(Exception):
         elif self.message is None:
             self.message = default_message
 
-        # Log the Exception
+        # Log the Exception using the logger for the child class's module
         if self.message:
-            _logger.log(level=self.level, event=self.message)
+            logger: BoundLogger = get_logger(self.__class__.__module__)
+            logger.log(level=self.level, event=self.message)
 
         # Set the kwargs as attributes of the exception
         for key, value in kwargs.items():

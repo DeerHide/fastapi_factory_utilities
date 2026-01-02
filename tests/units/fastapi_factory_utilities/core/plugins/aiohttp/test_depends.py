@@ -1,7 +1,7 @@
 """Tests for aiohttp plugin depends."""
 # pylint: disable=protected-access
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from opentelemetry.trace import INVALID_SPAN
@@ -50,7 +50,9 @@ class TestAioHttpResourceDepends:
         mock_state = MagicMock(spec=[])  # Empty spec means no attributes
         mock_request.app.state = mock_state
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
                 with pytest.raises(AioHttpClientResourceNotFoundError) as exc_info:
@@ -70,7 +72,9 @@ class TestAioHttpResourceDepends:
         setattr(mock_state, f"{STATE_PREFIX_KEY}{key}", None)
         mock_request.app.state = mock_state
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
                 with pytest.raises(AioHttpClientResourceNotFoundError):

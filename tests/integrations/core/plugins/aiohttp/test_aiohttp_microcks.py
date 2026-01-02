@@ -15,8 +15,11 @@ import aiohttp
 import pytest
 from pydantic import HttpUrl
 
-from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
-from fastapi_factory_utilities.core.plugins.aiohttp.resources import AioHttpClientResource
+from fastapi_factory_utilities.core.plugins.aiohttp import (
+    AioHttpClientError,
+    AioHttpClientResource,
+    HttpServiceDependencyConfig,
+)
 from tests.fixtures.microcks import MicrocksFixture
 
 # Constants for the sample API
@@ -377,7 +380,7 @@ class TestAioHttpResourceLifecycle:
         )
         resource = AioHttpClientResource(dependency_config=config)
 
-        with pytest.raises(RuntimeError, match="TCP connector is not initialized"):
+        with pytest.raises(AioHttpClientError, match="TCP connector is not initialized"):
             async with resource.acquire_client_session():
                 pass
 

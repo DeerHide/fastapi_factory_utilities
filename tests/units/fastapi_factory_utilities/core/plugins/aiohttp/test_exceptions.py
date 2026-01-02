@@ -1,6 +1,6 @@
 """Tests for aiohttp plugin exceptions."""
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from opentelemetry.trace import INVALID_SPAN
 
@@ -17,7 +17,9 @@ class TestAioHttpClientError:
 
     def test_inheritance(self) -> None:
         """Test that AioHttpClientError inherits from FastAPIFactoryUtilitiesError."""
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -30,7 +32,9 @@ class TestAioHttpClientError:
         """Test exception initialization with message."""
         message = "Custom error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -43,7 +47,9 @@ class TestAioHttpClientError:
         """Test that AioHttpClientError can be raised and caught."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -62,7 +68,9 @@ class TestUnableToReadHttpDependencyConfigError:
 
     def test_inheritance(self) -> None:
         """Test that UnableToReadHttpDependencyConfigError inherits from AioHttpClientError."""
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -77,7 +85,9 @@ class TestUnableToReadHttpDependencyConfigError:
         key_path = "dependencies.http.service1"
         file_path = "application.yaml"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -93,7 +103,9 @@ class TestUnableToReadHttpDependencyConfigError:
         """Test that exception can be caught by AioHttpClientError."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -112,7 +124,9 @@ class TestAioHttpClientResourceNotFoundError:
 
     def test_inheritance(self) -> None:
         """Test that AioHttpClientResourceNotFoundError inherits from AioHttpClientError."""
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -126,7 +140,9 @@ class TestAioHttpClientResourceNotFoundError:
         message = "Aiohttp resource not found"
         key = "my_service"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -138,7 +154,9 @@ class TestAioHttpClientResourceNotFoundError:
 
     def test_docstring_used_as_default_message(self) -> None:
         """Test that docstring is used as default message when no message provided."""
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 

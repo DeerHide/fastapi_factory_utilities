@@ -24,7 +24,9 @@ class TestFastAPIFactoryUtilitiesError:
         message = "Test error message"
         level = logging.WARNING
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -38,7 +40,9 @@ class TestFastAPIFactoryUtilitiesError:
         """Test exception initialization with message as first positional argument."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -52,7 +56,9 @@ class TestFastAPIFactoryUtilitiesError:
         """Test exception initialization with default logging level."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -63,7 +69,9 @@ class TestFastAPIFactoryUtilitiesError:
 
     def test_init_without_message(self) -> None:
         """Test exception initialization without message."""
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -80,7 +88,9 @@ class TestFastAPIFactoryUtilitiesError:
 
     def test_init_with_non_string_first_arg(self) -> None:
         """Test exception initialization with non-string first positional argument."""
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -97,7 +107,9 @@ class TestFastAPIFactoryUtilitiesError:
 
     def test_init_with_empty_args(self) -> None:
         """Test exception initialization with empty positional arguments."""
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -120,7 +132,9 @@ class TestFastAPIFactoryUtilitiesError:
         mock_span = Mock()
         mock_span.is_recording.return_value = True
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = mock_span
 
@@ -144,7 +158,9 @@ class TestFastAPIFactoryUtilitiesError:
         """Test OpenTelemetry span recording when span is not recording."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = INVALID_SPAN
 
@@ -158,7 +174,9 @@ class TestFastAPIFactoryUtilitiesError:
         mock_span = Mock()
         mock_span.is_recording.return_value = True
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = mock_span
 
@@ -202,7 +220,9 @@ class TestFastAPIFactoryUtilitiesError:
         """Test that FastAPIFactoryUtilitiesError properly inherits from Exception."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -217,7 +237,9 @@ class TestFastAPIFactoryUtilitiesError:
         arg1 = "additional_arg1"
         arg2 = "additional_arg2"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -234,7 +256,9 @@ class TestFastAPIFactoryUtilitiesError:
         mock_span = Mock()
         mock_span.is_recording.return_value = True
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = mock_span
 
@@ -260,7 +284,9 @@ class TestFastAPIFactoryUtilitiesError:
 
             FILTERED_ATTRIBUTES = ("filtered_attr",)
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -282,7 +308,9 @@ class TestFastAPIFactoryUtilitiesError:
         user_id = 123
         request_id = "req-456"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -306,7 +334,9 @@ class TestFastAPIFactoryUtilitiesError:
 
             DEFAULT_MESSAGE = custom_message
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -328,7 +358,9 @@ class TestFastAPIFactoryUtilitiesError:
 
             DEFAULT_MESSAGE = custom_message
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -350,7 +382,9 @@ class TestFastAPIFactoryUtilitiesError:
 
             DEFAULT_MESSAGE = custom_message
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -366,7 +400,9 @@ class TestFastAPIFactoryUtilitiesError:
         """Test that exceptions in OpenTelemetry span handling are suppressed."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 # Simulate get_current_span raising an exception
                 mock_get_span.side_effect = Exception("OpenTelemetry error")
@@ -380,7 +416,9 @@ class TestFastAPIFactoryUtilitiesError:
         """Test __str__ method when message is None."""
         # Create an exception with message explicitly set to None
         # This is an edge case that shouldn't normally happen, but we test it
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -408,7 +446,9 @@ class TestFastAPIFactoryUtilitiesError:
         mock_span = Mock()
         mock_span.is_recording.return_value = True
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = mock_span
 
@@ -433,7 +473,9 @@ class TestExceptionForTestError:
         message = "Custom test error message"
         level = logging.WARNING
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -447,7 +489,9 @@ class TestExceptionForTestError:
         """Test exception initialization with message as first positional argument."""
         message = "Custom test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -459,7 +503,9 @@ class TestExceptionForTestError:
 
     def test_init_without_message(self) -> None:
         """Test exception initialization without message uses docstring."""
-        with patch("fastapi_factory_utilities.core.exceptions._logger") as mock_logger:
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -478,7 +524,9 @@ class TestExceptionForTestError:
         """Test that TestErrorForTestError properly inherits from base classes."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -494,7 +542,9 @@ class TestExceptionForTestError:
         """Test that ExceptionForTestError can be raised and caught."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -512,7 +562,9 @@ class TestExceptionForTestError:
         """Test that ExceptionForTestError can be caught by base exception classes."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
 
@@ -534,7 +586,9 @@ class TestExceptionForTestError:
         mock_span = Mock()
         mock_span.is_recording.return_value = True
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = mock_span
 
@@ -558,7 +612,9 @@ class TestExceptionForTestError:
         """Test OpenTelemetry span recording when span is not recording."""
         message = "Test error message"
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = INVALID_SPAN
 
@@ -572,7 +628,9 @@ class TestExceptionForTestError:
         mock_span = Mock()
         mock_span.is_recording.return_value = True
 
-        with patch("fastapi_factory_utilities.core.exceptions._logger"):
+        mock_logger = Mock()
+        mock_logger.log = Mock()
+        with patch("fastapi_factory_utilities.core.exceptions.get_logger", return_value=mock_logger):
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = mock_span
 
