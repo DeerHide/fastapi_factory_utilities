@@ -80,12 +80,12 @@ GenericKratosIdentityObject = TypeVar("GenericKratosIdentityObject", bound=BaseM
 class KratosIdentityPatchObject(BaseModel):
     """Patch object for Kratos identity."""
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", populate_by_name=True)
 
-    from_: str = Field(alias="from")
+    from_: str | None = Field(alias="from", default=None)
     op: KratosIdentityPatchOpEnum
     path: str
-    value: Any
+    value: Any | None = None
 
 
 class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericKratosSessionObject]):
