@@ -149,7 +149,10 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
         """
         try:
             async with self._kratos_admin_http_resource.acquire_client_session() as session:
-                async with session.patch(url=f"{self.IDENTITY_ENDPOINT}/{identity_id}", json=patches) as response:
+                patches_dict: list[dict[str, Any]] = [
+                    patch.model_dump(by_alias=True, exclude_none=True) for patch in patches
+                ]
+                async with session.patch(url=f"{self.IDENTITY_ENDPOINT}/{identity_id}", json=patches_dict) as response:
                     response.raise_for_status()
                     identity: GenericKratosIdentityObject = self._concreate_identity_object_class.model_validate(
                         await response.json()

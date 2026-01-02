@@ -6,7 +6,7 @@ import datetime
 import json
 import uuid
 from http import HTTPStatus
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock
 
 import pytest
@@ -18,7 +18,10 @@ from fastapi_factory_utilities.core.plugins.aiohttp.mockers import (
     build_mocked_aiohttp_resource,
     build_mocked_aiohttp_response,
 )
-from fastapi_factory_utilities.core.services.kratos.enums import AuthenticationMethodEnum
+from fastapi_factory_utilities.core.services.kratos.enums import (
+    AuthenticationMethodEnum,
+    KratosIdentityPatchOpEnum,
+)
 from fastapi_factory_utilities.core.services.kratos.exceptions import (
     KratosOperationError,
     KratosSessionInvalidError,
@@ -26,6 +29,7 @@ from fastapi_factory_utilities.core.services.kratos.exceptions import (
 from fastapi_factory_utilities.core.services.kratos.services import (
     KratosGenericWhoamiService,
     KratosIdentityGenericService,
+    KratosIdentityPatchObject,
 )
 from fastapi_factory_utilities.core.services.kratos.types import (
     KratosIdentityId,
@@ -478,6 +482,100 @@ class TestKratosIdentityGenericService:
 
         with pytest.raises(NotImplementedError):
             await service.create_identity(identity=identity)
+
+    @pytest.mark.asyncio
+    async def test_update_identity_json_serialization(
+        self,
+        concrete_service: KratosIdentityGenericService[MockIdentityObject, MockSessionObject],
+        identity_id: KratosIdentityId,
+        mock_identity_data: dict[str, Any],
+    ) -> None:
+        """Test that update_identity properly serializes KratosIdentityPatchObject to JSON.
+
+        This test verifies the fix for the TypeError: Object of type KratosIdentityPatchObject
+        is not JSON serializable. It ensures that:
+        1. Pydantic models are converted to dictionaries before sending (no TypeError)
+        2. The alias "from" is used instead of "from_"
+        3. None values are excluded from the serialized data
+
+        Args:
+            concrete_service: Concrete service fixture.
+            identity_id: Identity ID fixture.
+            mock_identity_data: Mock identity data.
+        """
+        service = concrete_service
+        mock_identity_data["id"] = str(identity_id)
+
+        # Create patch objects with various scenarios
+        patches: list[KratosIdentityPatchObject] = [
+            KratosIdentityPatchObject(
+                op=KratosIdentityPatchOpEnum.REPLACE,
+                path="/traits/email",
+                value="newemail@example.com",
+            ),
+            KratosIdentityPatchObject.model_validate(
+                {
+                    "from": "/traits/old_field",
+                    "op": KratosIdentityPatchOpEnum.MOVE,
+                    "path": "/traits/new_field",
+                }
+            ),
+            KratosIdentityPatchObject(
+                op=KratosIdentityPatchOpEnum.ADD,
+                path="/traits/phone",
+                value="+1234567890",
+            ),
+        ]
+
+        # Capture the JSON argument passed to session.patch
+        captured_json: list[dict[str, Any]] | None = None
+
+        def patch_handler(*_args: Any, **kwargs: Any) -> Any:
+            """Mock patch handler that captures the JSON argument."""
+            nonlocal captured_json
+            captured_json = kwargs.get("json")
+            return build_mocked_aiohttp_response(
+                status=HTTPStatus.OK,
+                json=mock_identity_data,
+            )
+
+        mock_resource = build_mocked_aiohttp_resource(patch=patch_handler)
+        service._kratos_admin_http_resource = mock_resource
+
+        # Call update_identity - should not raise TypeError
+        result: MockIdentityObject = await service.update_identity(identity_id=identity_id, patches=patches)
+
+        # Verify the result
+        assert result.id == identity_id
+        assert result.data == mock_identity_data["data"]
+
+        # Verify the JSON was properly serialized (not Pydantic models)
+        assert captured_json is not None
+        assert isinstance(captured_json, list)
+        expected_patches_count = 3
+        assert len(captured_json) == expected_patches_count
+        # Type narrowing: captured_json is confirmed to be a list at this point
+        patches_list: list[dict[str, Any]] = cast(list[dict[str, Any]], captured_json)
+        # Verify all items are dictionaries (not Pydantic models)
+        assert all(isinstance(item, dict) for item in patches_list)  # pylint: disable=not-an-iterable
+
+        # Verify first patch (REPLACE operation)
+        assert patches_list[0]["op"] == "replace"  # pylint: disable=unsubscriptable-object
+        assert patches_list[0]["path"] == "/traits/email"  # pylint: disable=unsubscriptable-object
+        assert patches_list[0]["value"] == "newemail@example.com"  # pylint: disable=unsubscriptable-object
+        # Should not have "from_" field
+        assert "from_" not in patches_list[0]  # pylint: disable=unsubscriptable-object
+
+        # Verify second patch (MOVE operation with "from" alias)
+        assert patches_list[1]["op"] == "move"  # pylint: disable=unsubscriptable-object
+        assert patches_list[1]["path"] == "/traits/new_field"  # pylint: disable=unsubscriptable-object
+        assert patches_list[1]["from"] == "/traits/old_field"  # pylint: disable=unsubscriptable-object  # Alias should be used
+        assert "from_" not in patches_list[1]  # pylint: disable=unsubscriptable-object  # Original field name should not be present
+
+        # Verify third patch (ADD operation)
+        assert patches_list[2]["op"] == "add"  # pylint: disable=unsubscriptable-object
+        assert patches_list[2]["path"] == "/traits/phone"  # pylint: disable=unsubscriptable-object
+        assert patches_list[2]["value"] == "+1234567890"  # pylint: disable=unsubscriptable-object
 
     @pytest.mark.parametrize(
         "credentials_type,identifier",
