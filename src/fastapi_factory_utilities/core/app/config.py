@@ -10,7 +10,7 @@ from fastapi_factory_utilities.core.utils.configs import (
     ValueErrorConfigError,
     build_config_from_file_in_package,
 )
-from fastapi_factory_utilities.core.utils.log import LoggingConfig
+from fastapi_factory_utilities.core.utils.log import LoggingConfig, LogModeEnum
 
 from .enums import EnvironmentEnum
 
@@ -83,7 +83,9 @@ class RootConfig(BaseModel):
     server: ServerConfig = Field(description="Server configuration", default_factory=ServerConfig)
     cors: CorsConfig = Field(description="CORS configuration", default_factory=CorsConfig)
     development: DevelopmentConfig = Field(description="Development configuration", default_factory=DevelopmentConfig)
+    # Logging configuration
     logging: list[LoggingConfig] = Field(description="Logging configuration", default_factory=list)
+    logging_mode: LogModeEnum = Field(default=LogModeEnum.CONSOLE, description="Log mode")
 
 
 GenericConfig = TypeVar("GenericConfig", bound=BaseModel)

@@ -5,7 +5,7 @@ from typing import Any, Generic, Self, TypeVar, get_args
 from fastapi_factory_utilities.core.app.config import GenericConfigBuilder, RootConfig
 from fastapi_factory_utilities.core.app.fastapi_builder import FastAPIBuilder
 from fastapi_factory_utilities.core.plugins import PluginAbstract
-from fastapi_factory_utilities.core.utils.log import LogModeEnum, setup_log
+from fastapi_factory_utilities.core.utils.log import LoggingConfig, LogModeEnum, setup_log
 from fastapi_factory_utilities.core.utils.uvicorn import UvicornUtils
 
 from .application import ApplicationAbstract
@@ -91,6 +91,17 @@ class ApplicationGenericBuilder(Generic[T]):
         application.setup()
         return application
 
+    def configure_logging(
+        self, mode: LogModeEnum = LogModeEnum.CONSOLE, logging_config: list[LoggingConfig] | None = None
+    ) -> None:
+        """Configure the logging.
+
+        Args:
+            mode (LogModeEnum): The log mode.
+            logging_config (list[LoggingConfig]): The logging configuration.
+        """
+        setup_log(mode=mode, logging_config=logging_config)
+
     def build_as_uvicorn_utils(self) -> UvicornUtils:
         """Build the application and provide UvicornUtils."""
         self._uvicorn_utils = UvicornUtils(app=self.build())
@@ -100,8 +111,8 @@ class ApplicationGenericBuilder(Generic[T]):
         """Build the application and serve it with Uvicorn."""
         uvicorn_utils: UvicornUtils = self._uvicorn_utils or self.build_as_uvicorn_utils()
 
-        assert self._root_config is not None
-        setup_log(mode=LogModeEnum.CONSOLE, logging_config=self._root_config.logging)
+        assert self._root_config is not None, "Root configuration is not set"
+        self.configure_logging(mode=self._root_config.logging_mode, logging_config=self._root_config.logging)
 
         try:
             uvicorn_utils.serve()
