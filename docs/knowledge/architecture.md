@@ -2,6 +2,10 @@
 
 **Generated:** 2026-01-11 | **Scan Level:** Exhaustive
 
+> **📋 Related Documentation:**
+> - **[Architecture Decision Document](../planning-artifacts/architecture.md)** - Formal architectural decisions, patterns, and implementation guidelines for AI agents
+> - This document provides technical reference and implementation details
+
 ---
 
 ## Executive Summary
@@ -438,6 +442,29 @@ services:
 | **New Repository** | Implement `AbstractRepository` |
 | **Custom Health Logic** | Implement `HealthCalculatorStrategy` |
 | **New Service** | Add to `core/services/` |
+
+---
+
+## Document Relationship
+
+This technical architecture document complements the **[Architecture Decision Document](../planning-artifacts/architecture.md)**, which contains:
+
+- Formal architectural decisions with rationale
+- Implementation patterns and consistency rules
+- Complete project structure and boundaries
+- Requirements to architecture mapping
+- Validation results and implementation readiness
+
+**Use this document for:**
+- Understanding how components work together
+- Implementation details and code examples
+- Technical reference during development
+
+**Use the Architecture Decision Document for:**
+- Understanding why architectural decisions were made
+- Following implementation patterns for consistency
+- AI agent implementation guidance
+- Project structure and boundary definitions
 
 ---
 

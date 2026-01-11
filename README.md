@@ -16,7 +16,8 @@ This library consolidates common patterns, plugins, and utilities for creating m
 |----------|-------------|
 | **[Documentation Index](docs/knowledge/index.md)** | Master navigation for all documentation |
 | [Project Overview](docs/knowledge/project-overview.md) | Executive summary and tech stack |
-| [Architecture](docs/knowledge/architecture.md) | Detailed architecture and design patterns |
+| [Architecture](docs/knowledge/architecture.md) | Technical architecture reference with diagrams |
+| [Architecture Decisions](docs/planning-artifacts/architecture.md) | Formal architectural decisions and implementation patterns |
 | [Source Tree](docs/knowledge/source-tree-analysis.md) | Annotated directory structure |
 | [Development Guide](docs/knowledge/development-guide.md) | Setup, testing, and contribution guide |
 

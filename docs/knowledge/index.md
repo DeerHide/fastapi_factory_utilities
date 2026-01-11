@@ -40,7 +40,8 @@
 | Document | Description |
 |----------|-------------|
 | [Project Overview](./project-overview.md) | Executive summary, tech stack, architecture overview |
-| [Architecture](./architecture.md) | Detailed architecture, patterns, component design |
+| [Architecture](./architecture.md) | Technical architecture reference with diagrams and implementation details |
+| [Architecture Decisions](../planning-artifacts/architecture.md) | Formal architectural decisions, patterns, and AI agent guidelines |
 | [Source Tree Analysis](./source-tree-analysis.md) | Complete directory structure with annotations |
 | [Development Guide](./development-guide.md) | Setup, testing, code style, CI/CD |
 
