@@ -10,6 +10,18 @@ This library consolidates common patterns, plugins, and utilities for creating m
 
 ---
 
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| **[Documentation Index](docs/knowledge/index.md)** | Master navigation for all documentation |
+| [Project Overview](docs/knowledge/project-overview.md) | Executive summary and tech stack |
+| [Architecture](docs/knowledge/architecture.md) | Detailed architecture and design patterns |
+| [Source Tree](docs/knowledge/source-tree-analysis.md) | Annotated directory structure |
+| [Development Guide](docs/knowledge/development-guide.md) | Setup, testing, and contribution guide |
+
+---
+
 ## Features
 
 ### 🏗️ Application Framework
@@ -18,21 +30,29 @@ This library consolidates common patterns, plugins, and utilities for creating m
 - **Environment-aware** configuration (development, staging, production)
 - **Lifecycle Management** with startup/shutdown hooks
 
+> 📖 See [Architecture Documentation](docs/knowledge/architecture.md#core-components) for detailed component design.
+
 ### 🔐 Security & Authentication
 - **JWT Bearer Authentication** with token verification and decoding
 - **Ory Kratos Integration** for identity and user management
 - **Ory Hydra Integration** for OAuth2 and OpenID Connect flows
 - **Flexible Authentication** with custom JWT verifiers and JWK stores
 
+> 📖 See [Security Architecture](docs/knowledge/architecture.md#security-architecture) for authentication flows.
+
 ### 🗄️ Database & ODM
 - **Beanie ODM Plugin** for MongoDB with async operations
 - **Document Models** with Pydantic v2 validation
 - **Repository Pattern** support for clean architecture
 
+> 📖 See [Data Architecture](docs/knowledge/architecture.md#data-architecture) for repository patterns.
+
 ### 📨 Message Broker & Task Queue
 - **AioPika Plugin** for RabbitMQ message broker integration
 - **Taskiq Plugin** for distributed task queue with Redis backend
 - **Message-Driven Architecture** support with async consumers/producers
+
+> 📖 See [Plugin Architecture](docs/knowledge/architecture.md#plugin-architecture) for plugin details.
 
 ### 📊 Observability & Monitoring
 - **OpenTelemetry Plugin** with automatic instrumentation for:
@@ -44,16 +64,20 @@ This library consolidates common patterns, plugins, and utilities for creating m
 - **Structured Logging** with structlog integration
 - **Status Endpoint** for health checks and monitoring
 
+> 📖 See [Observability Architecture](docs/knowledge/architecture.md#observability-architecture) for tracing setup.
+
 ### 🌐 HTTP Client
 - **AioHttp Plugin** with OpenTelemetry instrumentation
 - **Async HTTP operations** with connection pooling
 - **Automatic tracing** of outbound HTTP requests
 
 ### 🛠️ Services
-- **Status Service** - Health check endpoints
+- **Status Service** - Health check endpoints with reactive monitoring
 - **Audit Service** - Event auditing capabilities
 - **Kratos Service** - Identity management operations
 - **Hydra Service** - OAuth2/OIDC operations
+
+> 📖 See [Service Layer](docs/knowledge/architecture.md#service-layer) for service details.
 
 ---
 
@@ -68,6 +92,8 @@ This library consolidates common patterns, plugins, and utilities for creating m
   - OpenTelemetry SDK ^1.26.0
   - Pydantic ^2.8.2
   - Structlog >= 24.1
+
+> 📖 See [Project Overview](docs/knowledge/project-overview.md#technology-stack-summary) for complete dependency list.
 
 ---
 
@@ -173,6 +199,8 @@ cors:
   allow_headers: ["*"]
 ```
 
+> 📖 See [Architecture - Configuration System](docs/knowledge/architecture.md#configuration-system) for complete configuration options.
+
 ---
 
 ## Core Components
@@ -192,20 +220,26 @@ The `ApplicationGenericBuilder` handles:
 - FastAPI application setup
 - Uvicorn server management
 
+> 📖 See [Architecture - Core Components](docs/knowledge/architecture.md#core-components) for detailed class documentation.
+
 ### Available Plugins
 
 Each plugin extends your application with specific capabilities:
 
-- **`ODMPlugin`** - Integrates Beanie ODM for MongoDB operations with document models
-- **`OpenTelemetryPlugin`** - Adds distributed tracing and metrics collection
-- **`TaskiqPlugin`** - Enables background task processing with Redis broker
-- **`AioPikaPlugin`** - Provides RabbitMQ messaging capabilities
-- **`AioHttpPlugin`** - Adds instrumented HTTP client for external API calls
+| Plugin | Purpose | Documentation |
+|--------|---------|---------------|
+| **`ODMPlugin`** | MongoDB operations with Beanie ODM | [Plugin Details](docs/knowledge/architecture.md#plugin-implementation-example-odmplugin) |
+| **`OpenTelemetryPlugin`** | Distributed tracing and metrics | [Observability](docs/knowledge/architecture.md#observability-architecture) |
+| **`TaskiqPlugin`** | Background task processing with Redis | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
+| **`AioPikaPlugin`** | RabbitMQ messaging capabilities | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
+| **`AioHttpPlugin`** | Instrumented HTTP client | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
 
 Plugins follow a consistent lifecycle:
 1. `on_load()` - Initial setup when plugin is registered
 2. `on_startup()` - Async initialization during application startup
 3. `on_shutdown()` - Cleanup during application shutdown
+
+> 📖 See [Plugin Lifecycle](docs/knowledge/architecture.md#plugin-lifecycle) for detailed flow.
 
 ### Security & Authentication
 
@@ -250,6 +284,8 @@ whoami_service = KratosGenericWhoamiService(base_url="http://kratos:4433")
 session = await whoami_service.whoami(cookie="...")
 ```
 
+> 📖 See [Security Architecture](docs/knowledge/architecture.md#security-architecture) for complete authentication flows.
+
 ### Configuration System
 
 The configuration system supports:
@@ -259,8 +295,6 @@ The configuration system supports:
 - **Type Safety**: Pydantic models ensure type correctness
 - **Environment-Specific**: Different configs for dev/staging/production
 - **Frozen Models**: Immutable configuration prevents accidental changes
-
-Configuration is loaded from a YAML file in your package and validated against your configuration model:
 
 ```python
 from fastapi_factory_utilities.core.app.config import (
@@ -278,6 +312,8 @@ class MyAppConfig(RootConfig):
     """Extended application configuration."""
     my_custom: MyCustomConfig = Field(description="Custom configuration")
 ```
+
+> 📖 See [Configuration Hierarchy](docs/knowledge/architecture.md#configuration-system) for all configuration options.
 
 ---
 
@@ -298,6 +334,8 @@ The example shows:
 - OpenTelemetry instrumentation
 
 Source code: [`src/fastapi_factory_utilities/example/`](src/fastapi_factory_utilities/example/)
+
+> 📖 See [Source Tree Analysis](docs/knowledge/source-tree-analysis.md) for complete directory structure.
 
 ---
 
@@ -324,6 +362,8 @@ poetry install --with test
 poetry run pre-commit install
 ```
 
+> 📖 See [Development Guide](docs/knowledge/development-guide.md) for complete setup instructions.
+
 ### Running Tests
 
 ```bash
@@ -336,6 +376,8 @@ poetry run pytest tests/units/test_exceptions.py
 # Run tests in parallel
 poetry run pytest -n auto
 ```
+
+> 📖 See [Development Guide - Testing](docs/knowledge/development-guide.md#running-tests) for testing patterns.
 
 ### Code Quality
 
@@ -351,12 +393,16 @@ poetry run ruff check --fix src tests
 poetry run mypy
 ```
 
+> 📖 See [Development Guide - Code Style](docs/knowledge/development-guide.md#code-style-guidelines) for conventions.
+
 ### Docker Development
 
 ```bash
 # Build and run in container
 ./scripts/dev-in-container.sh
 ```
+
+> 📖 See [Development Guide - Docker](docs/knowledge/development-guide.md#docker-development) for container setup.
 
 ---
 
@@ -391,6 +437,29 @@ graph TB
     App -->|provides| Services
 ```
 
+> 📖 See [Architecture Documentation](docs/knowledge/architecture.md) for detailed architecture diagrams and patterns.
+
+---
+
+## Project Structure
+
+```
+fastapi_factory_utilities/
+├── src/fastapi_factory_utilities/
+│   ├── core/           # 🎯 Main library code
+│   │   ├── app/        # Application framework
+│   │   ├── plugins/    # Plugin implementations
+│   │   ├── security/   # Authentication/authorization
+│   │   ├── services/   # Business services
+│   │   └── utils/      # Utility functions
+│   └── example/        # 📚 Usage example
+├── tests/              # Test suite
+├── docs/knowledge/     # 📖 Detailed documentation
+└── docker/             # Docker configurations
+```
+
+> 📖 See [Source Tree Analysis](docs/knowledge/source-tree-analysis.md) for complete annotated structure.
+
 ---
 
 ## Contributing
@@ -408,6 +477,8 @@ Please ensure:
 - Code is properly formatted (`poetry run ruff format`)
 - Type checking passes (`poetry run mypy`)
 - Pre-commit hooks pass (`poetry run pre-commit run --all-files`)
+
+> 📖 See [Development Guide](docs/knowledge/development-guide.md) for complete contribution workflow.
 
 ---
 
@@ -430,6 +501,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Repository**: [https://github.com/DeerHide/fastapi_factory_utilities](https://github.com/DeerHide/fastapi_factory_utilities)
 - **Issues**: [https://github.com/DeerHide/fastapi_factory_utilities/issues](https://github.com/DeerHide/fastapi_factory_utilities/issues)
 - **PyPI**: [https://pypi.org/project/fastapi-factory-utilities/](https://pypi.org/project/fastapi-factory-utilities/)
+- **Documentation**: [docs/knowledge/index.md](docs/knowledge/index.md)
 
 ### Related Projects
 

@@ -121,7 +121,9 @@ class GenericConfigBuilder(Generic[GenericConfig]):
         self.package_name: str = package_name
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
 
-        self.config_class: type[GenericConfig] = config_class if config_class is not None else generic_args[0]
+        self.config_class: type[GenericConfig] = (  # pyright: ignore
+            config_class if config_class is not None else generic_args[0]
+        )
         self.filename: str = filename
         self.yaml_base_key: str | None = yaml_base_key
 
