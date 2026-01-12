@@ -15,7 +15,6 @@ class JWTBearerAuthenticationConfig(BaseModel):
         default_factory=lambda: list(get_default_algorithms().keys()), description="The authorized algorithms."
     )
 
-    audience: str = Field(description="The audience to be included in the JWT token.")
     authorized_audiences: list[str] | None = Field(default=None, description="The authorized audiences.")
     authorized_issuers: list[str] | None = Field(default=None, description="The authorized issuers.")
 

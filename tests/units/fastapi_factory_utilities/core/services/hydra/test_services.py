@@ -12,6 +12,8 @@ import jwt
 import pytest
 from pydantic import HttpUrl, ValidationError
 
+from fastapi_factory_utilities.core.app.config import BaseApplicationConfig
+from fastapi_factory_utilities.core.app.enums import EnvironmentEnum
 from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource
 from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
 from fastapi_factory_utilities.core.plugins.aiohttp.mockers import (
@@ -93,6 +95,23 @@ def fixture_http_resource_public(http_config_public: HttpServiceDependencyConfig
         AioHttpClientResource: A test public HTTP resource.
     """
     return AioHttpClientResource(dependency_config=http_config_public)
+
+
+@pytest.fixture(name="application_config")
+def fixture_application_config() -> BaseApplicationConfig:
+    """Create a BaseApplicationConfig for testing.
+
+    Returns:
+        BaseApplicationConfig: A test application config.
+    """
+    return BaseApplicationConfig(
+        service_namespace="test",
+        environment=EnvironmentEnum.DEVELOPMENT,
+        service_name="test-service",
+        description="Test service",
+        version="1.0.0",
+        audience="test-audience",
+    )
 
 
 @pytest.fixture(name="mock_introspect_data")
@@ -484,15 +503,19 @@ class TestHydraIntrospectService:
 class TestHydraOAuth2ClientCredentialsService:
     """Various tests for the HydraOAuth2ClientCredentialsService class."""
 
-    def test_init(self, http_resource_public: AioHttpClientResource) -> None:
+    def test_init(self, http_resource_public: AioHttpClientResource, application_config: BaseApplicationConfig) -> None:
         """Test that __init__ properly initializes the service.
 
         Args:
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
+            application_config (BaseApplicationConfig): Application config fixture.
         """
-        service = HydraOAuth2ClientCredentialsService(hydra_public_http_resource=http_resource_public)
+        service = HydraOAuth2ClientCredentialsService(
+            hydra_public_http_resource=http_resource_public, application_config=application_config
+        )
 
         assert service._hydra_public_http_resource == http_resource_public
+        assert service._application_config == application_config
         assert service.CLIENT_CREDENTIALS_ENDPOINT == "/oauth2/token"
 
     def test_build_bearer_header(self) -> None:
@@ -537,13 +560,18 @@ class TestHydraOAuth2ClientCredentialsService:
         assert result == f"Basic {expected_b64}"
 
     @pytest.mark.asyncio
-    async def test_oauth2_client_credentials_success(self, http_resource_public: AioHttpClientResource) -> None:
+    async def test_oauth2_client_credentials_success(
+        self, http_resource_public: AioHttpClientResource, application_config: BaseApplicationConfig
+    ) -> None:
         """Test successful oauth2_client_credentials call.
 
         Args:
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
+            application_config (BaseApplicationConfig): Application config fixture.
         """
-        service = HydraOAuth2ClientCredentialsService(hydra_public_http_resource=http_resource_public)
+        service = HydraOAuth2ClientCredentialsService(
+            hydra_public_http_resource=http_resource_public, application_config=application_config
+        )
 
         client_id: HydraClientId = HydraClientId("test_client_id")
         client_secret: HydraClientSecret = HydraClientSecret("test_client_secret")
@@ -566,13 +594,18 @@ class TestHydraOAuth2ClientCredentialsService:
         assert result == access_token
 
     @pytest.mark.asyncio
-    async def test_oauth2_client_credentials_single_scope(self, http_resource_public: AioHttpClientResource) -> None:
+    async def test_oauth2_client_credentials_single_scope(
+        self, http_resource_public: AioHttpClientResource, application_config: BaseApplicationConfig
+    ) -> None:
         """Test oauth2_client_credentials with single scope.
 
         Args:
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
+            application_config (BaseApplicationConfig): Application config fixture.
         """
-        service = HydraOAuth2ClientCredentialsService(hydra_public_http_resource=http_resource_public)
+        service = HydraOAuth2ClientCredentialsService(
+            hydra_public_http_resource=http_resource_public, application_config=application_config
+        )
 
         client_id: HydraClientId = HydraClientId("test_client_id")
         client_secret: HydraClientSecret = HydraClientSecret("test_client_secret")
@@ -606,15 +639,21 @@ class TestHydraOAuth2ClientCredentialsService:
     )
     @pytest.mark.asyncio
     async def test_oauth2_client_credentials_error_status(
-        self, http_resource_public: AioHttpClientResource, status_code: HTTPStatus
+        self,
+        http_resource_public: AioHttpClientResource,
+        application_config: BaseApplicationConfig,
+        status_code: HTTPStatus,
     ) -> None:
         """Test oauth2_client_credentials raises HydraOperationError on non-200 status.
 
         Args:
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
+            application_config (BaseApplicationConfig): Application config fixture.
             status_code (HTTPStatus): HTTP status code.
         """
-        service = HydraOAuth2ClientCredentialsService(hydra_public_http_resource=http_resource_public)
+        service = HydraOAuth2ClientCredentialsService(
+            hydra_public_http_resource=http_resource_public, application_config=application_config
+        )
 
         client_id: HydraClientId = HydraClientId("test_client_id")
         client_secret: HydraClientSecret = HydraClientSecret("test_client_secret")

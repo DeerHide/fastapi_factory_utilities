@@ -9,6 +9,7 @@ import jwt
 from fastapi import Depends
 from pydantic import ValidationError
 
+from fastapi_factory_utilities.core.app import BaseApplicationConfig, depends_application_config
 from fastapi_factory_utilities.core.plugins.aiohttp import (
     AioHttpClientResource,
     AioHttpResourceDepends,
@@ -109,13 +110,16 @@ class HydraOAuth2ClientCredentialsService:
     def __init__(
         self,
         hydra_public_http_resource: AioHttpClientResource,
+        application_config: BaseApplicationConfig,
     ) -> None:
         """Instanciate the Hydra service.
 
         Args:
             hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
+            application_config (BaseApplicationConfig): The application config.
         """
         self._hydra_public_http_resource: AioHttpClientResource = hydra_public_http_resource
+        self._application_config: BaseApplicationConfig = application_config
 
     @classmethod
     def build_bearer_header(cls, client_id: HydraClientId, client_secret: HydraClientSecret) -> str:
@@ -134,14 +138,15 @@ class HydraOAuth2ClientCredentialsService:
         return f"Basic {auth_b64}"
 
     async def oauth2_client_credentials(
-        self, client_id: HydraClientId, client_secret: HydraClientSecret, scopes: list[str]
+        self, client_id: HydraClientId, client_secret: HydraClientSecret, scopes: list[str], audience: str | None = None
     ) -> HydraAccessToken:
         """Get the OAuth2 client credentials.
 
         Args:
             client_id (str): The client ID.
             client_secret (str): The client secret.
-            scopes (list[str]): The scopes
+            scopes (list[str]): The scopes.
+            audience (str, optional): The audience. Defaults to None.
 
         Returns:
             str: The access token.
@@ -149,12 +154,17 @@ class HydraOAuth2ClientCredentialsService:
         Raises:
             HydraOperationError: If the client credentials request fails.
         """
+        enforced_audience: str = audience if audience is not None else self._application_config.audience
         try:
             async with self._hydra_public_http_resource.acquire_client_session() as session:
                 async with session.post(
                     url=self.CLIENT_CREDENTIALS_ENDPOINT,
                     headers={"Authorization": self.build_bearer_header(client_id, client_secret)},
-                    data={"grant_type": "client_credentials", "scope": " ".join(scopes)},
+                    data={
+                        "grant_type": "client_credentials",
+                        "scope": " ".join(scopes),
+                        "audience": enforced_audience,
+                    },
                 ) as response:
                     response.raise_for_status()
                     response_data = await response.json()
@@ -179,11 +189,13 @@ class HydraOAuth2ClientCredentialsService:
 
 def depends_hydra_oauth2_client_credentials_service(
     hydra_public_http_resource: Annotated[AioHttpClientResource, Depends(AioHttpResourceDepends("hydra_public"))],
+    application_config: Annotated[BaseApplicationConfig, Depends(depends_application_config)],
 ) -> HydraOAuth2ClientCredentialsService:
     """Dependency injection for the Hydra OAuth2 client credentials service.
 
     Args:
         hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
+        application_config (BaseApplicationConfig): The application config.
 
     Returns:
         HydraOAuth2ClientCredentialsService: The Hydra OAuth2 client credentials service instance.
@@ -193,6 +205,7 @@ def depends_hydra_oauth2_client_credentials_service(
     """
     return HydraOAuth2ClientCredentialsService(
         hydra_public_http_resource=hydra_public_http_resource,
+        application_config=application_config,
     )
 
 

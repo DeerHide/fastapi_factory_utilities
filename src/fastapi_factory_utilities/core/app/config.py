@@ -67,6 +67,7 @@ class BaseApplicationConfig(BaseModel):
     service_name: str = Field(description="Service name")
     description: str = Field(description="Service description")
     version: str = Field(description="Service version")
+    audience: str = Field(description="Service audience")
     # Root path for the application
     root_path: str = Field(default="", description="Root path")
 

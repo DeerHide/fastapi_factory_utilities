@@ -6,12 +6,17 @@ from .config import (
     BaseApplicationConfig,
     RootConfig,
 )
+from .depends import depends_application_config
 from .enums import EnvironmentEnum
+from .exceptions import ConfigBuilderError, UnableToAcquireApplicationConfigError
 
 __all__: list[str] = [
     "ApplicationAbstract",
     "ApplicationGenericBuilder",
     "BaseApplicationConfig",
+    "ConfigBuilderError",
     "EnvironmentEnum",
     "RootConfig",
+    "UnableToAcquireApplicationConfigError",
+    "depends_application_config",
 ]

@@ -9,6 +9,10 @@ class BaseApplicationException(BaseException):
     pass
 
 
+class UnableToAcquireApplicationConfigError(FastAPIFactoryUtilitiesError):
+    """An Error occur when trying to acquire the application config."""
+
+
 class ConfigBuilderError(FastAPIFactoryUtilitiesError):
     """Application configuration factory exception."""
 

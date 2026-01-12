@@ -42,7 +42,6 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             JWTBearerAuthenticationConfig: A JWT bearer authentication config.
         """
         return JWTBearerAuthenticationConfig(
-            audience="test_audience",
             authorized_algorithms=["RS256"],
         )
 
@@ -644,7 +643,6 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
             JWTBearerAuthenticationConfig: A JWT bearer authentication config.
         """
         return JWTBearerAuthenticationConfig(
-            audience="test_audience",
             authorized_algorithms=["RS256"],
         )
 

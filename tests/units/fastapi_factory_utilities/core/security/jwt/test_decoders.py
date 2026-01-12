@@ -50,7 +50,6 @@ class TestDecodeJWTTokenPayload:
             JWTBearerAuthenticationConfig: A minimal config.
         """
         return JWTBearerAuthenticationConfig(
-            audience="test_audience",
             authorized_algorithms=["RS256"],
         )
 
@@ -62,7 +61,6 @@ class TestDecodeJWTTokenPayload:
             JWTBearerAuthenticationConfig: A config with issuer.
         """
         return JWTBearerAuthenticationConfig(
-            audience="test_audience",
             authorized_algorithms=["RS256"],
             authorized_issuers=["https://example.com"],
         )
@@ -75,7 +73,6 @@ class TestDecodeJWTTokenPayload:
             JWTBearerAuthenticationConfig: A config with authorized audiences.
         """
         return JWTBearerAuthenticationConfig(
-            audience="test_audience",
             authorized_algorithms=["RS256"],
             authorized_audiences=["audience1", "audience2"],
         )
@@ -88,7 +85,6 @@ class TestDecodeJWTTokenPayload:
             JWTBearerAuthenticationConfig: A config with all options.
         """
         return JWTBearerAuthenticationConfig(
-            audience="test_audience",
             authorized_algorithms=["RS256"],
             authorized_issuers=["https://example.com"],
             authorized_audiences=["audience1", "audience2"],
@@ -424,7 +420,6 @@ class TestJWTBearerTokenDecoder:
             JWTBearerAuthenticationConfig: A JWT bearer authentication config.
         """
         return JWTBearerAuthenticationConfig(
-            audience="test_audience",
             authorized_algorithms=["RS256"],
         )
 

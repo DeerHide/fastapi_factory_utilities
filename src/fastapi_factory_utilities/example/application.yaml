@@ -4,6 +4,7 @@ application:
   service_namespace: fastapi_factory_utilities
   description: An example application using fastapi-factory-utilities
   version: 0.1.0
+  audience: example-audience
   environment: ${ENVIRONMENT:development}
 
 development:
