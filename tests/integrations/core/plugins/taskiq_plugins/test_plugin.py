@@ -29,6 +29,7 @@ class TestTaskiqPlugin:
                 service_namespace="test",
                 description="test",
                 version="0.0.0",
+                audience="test",
             )
         )
         fastapi_app: FastAPI = FastAPI()
