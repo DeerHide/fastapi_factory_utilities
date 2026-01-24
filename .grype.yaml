@@ -1,0 +1,12 @@
+# Grype configuration file
+# This file configures vulnerability scanning exceptions
+
+ignore:
+  # Ignore GHSA-7gcm-g887-7qv7 in protobuf 6.33.4
+  # Reason: No fix available for this vulnerability at this time
+  - vulnerability: GHSA-7gcm-g887-7qv7
+    package:
+      name: protobuf
+      version: 6.33.4
+      type: python
+    reason: No fix available for this vulnerability. Monitoring for updates.
