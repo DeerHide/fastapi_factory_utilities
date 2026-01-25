@@ -178,3 +178,7 @@ data/*
 
 # Portman Temporary Files
 tmp
+
+# Agentic development files
+_bmad
+.cursor/commands/bmad
