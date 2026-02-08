@@ -148,7 +148,7 @@ async with repository.get_session() as session:
 
 ## Testing with AbstractRepositoryInMemory
 
-The library provides an in-memory repository implementation for testing.
+The library provides an in-memory repository implementation for testing. For services that use both a repository and an HTTP client (e.g., calling external APIs), combine this with [AioHttp mocking](aiohttp.md#testing-with-mocks) to test the full flow without real dependencies.
 
 ### Implementation
 

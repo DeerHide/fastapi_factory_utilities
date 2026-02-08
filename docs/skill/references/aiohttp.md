@@ -161,7 +161,7 @@ async def call_service2(
 
 ## Testing with Mocks
 
-The library provides utilities for mocking AioHttp resources and responses in tests.
+The library provides utilities for mocking AioHttp resources and responses in tests. For services that also use repositories, combine with the [Repository Pattern](repository-pattern.md#testing-with-abstractrepositoryinmemory) in-memory repository for full unit tests without external services.
 
 ### build_mocked_aiohttp_response
 

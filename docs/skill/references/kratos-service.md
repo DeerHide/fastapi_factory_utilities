@@ -220,6 +220,10 @@ except KratosOperationError as e:
 4. **State Management**: Check identity state before operations
 5. **Schema Validation**: Ensure identity traits match schema
 
+## See Also
+
+- [JWT Authentication](jwt-authentication.md) - Alternative API auth via JWT Bearer; both extend `AuthenticationAbstract`. For cookie-based session auth, use `KratosSessionAuthenticationService` from `core/security/kratos.py` with a Kratos whoami service.
+
 ## Reference
 
 - `src/fastapi_factory_utilities/core/services/kratos/` - Kratos service implementation

@@ -1,9 +1,29 @@
 ---
 name: fastapi-factory-utilities
 description: Build FastAPI microservices with plugins, message brokers, OAuth2/OIDC, OpenTelemetry, and structured logging.
+metadata:
+  author: Deerhide
+  version: 1.0.0
 ---
-
 # FastAPI Factory Utilities
+
+## When to use this skill?
+
+- Use this skill when building FastAPI microservices with the fastapi_factory_utilities library.
+- Use this skill when implementing plugin-based architectures in FastAPI applications.
+- Use this skill when setting up OAuth2/OIDC authentication with Hydra or Kratos.
+- Use this skill when configuring MongoDB with Beanie ODM in FastAPI applications.
+- Use this skill when implementing RabbitMQ message brokers with AioPika.
+- Use this skill when setting up background task processing with Taskiq and Redis.
+- Use this skill when configuring OpenTelemetry for distributed tracing and metrics.
+- Use this skill when implementing structured logging with structlog.
+- Use this skill when using dependency injection patterns with FastAPI's Depends system.
+- Use this skill when creating mock resources for testing (AioHttp, ODM repositories).
+- Use this skill when implementing repository patterns for data access.
+- Use this skill when configuring health checks and status services.
+- Use this skill when implementing JWT Bearer authentication with JWKS verification.
+
+---
 
 A library for building production-ready FastAPI microservices with plugin-based architecture.
 
@@ -49,6 +69,12 @@ For testing, several plugins provide mockers to create mock resources:
 | [Hydra Service](references/hydra-service.md) | OAuth2 token introspection, JWKS, client credentials |
 | [Kratos Service](references/kratos-service.md) | Identity management, session validation |
 | [Audit Service](references/audit-service.md) | Event auditing with RabbitMQ |
+
+### Security
+
+| Reference | Description |
+|-----------|-------------|
+| [JWT Authentication](references/jwt-authentication.md) | JWT Bearer validation, JWKS store, custom verifiers |
 
 ### Utilities
 

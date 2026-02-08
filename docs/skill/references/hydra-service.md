@@ -194,6 +194,11 @@ async def introspect_token(
 4. **Scope Validation**: Validate scopes after introspection
 5. **Audience Validation**: Always validate audience matches expected value
 
+## See Also
+
+- [JWT Authentication](jwt-authentication.md) - Local JWT verification with JWKS (e.g., using Hydra's JWKS endpoint as key source)
+- [AioHttp HTTP Client](aiohttp.md) - HTTP client used by Hydra services and integration patterns
+
 ## Reference
 
 - `src/fastapi_factory_utilities/core/services/hydra/` - Hydra service implementation
