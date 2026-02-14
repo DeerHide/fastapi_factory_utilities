@@ -1541,24 +1541,6 @@ class TestKratosSessionObject:
         # Note: Pydantic may deserialize to base MetadataObject classes
         # but the structure should be preserved
 
-    def test_missing_required_fields_raises_validation_error(self) -> None:
-        """Test that missing required fields raises ValidationError."""
-        with pytest.raises(ValidationError) as exc_info:
-            KratosSessionObject(
-                id=uuid.uuid4(),
-                active=True,
-                issued_at=datetime.datetime.now(tz=datetime.UTC),
-                expires_at=datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(hours=1),
-                authenticated_at=datetime.datetime.now(tz=datetime.UTC),
-                authentication_methods=[self._create_valid_authentication_method()],
-                authenticator_assurance_level=AuthenticatorAssuranceLevelEnum.AAL1,
-                identity=self._create_valid_identity(),
-                # tokenized is missing
-            )  # type: ignore[call-arg]
-
-        errors = exc_info.value.errors()
-        assert any(error["loc"] == ("tokenized",) for error in errors)
-
     def test_invalid_authenticator_assurance_level_enum_raises_validation_error(self) -> None:
         """Test that invalid authenticator_assurance_level enum value raises ValidationError."""
         with pytest.raises(ValidationError) as exc_info:

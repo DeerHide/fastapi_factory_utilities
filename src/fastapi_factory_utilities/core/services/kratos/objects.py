@@ -77,7 +77,7 @@ class KratosAuthenticationMethod(BaseModel):
     aal: AuthenticatorAssuranceLevelEnum
     completed_at: datetime.datetime
     method: AuthenticationMethodEnum
-    provider: KratosProvider
+    provider: KratosProvider | None = None
 
 
 class KratosSessionObject(BaseModel, Generic[GenericKratosIdentityObject]):
@@ -93,4 +93,4 @@ class KratosSessionObject(BaseModel, Generic[GenericKratosIdentityObject]):
     authentication_methods: list[KratosAuthenticationMethod]
     authenticator_assurance_level: AuthenticatorAssuranceLevelEnum
     identity: GenericKratosIdentityObject
-    tokenized: str
+    tokenized: str | None = None
