@@ -1,9 +1,12 @@
 """Provides types for the books service."""
 
-from typing import Any, cast
+from typing import Any, NewType, cast
+from uuid import UUID
 
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import core_schema
+
+BookEntityId = NewType("BookEntityId", UUID)
 
 
 class BookName(str):

@@ -27,7 +27,7 @@ from fastapi_factory_utilities.core.plugins.odm_plugin.exceptions import (
 from fastapi_factory_utilities.core.plugins.odm_plugin.helpers import PersistedEntity
 
 DocumentGenericType = TypeVar("DocumentGenericType", bound=BaseDocument)  # pylint: disable=invalid-name
-EntityGenericType = TypeVar("EntityGenericType", bound=PersistedEntity)  # pylint: disable=invalid-name
+EntityGenericType = TypeVar("EntityGenericType", bound=PersistedEntity[UUID])  # pylint: disable=invalid-name
 
 
 class MockQueryField(str):
