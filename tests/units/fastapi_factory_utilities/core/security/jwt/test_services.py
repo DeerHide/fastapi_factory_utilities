@@ -9,7 +9,7 @@ from fastapi import HTTPException, Request
 
 from fastapi_factory_utilities.core.security.jwt.configs import JWTBearerAuthenticationConfig
 from fastapi_factory_utilities.core.security.jwt.decoders import (
-    JWTBearerTokenDecoder,
+    GenericJWTBearerTokenDecoder,
     JWTBearerTokenDecoderAbstract,
 )
 from fastapi_factory_utilities.core.security.jwt.exceptions import (
@@ -19,16 +19,16 @@ from fastapi_factory_utilities.core.security.jwt.exceptions import (
     NotVerifiedJWTError,
 )
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
-from fastapi_factory_utilities.core.security.jwt.services import (
-    JWTAuthenticationService,
-    JWTAuthenticationServiceAbstract,
-)
+from fastapi_factory_utilities.core.security.jwt.services import JWTAuthenticationServiceAbstract
 from fastapi_factory_utilities.core.security.jwt.stores import JWKStoreAbstract
 from fastapi_factory_utilities.core.security.jwt.types import JWTToken
 from fastapi_factory_utilities.core.security.jwt.verifiers import (
     JWTNoneVerifier,
     JWTVerifierAbstract,
 )
+
+_TEST_IDENTIFIER: str = "test-jwt-auth"
+_DEFAULT_ISSUER: str = "https://example.com"
 
 
 class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
@@ -43,6 +43,7 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         """
         return JWTBearerAuthenticationConfig(
             authorized_algorithms=["RS256"],
+            issuer=_DEFAULT_ISSUER,
         )
 
     @pytest.fixture
@@ -111,6 +112,7 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             pass
 
         return ConcreteService(
+            identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
             jwt_verifier=mock_verifier,
             jwt_decoder=mock_decoder,
@@ -300,6 +302,7 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             pass
 
         service = ConcreteService(
+            identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
             jwt_verifier=mock_verifier,
             jwt_decoder=mock_decoder,
@@ -360,6 +363,7 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             pass
 
         service = ConcreteService(
+            identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
             jwt_verifier=mock_verifier,
             jwt_decoder=mock_decoder,
@@ -424,6 +428,7 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             pass
 
         service = ConcreteService(
+            identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
             jwt_verifier=mock_verifier,
             jwt_decoder=mock_decoder,
@@ -497,6 +502,7 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             pass
 
         service = ConcreteService(
+            identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
             jwt_verifier=mock_verifier,
             jwt_decoder=mock_decoder,
@@ -564,6 +570,7 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
             pass
 
         service = ConcreteService(
+            identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
             jwt_verifier=mock_verifier,
             jwt_decoder=mock_decoder,
@@ -632,8 +639,12 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         assert call_args.kwargs["jwt_payload"] == jwt_payload
 
 
-class TestJWTAuthenticationService:  # pylint: disable=protected-access
-    """Various tests for the JWTAuthenticationService class."""
+class ConcreteJWTAuthService(JWTAuthenticationServiceAbstract[JWTPayload]):
+    """Concrete JWT auth service for testing (identifier + config + JWTNoneVerifier + GenericJWTBearerTokenDecoder)."""
+
+
+class TestConcreteJWTAuthService:  # pylint: disable=protected-access
+    """Tests for a concrete JWT authentication service built from abstract + GenericJWTBearerTokenDecoder."""
 
     @pytest.fixture
     def jwt_config(self) -> JWTBearerAuthenticationConfig:
@@ -644,6 +655,7 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
         """
         return JWTBearerAuthenticationConfig(
             authorized_algorithms=["RS256"],
+            issuer=_DEFAULT_ISSUER,
         )
 
     @pytest.fixture
@@ -661,19 +673,26 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
         self,
         jwt_config: JWTBearerAuthenticationConfig,
         mock_jwks_store: MagicMock,
-    ) -> JWTAuthenticationService:
-        """Create a JWT authentication service.
+    ) -> ConcreteJWTAuthService:
+        """Create a JWT authentication service (concrete: abstract + GenericJWTBearerTokenDecoder + JWTNoneVerifier).
 
         Args:
             jwt_config (JWTBearerAuthenticationConfig): The JWT config.
             mock_jwks_store (MagicMock): The mock JWKS store.
 
         Returns:
-            JWTAuthenticationService: A JWT authentication service.
+            ConcreteJWTAuthService: A JWT authentication service.
         """
-        return JWTAuthenticationService(
+        decoder: GenericJWTBearerTokenDecoder[JWTPayload] = GenericJWTBearerTokenDecoder[JWTPayload](
             jwt_bearer_authentication_config=jwt_config,
             jwks_store=mock_jwks_store,
+        )
+        decoder._payload_model = JWTPayload  # pylint: disable=protected-access
+        return ConcreteJWTAuthService(
+            identifier=_TEST_IDENTIFIER,
+            jwt_bearer_authentication_config=jwt_config,
+            jwt_verifier=JWTNoneVerifier(),
+            jwt_decoder=decoder,
         )
 
     def test_can_be_instantiated(
@@ -681,47 +700,54 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
         jwt_config: JWTBearerAuthenticationConfig,
         mock_jwks_store: MagicMock,
     ) -> None:
-        """Test that JWTAuthenticationService can be instantiated.
+        """Test that concrete JWT auth service can be instantiated.
 
         Args:
             jwt_config (JWTBearerAuthenticationConfig): The JWT config.
             mock_jwks_store (MagicMock): The mock JWKS store.
         """
-        service = JWTAuthenticationService(
+        decoder = GenericJWTBearerTokenDecoder[JWTPayload](
             jwt_bearer_authentication_config=jwt_config,
             jwks_store=mock_jwks_store,
         )
-        assert isinstance(service, JWTAuthenticationService)
+        decoder._payload_model = JWTPayload  # pylint: disable=protected-access
+        service = ConcreteJWTAuthService(
+            identifier=_TEST_IDENTIFIER,
+            jwt_bearer_authentication_config=jwt_config,
+            jwt_verifier=JWTNoneVerifier(),
+            jwt_decoder=decoder,
+        )
+        assert isinstance(service, ConcreteJWTAuthService)
         assert isinstance(service, JWTAuthenticationServiceAbstract)
 
-    def test_inherits_from_abstract_class(self, service: JWTAuthenticationService) -> None:
-        """Test that JWTAuthenticationService inherits from JWTAuthenticationServiceAbstract.
+    def test_inherits_from_abstract_class(self, service: ConcreteJWTAuthService) -> None:
+        """Test that concrete service inherits from JWTAuthenticationServiceAbstract.
 
         Args:
-            service (JWTAuthenticationService): The service instance.
+            service (ConcreteJWTAuthService): The service instance.
         """
         assert isinstance(service, JWTAuthenticationServiceAbstract)
 
-    def test_initializes_with_none_verifier(self, service: JWTAuthenticationService) -> None:
+    def test_initializes_with_none_verifier(self, service: ConcreteJWTAuthService) -> None:
         """Test that service initializes with JWTNoneVerifier.
 
         Args:
-            service (JWTAuthenticationService): The service instance.
+            service (ConcreteJWTAuthService): The service instance.
         """
         assert isinstance(service._jwt_verifier, JWTNoneVerifier)  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     def test_initializes_with_decoder(
         self,
-        service: JWTAuthenticationService,
+        service: ConcreteJWTAuthService,
         mock_jwks_store: MagicMock,
     ) -> None:
-        """Test that service initializes with JWTBearerTokenDecoder.
+        """Test that service initializes with GenericJWTBearerTokenDecoder.
 
         Args:
-            service (JWTAuthenticationService): The service instance.
+            service (ConcreteJWTAuthService): The service instance.
             mock_jwks_store (MagicMock): The mock JWKS store.
         """
-        assert isinstance(service._jwt_decoder, JWTBearerTokenDecoder)  # type: ignore[attr-defined] # pylint: disable=protected-access
+        assert isinstance(service._jwt_decoder, GenericJWTBearerTokenDecoder)  # type: ignore[attr-defined] # pylint: disable=protected-access
         assert service._jwt_decoder._jwks_store == mock_jwks_store  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     def test_initializes_with_raise_exception_true_by_default(
@@ -735,9 +761,16 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
             jwt_config (JWTBearerAuthenticationConfig): The JWT config.
             mock_jwks_store (MagicMock): The mock JWKS store.
         """
-        service = JWTAuthenticationService(
+        decoder = GenericJWTBearerTokenDecoder[JWTPayload](
             jwt_bearer_authentication_config=jwt_config,
             jwks_store=mock_jwks_store,
+        )
+        decoder._payload_model = JWTPayload  # pylint: disable=protected-access
+        service = ConcreteJWTAuthService(
+            identifier=_TEST_IDENTIFIER,
+            jwt_bearer_authentication_config=jwt_config,
+            jwt_verifier=JWTNoneVerifier(),
+            jwt_decoder=decoder,
         )
         assert service._raise_exception is True  # type: ignore[attr-defined] # pylint: disable=protected-access
 
@@ -752,9 +785,16 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
             jwt_config (JWTBearerAuthenticationConfig): The JWT config.
             mock_jwks_store (MagicMock): The mock JWKS store.
         """
-        service = JWTAuthenticationService(
+        decoder = GenericJWTBearerTokenDecoder[JWTPayload](
             jwt_bearer_authentication_config=jwt_config,
             jwks_store=mock_jwks_store,
+        )
+        decoder._payload_model = JWTPayload  # pylint: disable=protected-access
+        service = ConcreteJWTAuthService(
+            identifier=_TEST_IDENTIFIER,
+            jwt_bearer_authentication_config=jwt_config,
+            jwt_verifier=JWTNoneVerifier(),
+            jwt_decoder=decoder,
             raise_exception=False,
         )
         assert service._raise_exception is False  # type: ignore[attr-defined] # pylint: disable=protected-access
@@ -762,12 +802,12 @@ class TestJWTAuthenticationService:  # pylint: disable=protected-access
     @pytest.mark.asyncio
     async def test_authenticate_works_with_service(
         self,
-        service: JWTAuthenticationService,
+        service: ConcreteJWTAuthService,
     ) -> None:
         """Test that authenticate method works with the service.
 
         Args:
-            service (JWTAuthenticationService): The service instance.
+            service (ConcreteJWTAuthService): The service instance.
         """
         request = MagicMock(spec=Request)
         request.headers = {"Authorization": "Bearer test.token.here"}

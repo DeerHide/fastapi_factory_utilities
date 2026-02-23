@@ -5,7 +5,7 @@ https://www.iana.org/assignments/jwt/jwt.xhtml#claims
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, get_args
 
 from jwt import InvalidTokenError, decode, get_unverified_header
 from jwt.api_jwk import PyJWK
@@ -15,7 +15,7 @@ from .configs import JWTBearerAuthenticationConfig
 from .exceptions import InvalidJWTError, InvalidJWTPayploadError
 from .objects import JWTPayload
 from .stores import JWKStoreAbstract
-from .types import JWTToken, OAuth2Subject
+from .types import JWTToken, OAuth2Issuer, OAuth2Subject
 
 JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)
 
@@ -25,6 +25,7 @@ async def decode_jwt_token_payload(
     public_key: PyJWK,
     jwt_bearer_authentication_config: JWTBearerAuthenticationConfig,
     subject: OAuth2Subject | None = None,
+    issuer: OAuth2Issuer | None = None,
 ) -> dict[str, Any]:
     """Decode the JWT bearer token payload.
 
@@ -33,6 +34,7 @@ async def decode_jwt_token_payload(
         public_key (PyJWK): The public key.
         jwt_bearer_authentication_config (JWTBearerAuthenticationConfig): The JWT bearer authentication configuration.
         subject (OAuth2Subject | None): The subject.
+        issuer (OAuth2Issuer | None): The issuer.
 
     Returns:
         dict[str, Any]: The decoded JWT bearer token payload.
@@ -42,8 +44,7 @@ async def decode_jwt_token_payload(
     """
     # Additional kwargs for the decode function
     kwargs: dict[str, Any] = {}
-    if jwt_bearer_authentication_config.authorized_issuers:
-        kwargs["issuer"] = jwt_bearer_authentication_config.authorized_issuers
+    kwargs["issuer"] = issuer or jwt_bearer_authentication_config.issuer
     if jwt_bearer_authentication_config.authorized_audiences:
         kwargs["audience"] = jwt_bearer_authentication_config.authorized_audiences
     if subject:
@@ -96,7 +97,10 @@ class JWTBearerTokenDecoderAbstract(ABC, Generic[JWTBearerPayloadGeneric]):
         raise NotImplementedError()
 
 
-class JWTBearerTokenDecoder(JWTBearerTokenDecoderAbstract[JWTPayload]):
+GenericJWTPayload = TypeVar("GenericJWTPayload", bound=JWTPayload)
+
+
+class GenericJWTBearerTokenDecoder(JWTBearerTokenDecoderAbstract[GenericJWTPayload], Generic[GenericJWTPayload]):
     """JWT bearer token classic decoder."""
 
     def __init__(
@@ -111,20 +115,23 @@ class JWTBearerTokenDecoder(JWTBearerTokenDecoderAbstract[JWTPayload]):
         """
         self._jwt_bearer_authentication_config: JWTBearerAuthenticationConfig = jwt_bearer_authentication_config
         self._jwks_store: JWKStoreAbstract = jwks_store
+        self._payload_model: type[GenericJWTPayload] = get_args(self.__orig_bases__[0])[0]  # type: ignore[attr-defined]
 
-    async def decode_payload(self, jwt_token: JWTToken) -> JWTPayload:
+    async def decode_payload(self, jwt_token: JWTToken) -> GenericJWTPayload:
         """Decode the JWT bearer token."""
         # Get the kid from the JWT header
         kid: str = self.get_kid_from_jwt_unsafe_header(jwt_token=jwt_token)
         # Get the JWK from the JWKS store
         jwk: PyJWK = await self._jwks_store.get_jwk(kid=kid)
+        issuer: OAuth2Issuer = await self._jwks_store.get_issuer_by_kid(kid=kid)
         # Decode the JWT bearer token payload
         jwt_decoded: dict[str, Any] = await decode_jwt_token_payload(
             jwt_token=jwt_token,
             public_key=jwk,
             jwt_bearer_authentication_config=self._jwt_bearer_authentication_config,
+            issuer=issuer,
         )
         try:
-            return JWTPayload.model_validate(jwt_decoded)
+            return self._payload_model.model_validate(jwt_decoded)
         except ValidationError as e:
             raise InvalidJWTPayploadError("Failed to validate the JWT bearer token payload") from e

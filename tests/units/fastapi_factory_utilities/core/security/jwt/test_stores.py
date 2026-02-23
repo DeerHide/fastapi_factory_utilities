@@ -1,17 +1,23 @@
 """Unit tests for the JWK stores."""
 
 import asyncio
-from unittest.mock import MagicMock
+from typing import cast
 
 import pytest
-from jwt.api_jwk import PyJWKSet
+from jwt import PyJWK, PyJWKSet
 
 from fastapi_factory_utilities.core.security.jwt.stores import JWKStoreAbstract, JWKStoreMemory
+from fastapi_factory_utilities.core.security.jwt.types import OAuth2Issuer
 
-# Test constants
-SAMPLE_JWKS_KEY_COUNT = 2
+# Minimal valid RSA JWK (RFC 7517-style) for real PyJWK instances
+_RSA_N = (
+    "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1"
+    + "RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5GsGY6QeFMStq1DqVQ6p6nQ"
+)
+_RSA_E = "AQAB"
+
 CONCURRENT_OPERATION_COUNT = 10
-LARGE_JWKS_KEY_COUNT = 10
+EXPECTED_TWO_KEYS = 2
 
 
 class TestJWKStoreAbstract:
@@ -24,79 +30,65 @@ class TestJWKStoreAbstract:
             JWKStoreAbstract()  # type: ignore[abstract]
 
     @pytest.mark.asyncio
-    async def test_get_jwk_calls_get_jwks(self) -> None:
-        """Test that get_jwk calls get_jwks and retrieves the correct JWK.
+    async def test_concrete_get_jwk_returns_added_jwk(self) -> None:
+        """Test that a concrete store returns the correct JWK after add_jwk."""
+        jwk1 = PyJWK.from_dict({"kid": "kid1", "kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
 
-        This test verifies that the abstract method get_jwk correctly
-        delegates to get_jwks and indexes the result.
-        """
-
-        # Create a concrete implementation for testing
         class ConcreteStore(JWKStoreAbstract):
             """Concrete implementation for testing."""
 
-            async def get_jwks(self) -> PyJWKSet:
-                """Get the JWKS from the store."""
-                jwks_dict = {
-                    "keys": [
-                        {
-                            "kid": "kid1",
-                            "kty": "RSA",
-                            "use": "sig",
-                            "n": "test_n_value_1",
-                            "e": "AQAB",
-                        },
-                        {
-                            "kid": "kid2",
-                            "kty": "RSA",
-                            "use": "sig",
-                            "n": "test_n_value_2",
-                            "e": "AQAB",
-                        },
-                    ]
-                }
-                jwks = PyJWKSet.from_dict(jwks_dict)
-                return jwks
+            async def get_jwk(self, kid: str) -> PyJWK:
+                return self._jwk_by_kid[kid]
 
-            async def store_jwks(self, jwks: PyJWKSet) -> None:
-                """Store the JWKS in the store."""
-                pass
+            async def get_issuer_by_kid(self, kid: str) -> OAuth2Issuer:
+                return self._issuer_by_kid[kid]
+
+            async def get_jwks(self, issuer: OAuth2Issuer) -> PyJWKSet:
+                jwks = [jwk for kid, jwk in self._jwk_by_kid.items() if self._issuer_by_kid[kid] == issuer]
+                return PyJWKSet.from_dict(
+                    {"keys": [jwk._jwk_data for jwk in jwks]}  # pylint: disable=protected-access # pyright: ignore[reportPrivateUsage]
+                )
+
+            async def add_jwk(self, issuer: str, jwk: PyJWK) -> None:
+                if jwk.key_id is None:
+                    raise ValueError("JWK key ID is required")
+                self._jwk_by_kid[jwk.key_id] = jwk
+                self._issuer_by_kid[jwk.key_id] = issuer
 
         store = ConcreteStore()
-        jwk = await store.get_jwk("kid1")
-
-        assert jwk is not None
-        assert jwk.key_id == "kid1"
+        await store.add_jwk("https://issuer.example", jwk1)
+        result = await store.get_jwk("kid1")
+        assert result is jwk1
+        assert result.key_id == "kid1"
 
     @pytest.mark.asyncio
     async def test_get_jwk_raises_key_error_for_missing_kid(self) -> None:
         """Test that get_jwk raises KeyError when kid is not found."""
+        jwk1 = PyJWK.from_dict({"kid": "existing_kid", "kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
 
-        # Create a concrete implementation for testing
-        class ConcreteStore(JWKStoreAbstract):
-            """Concrete implementation for testing."""
+        class ConcreteStoreKeyError(JWKStoreAbstract):
+            """Concrete implementation for testing KeyError."""
 
-            async def get_jwks(self) -> PyJWKSet:
-                """Get the JWKS from the store."""
-                # Create a JWKS with one key, but we'll look for a different kid
-                jwks_dict = {
-                    "keys": [
-                        {
-                            "kid": "existing_kid",
-                            "kty": "RSA",
-                            "use": "sig",
-                            "n": "test_n_value",
-                            "e": "AQAB",
-                        }
-                    ]
-                }
-                return PyJWKSet.from_dict(jwks_dict)
+            async def get_jwk(self, kid: str) -> PyJWK:
+                return self._jwk_by_kid[kid]
 
-            async def store_jwks(self, jwks: PyJWKSet) -> None:
-                """Store the JWKS in the store."""
-                pass
+            async def get_issuer_by_kid(self, kid: str) -> str:
+                return self._issuer_by_kid[kid]
 
-        store = ConcreteStore()
+            async def get_jwks(self, issuer: str) -> PyJWKSet:
+                jwks = [jwk for kid, jwk in self._jwk_by_kid.items() if self._issuer_by_kid[kid] == issuer]
+                return PyJWKSet.from_dict(
+                    {"keys": [jwk._jwk_data for jwk in jwks]}  # pylint: disable=protected-access # pyright: ignore[reportPrivateUsage]
+                )
+
+            async def add_jwk(self, issuer: str, jwk: PyJWK) -> None:
+                if jwk.key_id is None:
+                    raise ValueError("JWK key ID is required")
+                self._jwk_by_kid[jwk.key_id] = jwk
+                self._issuer_by_kid[jwk.key_id] = issuer
+
+        store = ConcreteStoreKeyError()
+        await store.add_jwk("https://issuer.example", jwk1)
 
         with pytest.raises(KeyError):
             await store.get_jwk("nonexistent_kid")
@@ -106,87 +98,59 @@ class TestJWKStoreMemory:
     """Various tests for the JWKStoreMemory class."""
 
     @pytest.fixture
-    def store(self, monkeypatch: pytest.MonkeyPatch) -> JWKStoreMemory:
+    def store(self) -> JWKStoreMemory:
         """Create a JWK store in memory.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Pytest monkeypatch fixture.
 
         Returns:
             JWKStoreMemory: A JWK store instance.
         """
-        # Mock PyJWKSet to allow empty initialization for testing
-        mock_empty_jwks = MagicMock()
-        type(mock_empty_jwks).__len__ = lambda self: 0
-        type(mock_empty_jwks).__getitem__ = lambda self, key: (_ for _ in ()).throw(KeyError("Key not found"))
-
-        def mock_pyjwkset_init(keys: list) -> MagicMock:  # pylint: disable=unused-argument
-            """Mock PyJWKSet initialization."""
-            return mock_empty_jwks
-
-        monkeypatch.setattr(
-            "fastapi_factory_utilities.core.security.jwt.stores.PyJWKSet",
-            mock_pyjwkset_init,
-        )
-        store = JWKStoreMemory()
-        return store
+        return JWKStoreMemory()
 
     @pytest.fixture
-    def empty_jwks(self) -> MagicMock:
-        """Create an empty JWKS mock.
+    def sample_jwk(self) -> PyJWK:
+        """Create a sample PyJWK with kid test_kid_1.
 
         Returns:
-            MagicMock: An empty JWKS mock.
+            PyJWK: A sample JWK.
         """
-        mock_jwks = MagicMock()
-        type(mock_jwks).__len__ = lambda self: 0
-        return mock_jwks
+        return PyJWK.from_dict(
+            {
+                "kid": "test_kid_1",
+                "kty": "RSA",
+                "use": "sig",
+                "n": _RSA_N,
+                "e": _RSA_E,
+            }
+        )
 
     @pytest.fixture
-    def sample_jwks(self) -> PyJWKSet:
-        """Create a sample JWKS with test keys.
+    def sample_jwk_2(self) -> PyJWK:
+        """Create a second sample PyJWK with kid test_kid_2.
 
         Returns:
-            PyJWKSet: A sample JWKS.
+            PyJWK: A sample JWK.
         """
-        jwks_dict = {
-            "keys": [
-                {
-                    "kid": "test_kid_1",
-                    "kty": "RSA",
-                    "use": "sig",
-                    "n": "test_n_value_1",
-                    "e": "AQAB",
-                },
-                {
-                    "kid": "test_kid_2",
-                    "kty": "RSA",
-                    "use": "sig",
-                    "n": "test_n_value_2",
-                    "e": "AQAB",
-                },
-            ]
-        }
-        return PyJWKSet.from_dict(jwks_dict)
-
-    def test_can_be_instantiated(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that JWKStoreMemory can be instantiated.
-
-        Args:
-            monkeypatch (pytest.MonkeyPatch): Pytest monkeypatch fixture.
-        """
-        # Mock PyJWKSet to allow empty initialization for testing
-        mock_empty_jwks = MagicMock()
-        type(mock_empty_jwks).__len__ = lambda self: 0
-
-        def mock_pyjwkset_init(keys: list) -> MagicMock:  # pylint: disable=unused-argument
-            """Mock PyJWKSet initialization."""
-            return mock_empty_jwks
-
-        monkeypatch.setattr(
-            "fastapi_factory_utilities.core.security.jwt.stores.PyJWKSet",
-            mock_pyjwkset_init,
+        return PyJWK.from_dict(
+            {
+                "kid": "test_kid_2",
+                "kty": "RSA",
+                "use": "sig",
+                "n": _RSA_N,
+                "e": _RSA_E,
+            }
         )
+
+    @pytest.fixture
+    def sample_jwk_no_kid(self) -> PyJWK:
+        """Create a PyJWK without kid for add_jwk validation tests.
+
+        Returns:
+            PyJWK: A JWK with key_id None.
+        """
+        return PyJWK.from_dict({"kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
+
+    def test_can_be_instantiated(self) -> None:
+        """Test that JWKStoreMemory can be instantiated."""
         store = JWKStoreMemory()
         assert isinstance(store, JWKStoreMemory)
         assert isinstance(store, JWKStoreAbstract)
@@ -208,232 +172,225 @@ class TestJWKStoreMemory:
         assert isinstance(store._lock, asyncio.Lock)  # pyright: ignore[reportPrivateUsage] # pylint: disable=protected-access
 
     @pytest.mark.asyncio
-    async def test_store_jwks_stores_jwks(self, store: JWKStoreMemory, sample_jwks: PyJWKSet) -> None:
-        """Test that store_jwks stores the JWKS.
+    async def test_add_jwk_then_get_jwk_returns_same_jwk(self, store: JWKStoreMemory, sample_jwk: PyJWK) -> None:
+        """Test that after add_jwk, get_jwk returns the same PyJWK.
 
         Args:
             store (JWKStoreMemory): The store instance.
-            sample_jwks (PyJWKSet): Sample JWKS to store.
+            sample_jwk (PyJWK): Sample JWK to add.
         """
-        await store.store_jwks(sample_jwks)
-        stored_jwks = await store.get_jwks()
-        assert stored_jwks == sample_jwks
-        assert len(stored_jwks.keys) == SAMPLE_JWKS_KEY_COUNT
+        await store.add_jwk("https://issuer.example", sample_jwk)
+        result = await store.get_jwk("test_kid_1")
+        assert result is sample_jwk
+        assert result.key_id == "test_kid_1"
 
     @pytest.mark.asyncio
-    async def test_store_jwks_overwrites_existing_jwks(
-        self, store: JWKStoreMemory, sample_jwks: PyJWKSet, empty_jwks: MagicMock
-    ) -> None:
-        """Test that store_jwks overwrites existing JWKS.
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-            sample_jwks (PyJWKSet): Sample JWKS to store first.
-            empty_jwks (MagicMock): Empty JWKS mock to overwrite with.
-        """
-        await store.store_jwks(sample_jwks)
-        assert len((await store.get_jwks()).keys) == SAMPLE_JWKS_KEY_COUNT
-
-        await store.store_jwks(empty_jwks)  # type: ignore[arg-type]
-        stored_jwks = await store.get_jwks()
-        assert stored_jwks == empty_jwks
-        assert len(stored_jwks.keys) == 0
-
-    @pytest.mark.asyncio
-    async def test_get_jwk_retrieves_correct_jwk(self, store: JWKStoreMemory, sample_jwks: PyJWKSet) -> None:
-        """Test that get_jwk retrieves the correct JWK by kid.
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-            sample_jwks (PyJWKSet): Sample JWKS to store.
-        """
-        await store.store_jwks(sample_jwks)
-        jwk = await store.get_jwk("test_kid_1")
-
-        assert jwk is not None
-        assert jwk.key_id == "test_kid_1"
-
-    @pytest.mark.asyncio
-    async def test_get_jwk_retrieves_different_jwk(self, store: JWKStoreMemory, sample_jwks: PyJWKSet) -> None:
-        """Test that get_jwk retrieves a different JWK by kid.
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-            sample_jwks (PyJWKSet): Sample JWKS to store.
-        """
-        await store.store_jwks(sample_jwks)
-        jwk = await store.get_jwk("test_kid_2")
-
-        assert jwk is not None
-        assert jwk.key_id == "test_kid_2"
-
-    @pytest.mark.asyncio
-    async def test_get_jwk_raises_key_error_for_missing_kid(self, store: JWKStoreMemory, sample_jwks: PyJWKSet) -> None:
+    async def test_get_jwk_raises_key_error_for_missing_kid(self, store: JWKStoreMemory, sample_jwk: PyJWK) -> None:
         """Test that get_jwk raises KeyError when kid is not found.
 
         Args:
             store (JWKStoreMemory): The store instance.
-            sample_jwks (PyJWKSet): Sample JWKS to store.
+            sample_jwk (PyJWK): Sample JWK to add.
         """
-        await store.store_jwks(sample_jwks)
+        await store.add_jwk("https://issuer.example", sample_jwk)
 
         with pytest.raises(KeyError):
             await store.get_jwk("nonexistent_kid")
 
     @pytest.mark.asyncio
-    async def test_concurrent_get_jwks_operations(self, store: JWKStoreMemory, sample_jwks: PyJWKSet) -> None:
-        """Test that concurrent get_jwks operations are thread-safe.
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-            sample_jwks (PyJWKSet): Sample JWKS to store.
-        """
-        await store.store_jwks(sample_jwks)
-
-        async def get_jwks() -> PyJWKSet:
-            """Get JWKS from store."""
-            return await store.get_jwks()
-
-        # Run multiple concurrent get operations
-        results = await asyncio.gather(*[get_jwks() for _ in range(CONCURRENT_OPERATION_COUNT)])
-
-        # All results should be the same
-        assert all(result == sample_jwks for result in results)
-        assert len(results) == CONCURRENT_OPERATION_COUNT
-
-    @pytest.mark.asyncio
-    async def test_concurrent_store_jwks_operations(self, store: JWKStoreMemory) -> None:
-        """Test that concurrent store_jwks operations are thread-safe.
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-        """
-        # Create different JWKS for each operation
-        jwks_list = []
-        for i in range(5):
-            jwks_dict = {
-                "keys": [
-                    {
-                        "kid": f"test_kid_{i}",
-                        "kty": "RSA",
-                        "use": "sig",
-                        "n": f"test_n_value_{i}",
-                        "e": "AQAB",
-                    }
-                ]
-            }
-            jwks_list.append(PyJWKSet.from_dict(jwks_dict))
-
-        async def store_jwks(jwks: PyJWKSet) -> None:
-            """Store JWKS in store."""
-            await store.store_jwks(jwks)
-
-        # Run multiple concurrent store operations
-        await asyncio.gather(*[store_jwks(jwks) for jwks in jwks_list])
-
-        # The final state should be one of the stored JWKS
-        final_jwks = await store.get_jwks()
-        assert len(final_jwks.keys) == 1
-        # Verify the final JWKS is one of the stored ones
-        assert any(final_jwks == jwks for jwks in jwks_list)
-
-    @pytest.mark.asyncio
-    async def test_concurrent_get_and_store_operations(
-        self, store: JWKStoreMemory, sample_jwks: PyJWKSet, empty_jwks: MagicMock
+    async def test_get_issuer_by_kid_returns_issuer_after_add_jwk(
+        self, store: JWKStoreMemory, sample_jwk: PyJWK
     ) -> None:
-        """Test that concurrent get and store operations are thread-safe.
+        """Test that get_issuer_by_kid returns the issuer for a stored kid.
 
         Args:
             store (JWKStoreMemory): The store instance.
-            sample_jwks (PyJWKSet): Sample JWKS to store.
-            empty_jwks (MagicMock): Empty JWKS mock to store.
+            sample_jwk (PyJWK): Sample JWK to add.
         """
-        await store.store_jwks(sample_jwks)
+        issuer = "https://issuer.example"
+        await store.add_jwk(issuer, sample_jwk)
+        result = await store.get_issuer_by_kid("test_kid_1")
+        assert result == issuer
 
-        async def get_jwks() -> PyJWKSet | MagicMock:
-            """Get JWKS from store."""
-            return await store.get_jwks()
+    @pytest.mark.asyncio
+    async def test_get_issuer_by_kid_raises_key_error_for_missing_kid(
+        self, store: JWKStoreMemory, sample_jwk: PyJWK
+    ) -> None:
+        """Test that get_issuer_by_kid raises KeyError when kid is not found.
 
-        async def store_jwks(jwks: PyJWKSet | MagicMock) -> None:
-            """Store JWKS in store."""
-            await store.store_jwks(jwks)  # type: ignore[arg-type]
+        Args:
+            store (JWKStoreMemory): The store instance.
+            sample_jwk (PyJWK): Sample JWK to add.
+        """
+        await store.add_jwk("https://issuer.example", sample_jwk)
 
-        # Run concurrent get and store operations
-        await asyncio.gather(
-            *[get_jwks() for _ in range(5)],
-            *[store_jwks(empty_jwks) for _ in range(5)],
+        with pytest.raises(KeyError):
+            await store.get_issuer_by_kid("nonexistent_kid")
+
+    @pytest.mark.asyncio
+    async def test_get_issuer_by_kid_returns_correct_issuer_per_kid(
+        self,
+        store: JWKStoreMemory,
+        sample_jwk: PyJWK,
+        sample_jwk_2: PyJWK,
+    ) -> None:
+        """Test that get_issuer_by_kid returns the right issuer for each kid.
+
+        Args:
+            store (JWKStoreMemory): The store instance.
+            sample_jwk (PyJWK): First JWK.
+            sample_jwk_2 (PyJWK): Second JWK.
+        """
+        issuer_a = "https://issuer-a.example"
+        issuer_b = "https://issuer-b.example"
+        await store.add_jwk(issuer_a, sample_jwk)
+        await store.add_jwk(issuer_a, sample_jwk_2)
+        jwk_b = PyJWK.from_dict({"kid": "kid_b", "kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
+        await store.add_jwk(issuer_b, jwk_b)
+
+        assert await store.get_issuer_by_kid("test_kid_1") == issuer_a
+        assert await store.get_issuer_by_kid("test_kid_2") == issuer_a
+        assert await store.get_issuer_by_kid("kid_b") == issuer_b
+
+    @pytest.mark.asyncio
+    async def test_add_jwk_without_kid_raises_value_error(
+        self, store: JWKStoreMemory, sample_jwk_no_kid: PyJWK
+    ) -> None:
+        """Test that add_jwk raises ValueError when JWK has no key_id.
+
+        Args:
+            store (JWKStoreMemory): The store instance.
+            sample_jwk_no_kid (PyJWK): JWK with key_id None.
+        """
+        with pytest.raises(ValueError, match="JWK key ID is required"):
+            await store.add_jwk("https://issuer.example", sample_jwk_no_kid)
+
+    @pytest.mark.asyncio
+    async def test_get_jwks_returns_only_keys_for_issuer(
+        self,
+        store: JWKStoreMemory,
+        sample_jwk: PyJWK,
+        sample_jwk_2: PyJWK,
+    ) -> None:
+        """Test that get_jwks(issuer) returns only keys stored for that issuer.
+
+        Args:
+            store (JWKStoreMemory): The store instance.
+            sample_jwk (PyJWK): First JWK.
+            sample_jwk_2 (PyJWK): Second JWK.
+        """
+        issuer_a = "https://issuer-a.example"
+        issuer_b = "https://issuer-b.example"
+        await store.add_jwk(issuer_a, sample_jwk)
+        await store.add_jwk(issuer_a, sample_jwk_2)
+        jwk_b = PyJWK.from_dict({"kid": "kid_b", "kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
+        await store.add_jwk(issuer_b, jwk_b)
+
+        jwks_a = await store.get_jwks(issuer_a)
+        jwks_b = await store.get_jwks(issuer_b)
+
+        keys_a: list[PyJWK] = cast(list[PyJWK], jwks_a.keys)  # type: ignore[union-attr]
+        keys_b: list[PyJWK] = cast(list[PyJWK], jwks_b.keys)  # type: ignore[union-attr]
+        assert len(keys_a) == EXPECTED_TWO_KEYS
+        assert len(keys_b) == 1
+        kids_a = {k.key_id for k in keys_a}
+        kids_b = {k.key_id for k in keys_b}
+        assert kids_a == {"test_kid_1", "test_kid_2"}
+        assert kids_b == {"kid_b"}
+
+    @pytest.mark.asyncio
+    async def test_get_jwks_returns_new_pyjwkset_each_time(self, store: JWKStoreMemory, sample_jwk: PyJWK) -> None:
+        """Test that get_jwks returns a new PyJWKSet each time (not same reference).
+
+        Args:
+            store (JWKStoreMemory): The store instance.
+            sample_jwk (PyJWK): Sample JWK to add.
+        """
+        await store.add_jwk("https://issuer.example", sample_jwk)
+        jwks1 = await store.get_jwks("https://issuer.example")
+        jwks2 = await store.get_jwks("https://issuer.example")
+        assert jwks1 is not jwks2
+        keys1: list[PyJWK] = cast(list[PyJWK], jwks1.keys)  # type: ignore[union-attr]
+        keys2: list[PyJWK] = cast(list[PyJWK], jwks2.keys)  # type: ignore[union-attr]
+        assert len(keys1) == 1
+        assert len(keys2) == 1
+        assert jwks1["test_kid_1"].key_id == jwks2["test_kid_1"].key_id
+
+    @pytest.mark.asyncio
+    async def test_add_jwk_overwrites_by_kid(self, store: JWKStoreMemory, sample_jwk: PyJWK) -> None:
+        """Test that adding a second JWK with the same kid overwrites the first.
+
+        Args:
+            store (JWKStoreMemory): The store instance.
+            sample_jwk (PyJWK): First JWK (kid test_kid_1).
+        """
+        issuer = "https://issuer.example"
+        await store.add_jwk(issuer, sample_jwk)
+        jwk_same_kid = PyJWK.from_dict(
+            {
+                "kid": "test_kid_1",
+                "kty": "RSA",
+                "use": "sig",
+                "n": _RSA_N,
+                "e": _RSA_E,
+            }
         )
-
-        # Final state should be consistent
-        final_jwks = await store.get_jwks()
-        # Should be empty after all store operations complete
-        if isinstance(final_jwks, MagicMock):
-            assert len(final_jwks) == 0
-        else:
-            assert isinstance(final_jwks, PyJWKSet)
-            assert len(final_jwks.keys) == 0
+        await store.add_jwk(issuer, jwk_same_kid)
+        result = await store.get_jwk("test_kid_1")
+        assert result is jwk_same_kid
+        assert result is not sample_jwk
 
     @pytest.mark.asyncio
-    async def test_get_jwks_returns_same_reference(self, store: JWKStoreMemory, sample_jwks: PyJWKSet) -> None:
-        """Test that get_jwks returns the same reference (not a copy).
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-            sample_jwks (PyJWKSet): Sample JWKS to store.
-        """
-        await store.store_jwks(sample_jwks)
-        jwks1 = await store.get_jwks()
-        jwks2 = await store.get_jwks()
-
-        # Should be the same object reference
-        assert jwks1 is jwks2
-        assert jwks1 == jwks2
-
-    @pytest.mark.asyncio
-    async def test_store_jwks_with_empty_set(self, store: JWKStoreMemory, empty_jwks: MagicMock) -> None:
-        """Test storing an empty JWKS.
-
-        Args:
-            store (JWKStoreMemory): The store instance.
-            empty_jwks (MagicMock): Empty JWKS mock to store.
-        """
-        await store.store_jwks(empty_jwks)  # type: ignore[arg-type]
-        stored_jwks = await store.get_jwks()
-        assert stored_jwks == empty_jwks
-        # For mocks, we check the mock's __len__ return value
-        if isinstance(stored_jwks, MagicMock):
-            assert len(stored_jwks) == 0
-        else:
-            assert len(stored_jwks.keys) == 0
-
-    @pytest.mark.asyncio
-    async def test_store_jwks_with_large_jwks(self, store: JWKStoreMemory) -> None:
-        """Test storing a JWKS with many keys.
+    async def test_concurrent_add_and_get_jwk(self, store: JWKStoreMemory) -> None:
+        """Test that concurrent add_jwk and get_jwk operations are safe.
 
         Args:
             store (JWKStoreMemory): The store instance.
         """
-        # Create a JWKS with many keys
-        keys = []
-        for i in range(LARGE_JWKS_KEY_COUNT):
-            keys.append(
+        issuer = "https://issuer.example"
+
+        async def add_and_get(i: int) -> PyJWK:
+            jwk = PyJWK.from_dict(
                 {
                     "kid": f"test_kid_{i}",
                     "kty": "RSA",
                     "use": "sig",
-                    "n": f"test_n_value_{i}",
-                    "e": "AQAB",
+                    "n": _RSA_N,
+                    "e": _RSA_E,
                 }
             )
+            await store.add_jwk(issuer, jwk)
+            return await store.get_jwk(f"test_kid_{i}")
 
-        jwks_dict = {"keys": keys}
-        large_jwks = PyJWKSet.from_dict(jwks_dict)
-
-        await store.store_jwks(large_jwks)
-        stored_jwks = await store.get_jwks()
-
-        assert len(stored_jwks.keys) == LARGE_JWKS_KEY_COUNT
-        # Verify we can retrieve all keys
-        for i in range(LARGE_JWKS_KEY_COUNT):
-            jwk = await store.get_jwk(f"test_kid_{i}")
+        results = await asyncio.gather(*[add_and_get(i) for i in range(CONCURRENT_OPERATION_COUNT)])
+        assert len(results) == CONCURRENT_OPERATION_COUNT
+        for i, jwk in enumerate(results):
             assert jwk.key_id == f"test_kid_{i}"
+
+        jwks = await store.get_jwks(issuer)
+        keys: list[PyJWK] = cast(list[PyJWK], jwks.keys)  # type: ignore[union-attr]
+        assert len(keys) == CONCURRENT_OPERATION_COUNT
+
+    @pytest.mark.asyncio
+    async def test_concurrent_get_jwks(self, store: JWKStoreMemory, sample_jwk: PyJWK, sample_jwk_2: PyJWK) -> None:
+        """Test that concurrent get_jwks operations are safe.
+
+        Args:
+            store (JWKStoreMemory): The store instance.
+            sample_jwk (PyJWK): First JWK.
+            sample_jwk_2 (PyJWK): Second JWK.
+        """
+        issuer = "https://issuer.example"
+        await store.add_jwk(issuer, sample_jwk)
+        await store.add_jwk(issuer, sample_jwk_2)
+
+        async def get_jwks() -> PyJWKSet:
+            return await store.get_jwks(issuer)
+
+        results = await asyncio.gather(*[get_jwks() for _ in range(CONCURRENT_OPERATION_COUNT)])
+        assert len(results) == CONCURRENT_OPERATION_COUNT
+        for jwks in results:
+            keys: list[PyJWK] = cast(list[PyJWK], jwks.keys)  # type: ignore[union-attr]
+            assert len(keys) == EXPECTED_TWO_KEYS
+            assert jwks["test_kid_1"].key_id == "test_kid_1"
+            assert jwks["test_kid_2"].key_id == "test_kid_2"

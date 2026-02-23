@@ -2,17 +2,15 @@
 
 import json
 from base64 import b64encode
-from typing import Annotated, Any, Generic, TypeVar, get_args
+from typing import Any, Generic, TypeVar, get_args
 
 import aiohttp
 import jwt
-from fastapi import Depends
 from pydantic import ValidationError
 
-from fastapi_factory_utilities.core.app import BaseApplicationConfig, depends_application_config
+from fastapi_factory_utilities.core.app import BaseApplicationConfig
 from fastapi_factory_utilities.core.plugins.aiohttp import (
     AioHttpClientResource,
-    AioHttpResourceDepends,
 )
 
 from .exceptions import HydraOperationError
@@ -30,15 +28,18 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
 
     def __init__(
         self,
+        identifier: str,
         hydra_admin_http_resource: AioHttpClientResource,
         hydra_public_http_resource: AioHttpClientResource,
     ) -> None:
         """Instanciate the Hydra introspect service.
 
         Args:
+            identifier (str): The identifier of the Hydra introspect service.
             hydra_admin_http_resource (AioHttpClientResource): The Hydra admin HTTP resource.
             hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
         """
+        self._identifier: str = identifier
         self._hydra_admin_http_resource: AioHttpClientResource = hydra_admin_http_resource
         self._hydra_public_http_resource: AioHttpClientResource = hydra_public_http_resource
         # Retrieve the concrete introspect object class
@@ -74,7 +75,7 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
 
         return instrospect
 
-    async def get_wellknown_jwks(self) -> jwt.PyJWKSet:
+    async def get_wellknown_jwks(self) -> list[jwt.PyJWK]:
         """Get the JWKS from the Hydra service."""
         try:
             async with self._hydra_public_http_resource.acquire_client_session() as session:
@@ -84,7 +85,7 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
                     response.raise_for_status()
                     jwks_data: dict[str, Any] = await response.json()
                     jwks: jwt.PyJWKSet = jwt.PyJWKSet.from_dict(jwks_data)
-                    return jwks
+                    return jwks.keys
         except aiohttp.ClientResponseError as error:
             raise HydraOperationError(
                 "Failed to get the JWKS from the Hydra service", status_code=error.status
@@ -109,15 +110,18 @@ class HydraOAuth2ClientCredentialsService:
 
     def __init__(
         self,
+        identifier: str,
         hydra_public_http_resource: AioHttpClientResource,
         application_config: BaseApplicationConfig,
     ) -> None:
         """Instanciate the Hydra service.
 
         Args:
+            identifier (str): The identifier of the Hydra OAuth2 client credentials service.
             hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
             application_config (BaseApplicationConfig): The application config.
         """
+        self._identifier: str = identifier
         self._hydra_public_http_resource: AioHttpClientResource = hydra_public_http_resource
         self._application_config: BaseApplicationConfig = application_config
 
@@ -185,47 +189,3 @@ class HydraOAuth2ClientCredentialsService:
             raise HydraOperationError(
                 "An error occurred while getting the client credentials, unknown error"
             ) from error
-
-
-def depends_hydra_oauth2_client_credentials_service(
-    hydra_public_http_resource: Annotated[AioHttpClientResource, Depends(AioHttpResourceDepends("hydra_public"))],
-    application_config: Annotated[BaseApplicationConfig, Depends(depends_application_config)],
-) -> HydraOAuth2ClientCredentialsService:
-    """Dependency injection for the Hydra OAuth2 client credentials service.
-
-    Args:
-        hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
-        application_config (BaseApplicationConfig): The application config.
-
-    Returns:
-        HydraOAuth2ClientCredentialsService: The Hydra OAuth2 client credentials service instance.
-
-    Raises:
-        HydraOperationError: If the Hydra public dependency is not configured.
-    """
-    return HydraOAuth2ClientCredentialsService(
-        hydra_public_http_resource=hydra_public_http_resource,
-        application_config=application_config,
-    )
-
-
-def depends_hydra_introspect_service(
-    hydra_admin_http_resource: Annotated[AioHttpClientResource, Depends(AioHttpResourceDepends("hydra_admin"))],
-    hydra_public_http_resource: Annotated[AioHttpClientResource, Depends(AioHttpResourceDepends("hydra_public"))],
-) -> HydraIntrospectService:
-    """Dependency injection for the Hydra introspect service.
-
-    Args:
-        hydra_admin_http_resource (AioHttpClientResource): The Hydra admin HTTP resource.
-        hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
-
-    Returns:
-        HydraIntrospectService: The Hydra introspect service instance.
-
-    Raises:
-        HydraOperationError: If the Hydra admin dependency is not configured.
-    """
-    return HydraIntrospectService(
-        hydra_admin_http_resource=hydra_admin_http_resource,
-        hydra_public_http_resource=hydra_public_http_resource,
-    )

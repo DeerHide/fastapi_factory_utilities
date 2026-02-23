@@ -5,6 +5,8 @@ from typing import ClassVar
 from jwt.algorithms import get_default_algorithms, requires_cryptography
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from fastapi_factory_utilities.core.security.jwt.types import OAuth2Issuer
+
 
 class JWTBearerAuthenticationConfig(BaseModel):
     """JWT bearer token authentication configuration."""
@@ -16,7 +18,7 @@ class JWTBearerAuthenticationConfig(BaseModel):
     )
 
     authorized_audiences: list[str] | None = Field(default=None, description="The authorized audiences.")
-    authorized_issuers: list[str] | None = Field(default=None, description="The authorized issuers.")
+    issuer: OAuth2Issuer = Field(description="The authorized issuers.")
 
     @field_validator("authorized_audiences", mode="before")
     @classmethod
@@ -26,22 +28,6 @@ class JWTBearerAuthenticationConfig(BaseModel):
         Example:
             "aud1,aud2,aud3" -> ["aud1", "aud2", "aud3"]
             ["aud1", "aud2", "aud3"] -> ["aud1", "aud2", "aud3"]
-        """
-        if isinstance(v, str):
-            v = v.split(sep=",")
-        v = [item.strip() for item in v if item.strip()]
-        if len(v) == 0:
-            raise ValueError("Invalid value: empty list after processing")
-        return list(set(v))
-
-    @field_validator("authorized_issuers", mode="before")
-    @classmethod
-    def validate_authorized_issuers(cls, v: str | list[str]) -> list[str]:
-        """Validate the authorized issuers.
-
-        Example:
-            "iss1,iss2,iss3" -> ["iss1", "iss2", "iss3"]
-            ["iss1", "iss2", "iss3"] -> ["iss1", "iss2", "iss3"]
         """
         if isinstance(v, str):
             v = v.split(sep=",")

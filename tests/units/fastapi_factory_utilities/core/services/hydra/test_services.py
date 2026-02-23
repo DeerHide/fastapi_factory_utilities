@@ -179,6 +179,7 @@ class TestHydraIntrospectGenericService:
             pass
 
         return ConcreteIntrospectService(
+            identifier="hydra-introspect-test",
             hydra_admin_http_resource=http_resource_admin,
             hydra_public_http_resource=http_resource_public,
         )
@@ -199,6 +200,7 @@ class TestHydraIntrospectGenericService:
             pass
 
         service = ConcreteIntrospectService(
+            identifier="hydra-introspect-test",
             hydra_admin_http_resource=http_resource_admin,
             hydra_public_http_resource=http_resource_public,
         )
@@ -349,9 +351,12 @@ class TestHydraIntrospectGenericService:
         mock_resource = build_mocked_aiohttp_resource(get=mock_response)
         service._hydra_public_http_resource = mock_resource
 
-        result: jwt.PyJWKSet = await service.get_wellknown_jwks()
+        result: list[jwt.PyJWK] = await service.get_wellknown_jwks()
 
-        assert isinstance(result, jwt.PyJWKSet)
+        assert isinstance(result, list)
+        assert all(isinstance(k, jwt.PyJWK) for k in result)
+        assert len(result) == 1
+        assert result[0].key_id == "test-key-id"
 
     @pytest.mark.parametrize(
         "status_code",
@@ -456,6 +461,7 @@ class TestHydraIntrospectService:
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
         """
         service = HydraIntrospectService(
+            identifier="hydra-introspect",
             hydra_admin_http_resource=http_resource_admin,
             hydra_public_http_resource=http_resource_public,
         )
@@ -480,6 +486,7 @@ class TestHydraIntrospectService:
             mock_introspect_data (dict[str, Any]): Mock introspect data.
         """
         service = HydraIntrospectService(
+            identifier="hydra-introspect",
             hydra_admin_http_resource=http_resource_admin,
             hydra_public_http_resource=http_resource_public,
         )
@@ -511,7 +518,9 @@ class TestHydraOAuth2ClientCredentialsService:
             application_config (BaseApplicationConfig): Application config fixture.
         """
         service = HydraOAuth2ClientCredentialsService(
-            hydra_public_http_resource=http_resource_public, application_config=application_config
+            identifier="hydra-oauth2",
+            hydra_public_http_resource=http_resource_public,
+            application_config=application_config,
         )
 
         assert service._hydra_public_http_resource == http_resource_public
@@ -570,7 +579,9 @@ class TestHydraOAuth2ClientCredentialsService:
             application_config (BaseApplicationConfig): Application config fixture.
         """
         service = HydraOAuth2ClientCredentialsService(
-            hydra_public_http_resource=http_resource_public, application_config=application_config
+            identifier="hydra-oauth2",
+            hydra_public_http_resource=http_resource_public,
+            application_config=application_config,
         )
 
         client_id: HydraClientId = HydraClientId("test_client_id")
@@ -604,7 +615,9 @@ class TestHydraOAuth2ClientCredentialsService:
             application_config (BaseApplicationConfig): Application config fixture.
         """
         service = HydraOAuth2ClientCredentialsService(
-            hydra_public_http_resource=http_resource_public, application_config=application_config
+            identifier="hydra-oauth2",
+            hydra_public_http_resource=http_resource_public,
+            application_config=application_config,
         )
 
         client_id: HydraClientId = HydraClientId("test_client_id")
@@ -652,7 +665,9 @@ class TestHydraOAuth2ClientCredentialsService:
             status_code (HTTPStatus): HTTP status code.
         """
         service = HydraOAuth2ClientCredentialsService(
-            hydra_public_http_resource=http_resource_public, application_config=application_config
+            identifier="hydra-oauth2",
+            hydra_public_http_resource=http_resource_public,
+            application_config=application_config,
         )
 
         client_id: HydraClientId = HydraClientId("test_client_id")

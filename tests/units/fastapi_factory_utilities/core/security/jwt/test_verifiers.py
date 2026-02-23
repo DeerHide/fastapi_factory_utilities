@@ -1,15 +1,20 @@
 """Unit tests for the JWT verifiers."""
 
 import datetime
+from unittest.mock import AsyncMock
 
 import pytest
 
+from fastapi_factory_utilities.core.security.jwt.exceptions import InvalidJWTError
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
 from fastapi_factory_utilities.core.security.jwt.types import JWTToken
 from fastapi_factory_utilities.core.security.jwt.verifiers import (
+    GenericHydraJWTVerifier,
     JWTNoneVerifier,
     JWTVerifierAbstract,
 )
+from fastapi_factory_utilities.core.services.hydra.exceptions import HydraOperationError
+from fastapi_factory_utilities.core.services.hydra.objects import HydraTokenIntrospectObject
 
 
 class TestJWTVerifierAbstract:
@@ -292,3 +297,158 @@ class TestJWTNoneVerifier:
 
         # Should not raise any exception (none verifier doesn't check expiration)
         await verifier.verify(jwt_token=jwt_token, jwt_payload=expired_payload)
+
+
+def _make_introspect_object(*, active: bool = True) -> HydraTokenIntrospectObject:
+    """Build a minimal HydraTokenIntrospectObject for tests."""
+    return HydraTokenIntrospectObject(
+        active=active,
+        aud=["api1"],
+        client_id="test-client",
+        exp=1234567890,
+        iat=1234567890,
+        iss="https://hydra.example.com",
+        nbf=1234567890,
+        scope="read write",
+        sub="user123",
+        token_type="Bearer",
+        token_use="access",
+    )
+
+
+class TestGenericHydraJWTVerifier:
+    """Various tests for the GenericHydraJWTVerifier class."""
+
+    @pytest.fixture
+    def mock_introspect_service(self) -> AsyncMock:
+        """Create a mock Hydra introspect service.
+
+        Returns:
+            AsyncMock: Mock with introspect() returning an active token by default.
+        """
+        mock = AsyncMock()
+        mock.introspect.return_value = _make_introspect_object(active=True)
+        return mock
+
+    @pytest.fixture
+    def verifier(
+        self, mock_introspect_service: AsyncMock
+    ) -> GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject]:
+        """Create a GenericHydraJWTVerifier with mocked introspect service.
+
+        Returns:
+            GenericHydraJWTVerifier: Verifier instance.
+        """
+        return GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject](
+            hydra_introspect_service=mock_introspect_service
+        )
+
+    @pytest.fixture
+    def jwt_token(self) -> JWTToken:
+        """Create a JWT token.
+
+        Returns:
+            JWTToken: A JWT token.
+        """
+        return JWTToken("test.jwt.token")
+
+    @pytest.fixture
+    def jwt_payload(self) -> JWTPayload:
+        """Create a JWT bearer payload.
+
+        Returns:
+            JWTPayload: A JWT bearer payload.
+        """
+        now = datetime.datetime.now(tz=datetime.UTC)
+        exp = now + datetime.timedelta(hours=1)
+        nbf = now - datetime.timedelta(minutes=5)
+        return JWTPayload(
+            scp="read write",
+            aud="api1 api2",
+            iss="https://example.com",
+            exp=int(exp.timestamp()),
+            iat=int(now.timestamp()),
+            nbf=int(nbf.timestamp()),
+            sub="user123",
+        )
+
+    def test_can_be_instantiated(self, mock_introspect_service: AsyncMock) -> None:
+        """Test that GenericHydraJWTVerifier can be instantiated with a mock service."""
+        verifier = GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject](
+            hydra_introspect_service=mock_introspect_service
+        )
+        assert isinstance(verifier, GenericHydraJWTVerifier)
+        assert isinstance(verifier, JWTVerifierAbstract)
+
+    @pytest.mark.asyncio
+    async def test_verify_success_sets_introspect_object(
+        self,
+        verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+        jwt_token: JWTToken,
+        jwt_payload: JWTPayload,
+    ) -> None:
+        """Test that verify succeeds and introspect_object returns the introspect result."""
+        introspect_result = _make_introspect_object(active=True)
+        mock_introspect_service.introspect.return_value = introspect_result
+
+        await verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+
+        assert verifier.introspect_object is introspect_result
+        mock_introspect_service.introspect.assert_awaited_once_with(token=jwt_token)
+
+    @pytest.mark.asyncio
+    async def test_verify_raises_invalid_jwt_error_on_hydra_operation_error(
+        self,
+        verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+        jwt_token: JWTToken,
+        jwt_payload: JWTPayload,
+    ) -> None:
+        """Test that verify raises InvalidJWTError when introspect raises HydraOperationError."""
+        original_error = HydraOperationError("Hydra request failed")
+        mock_introspect_service.introspect.side_effect = original_error
+
+        with pytest.raises(InvalidJWTError) as exc_info:
+            await verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+
+        assert exc_info.value.args[0] == "Failed to introspect the JWT token"
+        assert exc_info.value.__cause__ is original_error
+
+    @pytest.mark.asyncio
+    async def test_verify_raises_invalid_jwt_error_when_token_not_active(
+        self,
+        verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+        jwt_token: JWTToken,
+        jwt_payload: JWTPayload,
+    ) -> None:
+        """Test that verify raises InvalidJWTError when introspect returns active=False."""
+        mock_introspect_service.introspect.return_value = _make_introspect_object(active=False)
+
+        with pytest.raises(InvalidJWTError) as exc_info:
+            await verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+
+        assert exc_info.value.args[0] == "JWT token is not active"
+
+    def test_introspect_object_before_verify_raises(
+        self,
+        verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+    ) -> None:
+        """Test that accessing introspect_object before verify raises AssertionError."""
+        with pytest.raises(AssertionError):
+            _ = verifier.introspect_object
+
+    @pytest.mark.asyncio
+    async def test_verify_passes_jwt_token_to_introspect(
+        self,
+        verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+        jwt_payload: JWTPayload,
+    ) -> None:
+        """Test that verify passes the given JWTToken to the introspect service."""
+        token = JWTToken("specific.token.value")
+
+        await verifier.verify(jwt_token=token, jwt_payload=jwt_payload)
+
+        mock_introspect_service.introspect.assert_awaited_once_with(token=token)
