@@ -1,11 +1,16 @@
 """Provides security-related functions for the API."""
 
-from .configs import JWTBearerAuthenticationConfig
+from .configs import (
+    DependsJWTBearerAuthenticationConfig,
+    JWTBearerAuthenticationConfig,
+    JWTBearerAuthenticationConfigBuilder,
+)
 from .decoders import GenericJWTBearerTokenDecoder, JWTBearerTokenDecoderAbstract, decode_jwt_token_payload
 from .exceptions import (
     InvalidJWTError,
     InvalidJWTPayploadError,
     JWTAuthenticationError,
+    JWTBearerAuthenticationConfigBuilderError,
     MissingJWTCredentialsError,
     NotVerifiedJWTError,
 )
@@ -16,6 +21,7 @@ from .types import JWTToken, OAuth2Audience, OAuth2Issuer, OAuth2Scope, OAuth2Su
 from .verifiers import GenericHydraJWTVerifier, JWTNoneVerifier, JWTVerifierAbstract
 
 __all__: list[str] = [
+    "DependsJWTBearerAuthenticationConfig",
     "GenericHydraJWTVerifier",
     "GenericJWTBearerTokenDecoder",
     "InvalidJWTError",
@@ -25,6 +31,8 @@ __all__: list[str] = [
     "JWTAuthenticationError",
     "JWTAuthenticationServiceAbstract",
     "JWTBearerAuthenticationConfig",
+    "JWTBearerAuthenticationConfigBuilder",
+    "JWTBearerAuthenticationConfigBuilderError",
     "JWTBearerTokenDecoderAbstract",
     "JWTNoneVerifier",
     "JWTPayload",

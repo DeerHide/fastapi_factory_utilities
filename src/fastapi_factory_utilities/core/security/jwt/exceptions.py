@@ -21,3 +21,7 @@ class InvalidJWTPayploadError(JWTAuthenticationError):
 
 class NotVerifiedJWTError(JWTAuthenticationError):
     """Not verified JWT error."""
+
+
+class JWTBearerAuthenticationConfigBuilderError(FastAPIFactoryUtilitiesError):
+    """JWT bearer authentication configuration builder error."""

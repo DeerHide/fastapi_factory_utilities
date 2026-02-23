@@ -24,6 +24,7 @@ class ApplicationAbstract(ABC):
     PACKAGE_NAME: ClassVar[str]
 
     CONFIG_CLASS: ClassVar[type[RootConfig]] = RootConfig
+    CONFIG_FILENAME: ClassVar[str] = "application.yaml"
 
     # TODO: Find a way to remove this from here
     ODM_DOCUMENT_MODELS: ClassVar[list[type[Document]]]

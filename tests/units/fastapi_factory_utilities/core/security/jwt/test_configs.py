@@ -1,11 +1,24 @@
 """Provides unit tests for the JWT bearer token authentication configuration."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
+from fastapi import Request
+from fastapi.datastructures import State
 from jwt.algorithms import get_default_algorithms, requires_cryptography
 from pydantic import ValidationError
 
-from fastapi_factory_utilities.core.security.jwt.configs import JWTBearerAuthenticationConfig
+from fastapi_factory_utilities.core.security.jwt.configs import (
+    DependsJWTBearerAuthenticationConfig,
+    JWTBearerAuthenticationConfig,
+    JWTBearerAuthenticationConfigBuilder,
+)
+from fastapi_factory_utilities.core.security.jwt.exceptions import JWTBearerAuthenticationConfigBuilderError
 from fastapi_factory_utilities.core.security.jwt.types import OAuth2Issuer
+from fastapi_factory_utilities.core.utils.configs import (
+    UnableToReadConfigFileError,
+    ValueErrorConfigError,
+)
 
 _DEFAULT_ISSUER: OAuth2Issuer = OAuth2Issuer("https://example.com")
 
@@ -383,3 +396,181 @@ class TestJWTBearerAuthenticationConfig:
         assert errors[0]["loc"] == ("authorized_audiences",)
         assert errors[0]["type"] == "value_error"
         assert "Invalid value: empty list after processing" in str(errors[0]["msg"])
+
+
+class TestJWTBearerAuthenticationConfigBuilder:
+    """Unit tests for JWTBearerAuthenticationConfigBuilder."""
+
+    def test_init_raises_when_key_is_empty_string(self) -> None:
+        """Builder raises JWTBearerAuthenticationConfigBuilderError when key is empty."""
+        with pytest.raises(JWTBearerAuthenticationConfigBuilderError) as exc_info:
+            JWTBearerAuthenticationConfigBuilder("")
+        assert "Key cannot be empty" in str(exc_info.value)
+
+    def test_init_accepts_valid_key(self) -> None:
+        """Builder accepts a non-empty key and uses it when building from YAML."""
+        builder = JWTBearerAuthenticationConfigBuilder("my_jwt")
+        # Key is used in yaml_base_key when building; see test_build_loads_from_yaml_when_path_set
+        assert builder.APPLICATION_YAML_BASE_JWT_CONFIG_KEY == "jwt_configs"
+
+    def test_add_application_yaml_path_returns_self_and_sets_path(self) -> None:
+        """add_application_yaml_path returns self so build() can load from YAML."""
+        builder = JWTBearerAuthenticationConfigBuilder("my_jwt")
+        result = builder.add_application_yaml_path(
+            package_name="my_package",
+            filename="application.yaml",
+        )
+        assert result is builder
+        # Path is used in build(); see test_build_loads_from_yaml_when_path_set
+
+    def test_build_raises_when_no_config_and_no_yaml_path(self) -> None:
+        """build() raises when neither config nor YAML path is set."""
+        builder = JWTBearerAuthenticationConfigBuilder("my_jwt")
+        with pytest.raises(JWTBearerAuthenticationConfigBuilderError) as exc_info:
+            builder.build()
+        assert "Neither a JWT bearer authentication configuration" in str(exc_info.value)
+
+    @patch("fastapi_factory_utilities.core.security.jwt.configs.build_config_from_file_in_package")
+    def test_build_loads_from_yaml_when_path_set(
+        self,
+        mock_build_config: MagicMock,
+    ) -> None:
+        """build() loads config from YAML when package and filename are set."""
+        expected_config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        mock_build_config.return_value = expected_config
+
+        builder = (
+            JWTBearerAuthenticationConfigBuilder("my_jwt")
+            .add_application_yaml_path(package_name="pkg", filename="app.yaml")
+        )
+        result = builder.build()
+
+        assert result is expected_config
+        mock_build_config.assert_called_once_with(
+            package_name="pkg",
+            filename="app.yaml",
+            config_class=JWTBearerAuthenticationConfig,
+            yaml_base_key="jwt_configs.my_jwt",
+        )
+
+    @patch("fastapi_factory_utilities.core.security.jwt.configs.build_config_from_file_in_package")
+    def test_build_returns_cached_config_on_second_call(
+        self,
+        mock_build_config: MagicMock,
+    ) -> None:
+        """build() returns same config on second call without calling YAML again."""
+        expected_config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        mock_build_config.return_value = expected_config
+
+        builder = (
+            JWTBearerAuthenticationConfigBuilder("my_jwt")
+            .add_application_yaml_path(package_name="pkg", filename="app.yaml")
+        )
+        first = builder.build()
+        second = builder.build()
+
+        assert first is second is expected_config
+        mock_build_config.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "exception",
+        [UnableToReadConfigFileError("file not found"), ValueErrorConfigError("invalid")],
+        ids=["UnableToReadConfigFileError", "ValueErrorConfigError"],
+    )
+    @patch("fastapi_factory_utilities.core.security.jwt.configs.build_config_from_file_in_package")
+    def test_build_wraps_config_errors(
+        self,
+        mock_build_config: MagicMock,
+        exception: Exception,
+    ) -> None:
+        """build() wraps UnableToReadConfigFileError and ValueErrorConfigError."""
+        mock_build_config.side_effect = exception
+
+        builder = (
+            JWTBearerAuthenticationConfigBuilder("my_jwt")
+            .add_application_yaml_path(package_name="pkg", filename="app.yaml")
+        )
+        with pytest.raises(JWTBearerAuthenticationConfigBuilderError) as exc_info:
+            builder.build()
+        assert "Failed to read the application YAML file" in str(exc_info.value)
+        assert exc_info.value.__cause__ is exception
+
+    def test_config_property_raises_when_not_built(self) -> None:
+        """config property raises when build() was never called."""
+        builder = JWTBearerAuthenticationConfigBuilder("my_jwt")
+        with pytest.raises(JWTBearerAuthenticationConfigBuilderError) as exc_info:
+            _ = builder.config
+        assert "No configuration found" in str(exc_info.value)
+
+    @patch("fastapi_factory_utilities.core.security.jwt.configs.build_config_from_file_in_package")
+    def test_config_property_returns_config_after_build(
+        self,
+        mock_build_config: MagicMock,
+    ) -> None:
+        """config property returns config after successful build()."""
+        expected_config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        mock_build_config.return_value = expected_config
+
+        builder = (
+            JWTBearerAuthenticationConfigBuilder("my_jwt")
+            .add_application_yaml_path(package_name="pkg", filename="app.yaml")
+        )
+        builder.build()
+        assert builder.config is expected_config
+
+
+class TestDependsJWTBearerAuthenticationConfig:
+    """Unit tests for DependsJWTBearerAuthenticationConfig."""
+
+    def test_init_accepts_key(self) -> None:
+        """Dependency accepts a key used for state lookup in __call__."""
+        dep = DependsJWTBearerAuthenticationConfig("my_jwt")
+        assert dep is not None
+        assert DependsJWTBearerAuthenticationConfig.STATE_PREFIX_KEY == "jwt_configs"
+
+    def test_export_from_state_raises_when_key_missing(self) -> None:
+        """export_from_state raises when config is not in state."""
+        state: State = MagicMock(spec=State)
+        with pytest.raises(JWTBearerAuthenticationConfigBuilderError) as exc_info:
+            DependsJWTBearerAuthenticationConfig.export_from_state(state=state, key="missing")
+        assert "not found in the state" in str(exc_info.value)
+
+    def test_export_from_state_raises_when_attribute_is_none(self) -> None:
+        """export_from_state raises when state attribute is explicitly None."""
+        state: State = MagicMock(spec=State)
+        setattr(state, "jwt_configs.missing", None)
+        with pytest.raises(JWTBearerAuthenticationConfigBuilderError) as exc_info:
+            DependsJWTBearerAuthenticationConfig.export_from_state(state=state, key="missing")
+        assert "not found in the state" in str(exc_info.value)
+
+    def test_export_from_state_returns_config_when_present(self) -> None:
+        """export_from_state returns config when state has it."""
+        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        state: State = MagicMock(spec=State)
+        setattr(state, "jwt_configs.my_jwt", config)
+
+        result = DependsJWTBearerAuthenticationConfig.export_from_state(state=state, key="my_jwt")
+        assert result is config
+
+    def test_import_to_state_sets_attribute(self) -> None:
+        """import_to_state sets state attribute so export_from_state can read it."""
+        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        state: State = MagicMock(spec=State)
+
+        DependsJWTBearerAuthenticationConfig.import_to_state(
+            state=state, config=config, key="my_jwt"
+        )
+        assert getattr(state, "jwt_configs.my_jwt") is config
+
+    def test_call_returns_config_from_request_app_state(self) -> None:
+        """__call__ returns config from request.app.state using the dependency key."""
+        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        app_state: State = MagicMock(spec=State)
+        setattr(app_state, "jwt_configs.my_jwt", config)
+
+        request = MagicMock(spec=Request)
+        request.app.state = app_state
+
+        dep = DependsJWTBearerAuthenticationConfig("my_jwt")
+        result = dep(request)
+        assert result is config
