@@ -439,9 +439,8 @@ class TestJWTBearerAuthenticationConfigBuilder:
         expected_config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
         mock_build_config.return_value = expected_config
 
-        builder = (
-            JWTBearerAuthenticationConfigBuilder("my_jwt")
-            .add_application_yaml_path(package_name="pkg", filename="app.yaml")
+        builder = JWTBearerAuthenticationConfigBuilder("my_jwt").add_application_yaml_path(
+            package_name="pkg", filename="app.yaml"
         )
         result = builder.build()
 
@@ -462,9 +461,8 @@ class TestJWTBearerAuthenticationConfigBuilder:
         expected_config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
         mock_build_config.return_value = expected_config
 
-        builder = (
-            JWTBearerAuthenticationConfigBuilder("my_jwt")
-            .add_application_yaml_path(package_name="pkg", filename="app.yaml")
+        builder = JWTBearerAuthenticationConfigBuilder("my_jwt").add_application_yaml_path(
+            package_name="pkg", filename="app.yaml"
         )
         first = builder.build()
         second = builder.build()
@@ -486,9 +484,8 @@ class TestJWTBearerAuthenticationConfigBuilder:
         """build() wraps UnableToReadConfigFileError and ValueErrorConfigError."""
         mock_build_config.side_effect = exception
 
-        builder = (
-            JWTBearerAuthenticationConfigBuilder("my_jwt")
-            .add_application_yaml_path(package_name="pkg", filename="app.yaml")
+        builder = JWTBearerAuthenticationConfigBuilder("my_jwt").add_application_yaml_path(
+            package_name="pkg", filename="app.yaml"
         )
         with pytest.raises(JWTBearerAuthenticationConfigBuilderError) as exc_info:
             builder.build()
@@ -496,7 +493,7 @@ class TestJWTBearerAuthenticationConfigBuilder:
         assert exc_info.value.__cause__ is exception
 
     def test_config_property_raises_when_not_built(self) -> None:
-        """config property raises when build() was never called."""
+        """Config property raises when build() was never called."""
         builder = JWTBearerAuthenticationConfigBuilder("my_jwt")
         with pytest.raises(JWTBearerAuthenticationConfigBuilderError) as exc_info:
             _ = builder.config
@@ -507,13 +504,12 @@ class TestJWTBearerAuthenticationConfigBuilder:
         self,
         mock_build_config: MagicMock,
     ) -> None:
-        """config property returns config after successful build()."""
+        """Config property returns config after successful build()."""
         expected_config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
         mock_build_config.return_value = expected_config
 
-        builder = (
-            JWTBearerAuthenticationConfigBuilder("my_jwt")
-            .add_application_yaml_path(package_name="pkg", filename="app.yaml")
+        builder = JWTBearerAuthenticationConfigBuilder("my_jwt").add_application_yaml_path(
+            package_name="pkg", filename="app.yaml"
         )
         builder.build()
         assert builder.config is expected_config
@@ -557,9 +553,7 @@ class TestDependsJWTBearerAuthenticationConfig:
         config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
         state: State = MagicMock(spec=State)
 
-        DependsJWTBearerAuthenticationConfig.import_to_state(
-            state=state, config=config, key="my_jwt"
-        )
+        DependsJWTBearerAuthenticationConfig.import_to_state(state=state, config=config, key="my_jwt")
         assert getattr(state, "jwt_configs.my_jwt") is config
 
     def test_call_returns_config_from_request_app_state(self) -> None:
