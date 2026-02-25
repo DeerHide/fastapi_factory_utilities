@@ -5,7 +5,12 @@ from typing import Annotated, Any, ClassVar
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
-from .types import OAuth2Audience, OAuth2Issuer, OAuth2Scope, OAuth2Subject
+from fastapi_factory_utilities.core.security.types import (
+    OAuth2Audience,
+    OAuth2Issuer,
+    OAuth2Scope,
+    OAuth2Subject,
+)
 
 
 def validate_string_list_field(value: Any) -> list[str]:

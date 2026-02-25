@@ -2,12 +2,20 @@
 
 import asyncio
 from typing import cast
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from jwt import PyJWK, PyJWKSet
 
-from fastapi_factory_utilities.core.security.jwt.stores import JWKStoreAbstract, JWKStoreMemory
-from fastapi_factory_utilities.core.security.jwt.types import OAuth2Issuer
+from fastapi_factory_utilities.core.security.jwt.exceptions import HydraJWKSStoreError
+from fastapi_factory_utilities.core.security.jwt.stores import (
+    DependsHydraJWKStoreMemory,
+    JWKStoreAbstract,
+    JWKStoreMemory,
+    configure_jwks_in_memory_store_from_hydra_introspect_services,
+)
+from fastapi_factory_utilities.core.security.types import OAuth2Issuer
+from fastapi_factory_utilities.core.services.hydra import HydraOperationError
 
 # Minimal valid RSA JWK (RFC 7517-style) for real PyJWK instances
 _RSA_N = (
@@ -394,3 +402,153 @@ class TestJWKStoreMemory:
             assert len(keys) == EXPECTED_TWO_KEYS
             assert jwks["test_kid_1"].key_id == "test_kid_1"
             assert jwks["test_kid_2"].key_id == "test_kid_2"
+
+
+class TestConfigureJwksInMemoryStoreFromHydraIntrospectServices:
+    """Unit tests for configure_jwks_in_memory_store_from_hydra_introspect_services."""
+
+    @pytest.mark.asyncio
+    async def test_success_one_service_one_key(self) -> None:
+        """Configure returns store with one key when one service returns one JWK."""
+        jwk = PyJWK.from_dict({"kid": "kid1", "kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
+        issuer = OAuth2Issuer("https://issuer.example")
+        mock_service = MagicMock()
+        mock_service.get_issuer.return_value = issuer
+        mock_service.get_wellknown_jwks = AsyncMock(return_value=[jwk])
+
+        store = await configure_jwks_in_memory_store_from_hydra_introspect_services([mock_service])
+
+        assert isinstance(store, JWKStoreMemory)
+        result = await store.get_jwk("kid1")
+        assert result is jwk
+        assert result.key_id == "kid1"
+        assert await store.get_issuer_by_kid("kid1") == issuer
+
+    @pytest.mark.asyncio
+    async def test_success_one_service_multiple_keys(self) -> None:
+        """Configure returns store with multiple keys when one service returns multiple JWKs."""
+        jwk1 = PyJWK.from_dict({"kid": "kid1", "kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
+        jwk2 = PyJWK.from_dict({"kid": "kid2", "kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
+        issuer = OAuth2Issuer("https://issuer.example")
+        mock_service = MagicMock()
+        mock_service.get_issuer.return_value = issuer
+        mock_service.get_wellknown_jwks = AsyncMock(return_value=[jwk1, jwk2])
+
+        store = await configure_jwks_in_memory_store_from_hydra_introspect_services([mock_service])
+
+        assert await store.get_jwk("kid1") is jwk1
+        assert await store.get_jwk("kid2") is jwk2
+        jwks = await store.get_jwks(issuer)
+        keys: list[PyJWK] = cast(list[PyJWK], jwks.keys)  # type: ignore[union-attr]
+        assert len(keys) == EXPECTED_TWO_KEYS
+        assert {k.key_id for k in keys} == {"kid1", "kid2"}
+
+    @pytest.mark.asyncio
+    async def test_success_multiple_services(self) -> None:
+        """Configure returns store with keys from multiple services and issuers."""
+        jwk_a1 = PyJWK.from_dict({"kid": "kid_a1", "kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
+        issuer_a = OAuth2Issuer("https://issuer-a.example")
+        mock_a = MagicMock()
+        mock_a.get_issuer.return_value = issuer_a
+        mock_a.get_wellknown_jwks = AsyncMock(return_value=[jwk_a1])
+
+        jwk_b1 = PyJWK.from_dict({"kid": "kid_b1", "kty": "RSA", "use": "sig", "n": _RSA_N, "e": _RSA_E})
+        issuer_b = OAuth2Issuer("https://issuer-b.example")
+        mock_b = MagicMock()
+        mock_b.get_issuer.return_value = issuer_b
+        mock_b.get_wellknown_jwks = AsyncMock(return_value=[jwk_b1])
+
+        store = await configure_jwks_in_memory_store_from_hydra_introspect_services([mock_a, mock_b])
+
+        assert await store.get_jwk("kid_a1") is jwk_a1
+        assert await store.get_issuer_by_kid("kid_a1") == issuer_a
+        assert await store.get_jwk("kid_b1") is jwk_b1
+        assert await store.get_issuer_by_kid("kid_b1") == issuer_b
+        jwks_a = await store.get_jwks(issuer_a)
+        jwks_b = await store.get_jwks(issuer_b)
+        keys_a: list[PyJWK] = cast(list[PyJWK], jwks_a.keys)  # type: ignore[union-attr]
+        keys_b: list[PyJWK] = cast(list[PyJWK], jwks_b.keys)  # type: ignore[union-attr]
+        assert len(keys_a) == 1 and keys_a[0].key_id == "kid_a1"
+        assert len(keys_b) == 1 and keys_b[0].key_id == "kid_b1"
+
+    @pytest.mark.asyncio
+    async def test_hydra_operation_error_wrapped_in_hydra_jwks_store_error(
+        self,
+    ) -> None:
+        """Configure wraps HydraOperationError in HydraJWKSStoreError."""
+        mock_service = MagicMock()
+        mock_service.get_wellknown_jwks = AsyncMock(side_effect=HydraOperationError("hydra failed"))
+
+        with pytest.raises(HydraJWKSStoreError) as exc_info:
+            await configure_jwks_in_memory_store_from_hydra_introspect_services([mock_service])
+
+        assert "Failed to get the JWKS from the introspect services" in str(exc_info.value)
+        assert exc_info.value.__cause__ is not None
+        assert isinstance(exc_info.value.__cause__, HydraOperationError)
+        assert "hydra failed" in str(exc_info.value.__cause__)
+
+    @pytest.mark.asyncio
+    async def test_runtime_error_wrapped_in_hydra_jwks_store_error(
+        self,
+    ) -> None:
+        """Configure wraps RuntimeError in HydraJWKSStoreError."""
+        mock_service = MagicMock()
+        mock_service.get_wellknown_jwks = AsyncMock(side_effect=RuntimeError("runtime failed"))
+
+        with pytest.raises(HydraJWKSStoreError) as exc_info:
+            await configure_jwks_in_memory_store_from_hydra_introspect_services([mock_service])
+
+        assert "Failed to get the JWKS from the introspect services" in str(exc_info.value)
+        assert exc_info.value.__cause__ is not None
+        assert isinstance(exc_info.value.__cause__, RuntimeError)
+        assert "runtime failed" in str(exc_info.value.__cause__)
+
+
+class TestDependsHydraJWKStoreMemory:
+    """Unit tests for DependsHydraJWKStoreMemory."""
+
+    def test_export_from_state_raises_when_store_missing(self) -> None:
+        """export_from_state raises HydraJWKSStoreError when store not in state."""
+        state = object()  # No hydra_jwks_store_memory attribute
+        with pytest.raises(HydraJWKSStoreError) as exc_info:
+            DependsHydraJWKStoreMemory.export_from_state(state=state)
+        assert "Hydra JWKS store in memory not found in the state" in str(exc_info.value)
+
+    def test_export_from_state_raises_when_attribute_is_none(self) -> None:
+        """export_from_state raises when state attribute is explicitly None."""
+        state = MagicMock()
+        setattr(state, DependsHydraJWKStoreMemory.DEPENDENCY_KEY, None)
+
+        with pytest.raises(HydraJWKSStoreError) as exc_info:
+            DependsHydraJWKStoreMemory.export_from_state(state=state)
+        assert "Hydra JWKS store in memory not found in the state" in str(exc_info.value)
+
+    def test_export_from_state_returns_store_when_present(self) -> None:
+        """export_from_state returns the store when it is in state."""
+        jwk_store = JWKStoreMemory()
+        state = MagicMock()
+        setattr(state, DependsHydraJWKStoreMemory.DEPENDENCY_KEY, jwk_store)
+
+        result = DependsHydraJWKStoreMemory.export_from_state(state=state)
+        assert result is jwk_store
+
+    def test_import_to_state_sets_attribute(self) -> None:
+        """import_to_state sets state attribute so export_from_state can read it."""
+        jwk_store = JWKStoreMemory()
+        state = MagicMock()
+
+        DependsHydraJWKStoreMemory.import_to_state(state=state, jwk_store=jwk_store)
+        assert getattr(state, DependsHydraJWKStoreMemory.DEPENDENCY_KEY) is jwk_store
+
+    def test_call_returns_store_from_request_app_state(self) -> None:
+        """__call__ returns store from request.app.state."""
+        jwk_store = JWKStoreMemory()
+        app_state = MagicMock()
+        setattr(app_state, DependsHydraJWKStoreMemory.DEPENDENCY_KEY, jwk_store)
+
+        request = MagicMock()
+        request.app.state = app_state
+
+        dep = DependsHydraJWKStoreMemory()
+        result = dep(request)
+        assert result is jwk_store

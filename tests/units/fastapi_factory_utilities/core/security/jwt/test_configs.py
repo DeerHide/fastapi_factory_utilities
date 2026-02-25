@@ -14,7 +14,7 @@ from fastapi_factory_utilities.core.security.jwt.configs import (
     JWTBearerAuthenticationConfigBuilder,
 )
 from fastapi_factory_utilities.core.security.jwt.exceptions import JWTBearerAuthenticationConfigBuilderError
-from fastapi_factory_utilities.core.security.jwt.types import OAuth2Issuer
+from fastapi_factory_utilities.core.security.types import OAuth2Issuer
 from fastapi_factory_utilities.core.utils.configs import (
     UnableToReadConfigFileError,
     ValueErrorConfigError,

@@ -3,9 +3,18 @@
 from abc import ABC, abstractmethod
 from asyncio import Lock
 
+from fastapi import Request
+from fastapi.datastructures import State
 from jwt import PyJWK, PyJWKSet
 
-from .types import OAuth2Issuer
+from fastapi_factory_utilities.core.security.types import OAuth2Issuer
+from fastapi_factory_utilities.core.services.hydra import (
+    HydraIntrospectGenericService,
+    HydraOperationError,
+    HydraTokenIntrospectObject,
+)
+
+from .exceptions import HydraJWKSStoreError
 
 
 class JWKStoreAbstract(ABC):
@@ -75,3 +84,42 @@ class JWKStoreMemory(JWKStoreAbstract):
                 raise ValueError("JWK key ID is required")
             self._jwk_by_kid[jwk.key_id] = jwk
             self._issuer_by_kid[jwk.key_id] = issuer
+
+
+async def configure_jwks_in_memory_store_from_hydra_introspect_services(
+    introspect_service_list: list[HydraIntrospectGenericService[HydraTokenIntrospectObject]],
+) -> JWKStoreMemory:
+    """Configure the JWKS in memory store from the Hydra introspect services."""
+    jwk_store = JWKStoreMemory()
+    try:
+        for introspect_service in introspect_service_list:
+            jwks: list[PyJWK] = await introspect_service.get_wellknown_jwks()
+            for key in jwks:
+                assert key.key_id is not None
+                await jwk_store.add_jwk(introspect_service.get_issuer(), key)
+    except (HydraOperationError, RuntimeError) as e:
+        raise HydraJWKSStoreError("Failed to get the JWKS from the introspect services") from e
+    return jwk_store
+
+
+class DependsHydraJWKStoreMemory:
+    """Dependency for the Hydra JWKS store in memory."""
+
+    DEPENDENCY_KEY: str = "hydra_jwks_store_memory"
+
+    @classmethod
+    def export_from_state(cls, state: State) -> JWKStoreMemory:
+        """Export the Hydra JWKS store in memory from the state."""
+        jwk_store: JWKStoreMemory | None = getattr(state, cls.DEPENDENCY_KEY, None)
+        if jwk_store is None:
+            raise HydraJWKSStoreError("Hydra JWKS store in memory not found in the state")
+        return jwk_store
+
+    @classmethod
+    def import_to_state(cls, state: State, jwk_store: JWKStoreMemory) -> None:
+        """Import the Hydra JWKS store in memory to the state."""
+        setattr(state, cls.DEPENDENCY_KEY, jwk_store)
+
+    def __call__(self, request: Request) -> JWKStoreMemory:
+        """Dependency for the Hydra JWKS store in memory."""
+        return self.export_from_state(state=request.app.state)

@@ -16,11 +16,16 @@ from .exceptions import (
 )
 from .objects import JWTPayload
 from .services import JWTAuthenticationServiceAbstract
-from .stores import JWKStoreAbstract, JWKStoreMemory
-from .types import JWTToken, OAuth2Audience, OAuth2Issuer, OAuth2Scope, OAuth2Subject
+from .stores import (
+    DependsHydraJWKStoreMemory,
+    JWKStoreAbstract,
+    JWKStoreMemory,
+    configure_jwks_in_memory_store_from_hydra_introspect_services,
+)
 from .verifiers import GenericHydraJWTVerifier, JWTNoneVerifier, JWTVerifierAbstract
 
 __all__: list[str] = [
+    "DependsHydraJWKStoreMemory",
     "DependsJWTBearerAuthenticationConfig",
     "GenericHydraJWTVerifier",
     "GenericJWTBearerTokenDecoder",
@@ -36,13 +41,9 @@ __all__: list[str] = [
     "JWTBearerTokenDecoderAbstract",
     "JWTNoneVerifier",
     "JWTPayload",
-    "JWTToken",
     "JWTVerifierAbstract",
     "MissingJWTCredentialsError",
     "NotVerifiedJWTError",
-    "OAuth2Audience",
-    "OAuth2Issuer",
-    "OAuth2Scope",
-    "OAuth2Subject",
+    "configure_jwks_in_memory_store_from_hydra_introspect_services",
     "decode_jwt_token_payload",
 ]

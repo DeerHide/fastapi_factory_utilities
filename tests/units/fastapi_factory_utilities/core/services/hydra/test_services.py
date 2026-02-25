@@ -20,6 +20,8 @@ from fastapi_factory_utilities.core.plugins.aiohttp.mockers import (
     build_mocked_aiohttp_resource,
     build_mocked_aiohttp_response,
 )
+from fastapi_factory_utilities.core.security.jwt import JWTBearerAuthenticationConfig
+from fastapi_factory_utilities.core.security.types import OAuth2Issuer
 from fastapi_factory_utilities.core.services.hydra.exceptions import HydraOperationError
 from fastapi_factory_utilities.core.services.hydra.objects import HydraTokenIntrospectObject
 from fastapi_factory_utilities.core.services.hydra.services import (
@@ -114,6 +116,19 @@ def fixture_application_config() -> BaseApplicationConfig:
     )
 
 
+@pytest.fixture(name="hydra_jwt_config")
+def fixture_hydra_jwt_config() -> JWTBearerAuthenticationConfig:
+    """Create a JWTBearerAuthenticationConfig for Hydra services.
+
+    Returns:
+        JWTBearerAuthenticationConfig: A test JWT bearer authentication config.
+    """
+    return JWTBearerAuthenticationConfig(
+        authorized_algorithms=["RS256"],
+        issuer=OAuth2Issuer("https://hydra.example.com"),
+    )
+
+
 @pytest.fixture(name="mock_introspect_data")
 def fixture_mock_introspect_data() -> dict[str, Any]:
     """Create mock introspect data.
@@ -161,13 +176,17 @@ class TestHydraIntrospectGenericService:
 
     @pytest.fixture
     def concrete_service(
-        self, http_resource_admin: AioHttpClientResource, http_resource_public: AioHttpClientResource
+        self,
+        http_resource_admin: AioHttpClientResource,
+        http_resource_public: AioHttpClientResource,
+        hydra_jwt_config: JWTBearerAuthenticationConfig,
     ) -> HydraIntrospectGenericService[MockIntrospectObject]:
         """Create a concrete implementation for testing.
 
         Args:
             http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
+            hydra_jwt_config (JWTBearerAuthenticationConfig): JWT configuration for Hydra.
 
         Returns:
             HydraIntrospectGenericService[MockIntrospectObject]: Concrete service instance.
@@ -180,18 +199,23 @@ class TestHydraIntrospectGenericService:
 
         return ConcreteIntrospectService(
             identifier="hydra-introspect-test",
+            config=hydra_jwt_config,
             hydra_admin_http_resource=http_resource_admin,
             hydra_public_http_resource=http_resource_public,
         )
 
     def test_init(
-        self, http_resource_admin: AioHttpClientResource, http_resource_public: AioHttpClientResource
+        self,
+        http_resource_admin: AioHttpClientResource,
+        http_resource_public: AioHttpClientResource,
+        hydra_jwt_config: JWTBearerAuthenticationConfig,
     ) -> None:
         """Test that __init__ properly initializes the service.
 
         Args:
             http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
+            hydra_jwt_config (JWTBearerAuthenticationConfig): JWT configuration for Hydra.
         """
 
         class ConcreteIntrospectService(HydraIntrospectGenericService[MockIntrospectObject]):
@@ -201,15 +225,18 @@ class TestHydraIntrospectGenericService:
 
         service = ConcreteIntrospectService(
             identifier="hydra-introspect-test",
+            config=hydra_jwt_config,
             hydra_admin_http_resource=http_resource_admin,
             hydra_public_http_resource=http_resource_public,
         )
 
+        assert service._config is hydra_jwt_config  # pylint: disable=protected-access
         assert service._hydra_admin_http_resource == http_resource_admin
         assert service._hydra_public_http_resource == http_resource_public
         assert service._concreate_introspect_object_class == MockIntrospectObject
         assert service.INTROSPECT_ENDPOINT == "/admin/oauth2/introspect"
         assert service.WELLKNOWN_JWKS_ENDPOINT == "/.well-known/jwks.json"
+        assert service.get_issuer() == hydra_jwt_config.issuer
 
     @pytest.mark.asyncio
     async def test_introspect_success(
@@ -452,30 +479,38 @@ class TestHydraIntrospectService:
     """Various tests for the HydraIntrospectService class."""
 
     def test_init(
-        self, http_resource_admin: AioHttpClientResource, http_resource_public: AioHttpClientResource
+        self,
+        http_resource_admin: AioHttpClientResource,
+        http_resource_public: AioHttpClientResource,
+        hydra_jwt_config: JWTBearerAuthenticationConfig,
     ) -> None:
         """Test that __init__ properly initializes the service.
 
         Args:
             http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
+            hydra_jwt_config (JWTBearerAuthenticationConfig): JWT configuration for Hydra.
         """
         service = HydraIntrospectService(
             identifier="hydra-introspect",
+            config=hydra_jwt_config,
             hydra_admin_http_resource=http_resource_admin,
             hydra_public_http_resource=http_resource_public,
         )
 
+        assert service._config is hydra_jwt_config  # pylint: disable=protected-access
         assert service._hydra_admin_http_resource == http_resource_admin
         assert service._hydra_public_http_resource == http_resource_public
         assert service._concreate_introspect_object_class == HydraTokenIntrospectObject
         assert isinstance(service, HydraIntrospectGenericService)
+        assert service.get_issuer() == hydra_jwt_config.issuer
 
     @pytest.mark.asyncio
     async def test_introspect_with_default_object(
         self,
         http_resource_admin: AioHttpClientResource,
         http_resource_public: AioHttpClientResource,
+        hydra_jwt_config: JWTBearerAuthenticationConfig,
         mock_introspect_data: dict[str, Any],
     ) -> None:
         """Test introspect with default HydraTokenIntrospectObject.
@@ -483,10 +518,12 @@ class TestHydraIntrospectService:
         Args:
             http_resource_admin (AioHttpClientResource): Admin HTTP resource fixture.
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
+            hydra_jwt_config (JWTBearerAuthenticationConfig): JWT configuration for Hydra.
             mock_introspect_data (dict[str, Any]): Mock introspect data.
         """
         service = HydraIntrospectService(
             identifier="hydra-introspect",
+            config=hydra_jwt_config,
             hydra_admin_http_resource=http_resource_admin,
             hydra_public_http_resource=http_resource_public,
         )

@@ -12,6 +12,8 @@ from fastapi_factory_utilities.core.app import BaseApplicationConfig
 from fastapi_factory_utilities.core.plugins.aiohttp import (
     AioHttpClientResource,
 )
+from fastapi_factory_utilities.core.security.jwt import JWTBearerAuthenticationConfig
+from fastapi_factory_utilities.core.security.types import OAuth2Issuer
 
 from .exceptions import HydraOperationError
 from .objects import HydraTokenIntrospectObject
@@ -29,6 +31,7 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
     def __init__(
         self,
         identifier: str,
+        config: JWTBearerAuthenticationConfig,
         hydra_admin_http_resource: AioHttpClientResource,
         hydra_public_http_resource: AioHttpClientResource,
     ) -> None:
@@ -36,10 +39,12 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
 
         Args:
             identifier (str): The identifier of the Hydra introspect service.
+            config (JWTBearerAuthenticationConfig): The JWT bearer authentication configuration.
             hydra_admin_http_resource (AioHttpClientResource): The Hydra admin HTTP resource.
             hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
         """
         self._identifier: str = identifier
+        self._config: JWTBearerAuthenticationConfig = config
         self._hydra_admin_http_resource: AioHttpClientResource = hydra_admin_http_resource
         self._hydra_public_http_resource: AioHttpClientResource = hydra_public_http_resource
         # Retrieve the concrete introspect object class
@@ -75,6 +80,10 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
 
         return instrospect
 
+    def get_issuer(self) -> OAuth2Issuer:
+        """Get the issuer from the JWT bearer authentication configuration."""
+        return self._config.issuer
+
     async def get_wellknown_jwks(self) -> list[jwt.PyJWK]:
         """Get the JWKS from the Hydra service."""
         try:
@@ -85,7 +94,7 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
                     response.raise_for_status()
                     jwks_data: dict[str, Any] = await response.json()
                     jwks: jwt.PyJWKSet = jwt.PyJWKSet.from_dict(jwks_data)
-                    return jwks.keys
+                    return jwks.keys  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         except aiohttp.ClientResponseError as error:
             raise HydraOperationError(
                 "Failed to get the JWKS from the Hydra service", status_code=error.status

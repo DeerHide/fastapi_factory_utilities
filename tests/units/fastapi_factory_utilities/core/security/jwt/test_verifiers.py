@@ -7,12 +7,12 @@ import pytest
 
 from fastapi_factory_utilities.core.security.jwt.exceptions import InvalidJWTError
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
-from fastapi_factory_utilities.core.security.jwt.types import JWTToken
 from fastapi_factory_utilities.core.security.jwt.verifiers import (
     GenericHydraJWTVerifier,
     JWTNoneVerifier,
     JWTVerifierAbstract,
 )
+from fastapi_factory_utilities.core.security.types import JWTToken
 from fastapi_factory_utilities.core.services.hydra.exceptions import HydraOperationError
 from fastapi_factory_utilities.core.services.hydra.objects import HydraTokenIntrospectObject
 

@@ -21,11 +21,11 @@ from fastapi_factory_utilities.core.security.jwt.exceptions import (
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
 from fastapi_factory_utilities.core.security.jwt.services import JWTAuthenticationServiceAbstract
 from fastapi_factory_utilities.core.security.jwt.stores import JWKStoreAbstract
-from fastapi_factory_utilities.core.security.jwt.types import JWTToken
 from fastapi_factory_utilities.core.security.jwt.verifiers import (
     JWTNoneVerifier,
     JWTVerifierAbstract,
 )
+from fastapi_factory_utilities.core.security.types import JWTToken
 
 _TEST_IDENTIFIER: str = "test-jwt-auth"
 _DEFAULT_ISSUER: str = "https://example.com"

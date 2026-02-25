@@ -7,7 +7,7 @@ from fastapi.datastructures import State
 from jwt.algorithms import get_default_algorithms, requires_cryptography
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from fastapi_factory_utilities.core.security.jwt.types import OAuth2Issuer
+from fastapi_factory_utilities.core.security.types import OAuth2Issuer
 from fastapi_factory_utilities.core.utils.configs import (
     UnableToReadConfigFileError,
     ValueErrorConfigError,

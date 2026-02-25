@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar, cast
 
+from fastapi_factory_utilities.core.security.types import JWTToken
 from fastapi_factory_utilities.core.services.hydra import (
     HydraAccessToken,
     HydraIntrospectGenericService,
@@ -12,7 +13,6 @@ from fastapi_factory_utilities.core.services.hydra import (
 
 from .exceptions import InvalidJWTError
 from .objects import JWTPayload
-from .types import JWTToken
 
 JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)
 HydraIntrospectObjectGeneric = TypeVar("HydraIntrospectObjectGeneric", bound=HydraTokenIntrospectObject)

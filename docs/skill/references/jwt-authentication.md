@@ -11,33 +11,52 @@ Use JWT authentication when:
 - Building custom JWT verification logic beyond signature validation
 - Integrating with OAuth2/OIDC token flows (e.g., tokens issued by Hydra)
 
-## JWTAuthenticationService
+## JWTAuthenticationServiceAbstract
 
-Main service class that orchestrates JWT Bearer authentication. Extends `AuthenticationAbstract`.
+Generic service class that orchestrates JWT Bearer authentication. Extends `AuthenticationAbstract` and is intended to be used either directly (with a configured decoder and verifier) or as a base class for your own typed service.
 
 ### Basic Usage
 
 ```python
-from fastapi import Depends, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi_factory_utilities.core.security.jwt import (
-    JWTAuthenticationService,
+    GenericJWTBearerTokenDecoder,
+    JWTAuthenticationServiceAbstract,
     JWTBearerAuthenticationConfig,
+    JWTNoneVerifier,
+    JWTPayload,
     JWKStoreMemory,
 )
 
+router = APIRouter()
+
+# Configuration used by both Hydra services and local JWT verification
 config = JWTBearerAuthenticationConfig(
     authorized_algorithms=["RS256"],
     authorized_audiences=["my-api"],
-    authorized_issuers=["https://auth.example.com"],
+    issuer="https://auth.example.com",
 )
-jwks_store = JWKStoreMemory()
-# Populate store: await jwks_store.store_jwks(pyjwk_set)
 
-auth_service = JWTAuthenticationService(
+# JWK store populated from Hydra JWKS (see Hydra docs)
+jwks_store = JWKStoreMemory()
+# Example: keys added up-front from Hydra JWKS
+# for jwk in hydra_jwks:
+#     await jwks_store.add_jwk(issuer=config.issuer, jwk=jwk)
+
+decoder = GenericJWTBearerTokenDecoder[JWTPayload](
     jwt_bearer_authentication_config=config,
     jwks_store=jwks_store,
+)
+verifier = JWTNoneVerifier()
+
+auth_service = JWTAuthenticationServiceAbstract[JWTPayload](
+    identifier="jwt_auth",
+    jwt_bearer_authentication_config=config,
+    jwt_verifier=verifier,
+    jwt_decoder=decoder,
     raise_exception=True,
 )
+
 
 @router.get("/protected")
 async def protected_route(
@@ -51,11 +70,11 @@ async def protected_route(
 ### Extract Token from Request
 
 ```python
-from fastapi_factory_utilities.core.security.jwt import JWTAuthenticationService
+from fastapi_factory_utilities.core.security.jwt import JWTAuthenticationServiceAbstract
 
-# Class methods for manual extraction
-auth_header = JWTAuthenticationService.extract_authorization_header_from_request(request)
-token = JWTAuthenticationService.extract_bearer_token_from_authorization_header(auth_header)
+# Class methods for manual extraction (available on the abstract service)
+auth_header = JWTAuthenticationServiceAbstract.extract_authorization_header_from_request(request)
+token = JWTAuthenticationServiceAbstract.extract_bearer_token_from_authorization_header(auth_header)
 ```
 
 ### Custom Payload Type
@@ -66,7 +85,7 @@ Use the abstract service with a custom payload model:
 from fastapi_factory_utilities.core.security.jwt import (
     JWTAuthenticationServiceAbstract,
     JWTPayload,
-    JWTBearerTokenDecoder,
+    GenericJWTBearerTokenDecoder,
     JWTVerifierAbstract,
 )
 
@@ -78,14 +97,20 @@ class CustomVerifier(JWTVerifierAbstract[CustomPayload]):
         if not jwt_payload.custom_claim:
             raise NotVerifiedJWTError("Missing custom claim")
 
+decoder = GenericJWTBearerTokenDecoder[CustomPayload](
+    jwt_bearer_authentication_config=config,
+    jwks_store=jwks_store,
+)
+
 service = JWTAuthenticationServiceAbstract[CustomPayload](
+    identifier="custom_jwt_auth",
     jwt_bearer_authentication_config=config,
     jwt_verifier=CustomVerifier(),
-    jwt_decoder=CustomDecoder(...),  # Decoder returning CustomPayload
+    jwt_decoder=decoder,
 )
 ```
 
-## JWTBearerTokenDecoder
+## GenericJWTBearerTokenDecoder
 
 Decodes JWT using `kid` from the header and keys from a JWKS store.
 
@@ -100,12 +125,13 @@ Decodes JWT using `kid` from the header and keys from a JWKS store.
 
 ```python
 from fastapi_factory_utilities.core.security.jwt import (
-    JWTBearerTokenDecoder,
+    GenericJWTBearerTokenDecoder,
     JWTBearerAuthenticationConfig,
     JWKStoreAbstract,
+    JWTPayload,
 )
 
-decoder = JWTBearerTokenDecoder(
+decoder = GenericJWTBearerTokenDecoder[JWTPayload](
     jwt_bearer_authentication_config=config,
     jwks_store=jwks_store,
 )
@@ -125,33 +151,46 @@ raw_payload = await decode_jwt_token_payload(
     public_key=jwk,
     jwt_bearer_authentication_config=config,
     subject=None,  # Optional subject check
+    # issuer can be overridden; defaults to config.issuer if not provided
+    # issuer=OAuth2Issuer("https://auth.example.com"),
 )
 ```
 
 ## JWKStoreAbstract / JWKStoreMemory
 
-Abstract store for JWKS; concrete in-memory implementation is thread-safe.
+Abstract store for JWKS; concrete in-memory implementation is concurrency-safe.
 
 ### JWKStoreAbstract
 
-- `get_jwk(kid: str) -> PyJWK` - Get key by ID (default uses `get_jwks()[kid]`)
-- `get_jwks() -> PyJWKSet` - Get full key set
-- `store_jwks(jwks: PyJWKSet) -> None` - Store or update key set
+- `get_jwk(kid: str) -> PyJWK` - Get key by ID.
+- `get_issuer_by_kid(kid: str) -> OAuth2Issuer` - Get issuer associated with a given key ID.
+- `get_jwks(issuer: OAuth2Issuer) -> PyJWKSet` - Get full key set for a given issuer.
+- `add_jwk(issuer: OAuth2Issuer, jwk: PyJWK) -> None` - Store or update a single key for an issuer.
 
 ### JWKStoreMemory
 
 ```python
-from fastapi_factory_utilities.core.security.jwt import JWKStoreMemory
-from jwt.api_jwk import PyJWKSet
+from fastapi_factory_utilities.core.security.jwt import (
+    JWKStoreMemory,
+    configure_jwks_in_memory_store_from_hydra_introspect_services,
+)
+from fastapi_factory_utilities.core.services.hydra import HydraIntrospectService
 
+# Option 1: Build from Hydra introspect services (recommended)
+store = await configure_jwks_in_memory_store_from_hydra_introspect_services(
+    introspect_service_list=[hydra_introspect_service],
+)
+
+# Option 2: Manually add keys
 store = JWKStoreMemory()
-# After fetching JWKS from Hydra or another provider
-await store.store_jwks(jwks_set)  # PyJWKSet
+for jwk in hydra_jwks:
+    await store.add_jwk(issuer=config.issuer, jwk=jwk)
+
 jwk = await store.get_jwk(kid="my-key-id")
-jwks = await store.get_jwks()
+jwks = await store.get_jwks(issuer=config.issuer)
 ```
 
-Use with [Hydra Service](hydra-service.md) to obtain JWKS: `await hydra_service.get_wellknown_jwks()` and then build a `PyJWKSet` for the store.
+Use with [Hydra Service](hydra-service.md) to obtain JWKS: `await hydra_service.get_wellknown_jwks()` and then add each key to the store or use the helper to configure the store automatically.
 
 ## JWTPayload
 
@@ -179,17 +218,17 @@ Frozen Pydantic config for JWT validation.
 from fastapi_factory_utilities.core.security.jwt import JWTBearerAuthenticationConfig
 
 config = JWTBearerAuthenticationConfig(
-    authorized_algorithms=["RS256"],  # Defaults to PyJWT default algorithms
+    authorized_algorithms=["RS256"],  # Must all be in PyJWT's requires_cryptography set
     authorized_audiences=["api://default", "my-audience"],  # Or "aud1,aud2"
-    authorized_issuers=["https://hydra.example.com"],       # Or "iss1,iss2"
+    issuer="https://hydra.example.com",
 )
 ```
 
-- **authorized_algorithms**: List of algorithms (must be in PyJWT's `requires_cryptography` set when using asymmetric keys).
-- **authorized_audiences**: Optional. Comma-separated string or list; duplicates and empty values removed.
-- **authorized_issuers**: Optional. Same format as audiences.
+- **authorized_algorithms**: List of algorithms; any algorithm not in PyJWT's `requires_cryptography` set raises `ValueError`.
+- **authorized_audiences**: Optional. Comma-separated string or list; cleaned (trimmed, empties removed) and deduplicated; empty after processing raises `ValueError`.
+- **issuer**: Required `OAuth2Issuer` used as default issuer during decoding.
 
-Validation: invalid or empty lists for audiences/issuers raise `ValueError`; invalid algorithms raise `ValueError`.
+Validation: invalid algorithms or an empty processed audience list raise `ValueError`.
 
 ## Custom Verifiers
 
@@ -253,9 +292,29 @@ With `raise_exception=False`, the service appends exceptions to `auth_service._e
 
 1. **JWKS source**: Populate the JWKS store from a trusted source (e.g., Hydra's `.well-known/jwks.json`); see [Hydra Service](hydra-service.md).
 2. **Algorithms**: Use only asymmetric algorithms (e.g., RS256) for API-held public keys; avoid `none` and symmetric algorithms for Bearer tokens.
-3. **Audience and issuer**: Always set `authorized_audiences` and `authorized_issuers` in production.
+3. **Audience and issuer**: Always set `authorized_audiences` and `issuer` in production.
 4. **Verifiers**: Use custom verifiers for scope or claim checks; keep signature and standard claims in the decoder.
 5. **Dependency injection**: Inject config and JWKS store (or decoder/verifier) via FastAPI `Depends` so keys and config can be refreshed or vary by environment.
+
+## End-to-End Hydra + JWT Flow
+
+At a high level, Hydra issues and introspects tokens, while the JWT module validates those tokens locally using JWKS obtained from Hydra.
+
+```mermaid
+flowchart TD
+  client[Client] --> api[FastAPIApp]
+  api --> jwtService[JWTAuthenticationService]
+  jwtService --> decoder[GenericJWTBearerTokenDecoder]
+  jwtService --> verifier[GenericHydraJWTVerifier]
+  decoder --> jwkStore[JWKStoreMemory]
+  verifier --> hydraIntrospect[HydraIntrospectService]
+  hydraIntrospect --> hydraAdmin[HydraAdminEndpoint]
+  jwkStore --> hydraPublic[HydraJWKSWellKnown]
+```
+
+- **JWKS setup**: `HydraIntrospectService.get_wellknown_jwks()` (or the helper `configure_jwks_in_memory_store_from_hydra_introspect_services`) populates `JWKStoreMemory`.
+- **Local JWT validation**: `GenericJWTBearerTokenDecoder` uses the JWK store and `JWTBearerAuthenticationConfig` to verify signature, issuer, and audiences and to build a `JWTPayload`.
+- **Optional introspection**: `GenericHydraJWTVerifier` can call Hydra’s introspection endpoint to enforce that the token is still active and meets additional requirements (scopes, audiences, etc.).
 
 ## Reference
 

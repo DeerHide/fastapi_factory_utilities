@@ -25,3 +25,7 @@ class NotVerifiedJWTError(JWTAuthenticationError):
 
 class JWTBearerAuthenticationConfigBuilderError(FastAPIFactoryUtilitiesError):
     """JWT bearer authentication configuration builder error."""
+
+
+class HydraJWKSStoreError(FastAPIFactoryUtilitiesError):
+    """Hydra JWKS store error."""

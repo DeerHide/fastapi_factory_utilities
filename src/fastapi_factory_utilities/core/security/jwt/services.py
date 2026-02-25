@@ -6,12 +6,12 @@ from typing import Generic, TypeVar
 from fastapi import HTTPException, Request
 
 from fastapi_factory_utilities.core.security.abstracts import AuthenticationAbstract
+from fastapi_factory_utilities.core.security.types import JWTToken, OAuth2Issuer
 
 from .configs import JWTBearerAuthenticationConfig
 from .decoders import JWTBearerTokenDecoderAbstract
 from .exceptions import InvalidJWTError, InvalidJWTPayploadError, MissingJWTCredentialsError, NotVerifiedJWTError
 from .objects import JWTPayload
-from .types import JWTToken, OAuth2Issuer
 from .verifiers import JWTVerifierAbstract
 
 JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)

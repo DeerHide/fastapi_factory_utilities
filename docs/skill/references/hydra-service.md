@@ -26,6 +26,13 @@ from fastapi_factory_utilities.core.services.hydra import (
     HydraAccessToken,
 )
 from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource
+from fastapi_factory_utilities.core.security.jwt import JWTBearerAuthenticationConfig
+from fastapi_factory_utilities.core.security.types import OAuth2Issuer
+
+jwt_config = JWTBearerAuthenticationConfig(
+    authorized_algorithms=["RS256"],
+    issuer=OAuth2Issuer("https://hydra.example.com"),
+)
 
 class CustomIntrospectObject(HydraTokenIntrospectObject):
     # Add custom fields
@@ -36,12 +43,17 @@ class CustomHydraService(HydraIntrospectGenericService[CustomIntrospectObject]):
 
 # Usage
 service = CustomHydraService(
+    identifier="hydra_custom",
+    config=jwt_config,
     hydra_admin_http_resource=admin_client,
     hydra_public_http_resource=public_client,
 )
 
+# Optional: access the configured issuer
+issuer = service.get_issuer()
+
 # Introspect token
-introspect = await service.introspect(token="access_token_here")
+introspect = await service.introspect(token=HydraAccessToken("access_token_here"))
 ```
 
 ### Token Introspection
@@ -63,17 +75,17 @@ async def validate_token(token: str, service: HydraIntrospectGenericService):
 ### JWKS Access
 
 ```python
-# Get JWKS for JWT verification
+# Get JWKS (list of PyJWK) for JWT verification
 jwks = await service.get_wellknown_jwks()
 
-# Use with PyJWT
-import jwt
-decoded = jwt.decode(
-    token,
-    jwks,
-    algorithms=["RS256"],
-    audience="your-audience",
-)
+from fastapi_factory_utilities.core.security.jwt import JWKStoreMemory
+
+# Populate an in-memory JWK store from Hydra JWKS
+jwk_store = JWKStoreMemory()
+for jwk in jwks:
+    await jwk_store.add_jwk(issuer=jwt_config.issuer, jwk=jwk)
+
+# The JWK store can now be used by GenericJWTBearerTokenDecoder in the JWT authentication module.
 ```
 
 ## HydraOAuth2ClientCredentialsService
@@ -91,6 +103,7 @@ from fastapi_factory_utilities.core.services.hydra import (
 )
 
 service = HydraOAuth2ClientCredentialsService(
+    identifier="hydra_client_credentials",
     hydra_public_http_resource=public_client,
     application_config=app_config,
 )
@@ -126,8 +139,17 @@ Base class for token introspection responses.
 from fastapi_factory_utilities.core.services.hydra import (
     HydraIntrospectService,  # Uses default HydraTokenIntrospectObject
 )
+from fastapi_factory_utilities.core.security.jwt import JWTBearerAuthenticationConfig
+from fastapi_factory_utilities.core.security.types import OAuth2Issuer
+
+jwt_config = JWTBearerAuthenticationConfig(
+    authorized_algorithms=["RS256"],
+    issuer=OAuth2Issuer("https://hydra.example.com"),
+)
 
 service = HydraIntrospectService(
+    identifier="hydra_introspect",
+    config=jwt_config,
     hydra_admin_http_resource=admin_client,
     hydra_public_http_resource=public_client,
 )

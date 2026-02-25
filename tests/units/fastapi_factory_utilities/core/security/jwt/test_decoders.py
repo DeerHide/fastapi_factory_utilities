@@ -18,7 +18,7 @@ from fastapi_factory_utilities.core.security.jwt.decoders import (
 from fastapi_factory_utilities.core.security.jwt.exceptions import InvalidJWTError, InvalidJWTPayploadError
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
 from fastapi_factory_utilities.core.security.jwt.stores import JWKStoreAbstract
-from fastapi_factory_utilities.core.security.jwt.types import JWTToken, OAuth2Issuer, OAuth2Subject
+from fastapi_factory_utilities.core.security.types import JWTToken, OAuth2Issuer, OAuth2Subject
 
 
 class TestDecodeJWTTokenPayload:

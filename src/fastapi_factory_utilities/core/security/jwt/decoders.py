@@ -11,11 +11,12 @@ from jwt import InvalidTokenError, decode, get_unverified_header
 from jwt.api_jwk import PyJWK
 from pydantic import ValidationError
 
+from fastapi_factory_utilities.core.security.types import JWTToken, OAuth2Issuer, OAuth2Subject
+
 from .configs import JWTBearerAuthenticationConfig
 from .exceptions import InvalidJWTError, InvalidJWTPayploadError
 from .objects import JWTPayload
 from .stores import JWKStoreAbstract
-from .types import JWTToken, OAuth2Issuer, OAuth2Subject
 
 JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)
 
