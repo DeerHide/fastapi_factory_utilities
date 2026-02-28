@@ -12,8 +12,6 @@ import jwt
 import pytest
 from pydantic import HttpUrl, ValidationError
 
-from fastapi_factory_utilities.core.app.config import BaseApplicationConfig
-from fastapi_factory_utilities.core.app.enums import EnvironmentEnum
 from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource
 from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
 from fastapi_factory_utilities.core.plugins.aiohttp.mockers import (
@@ -97,23 +95,6 @@ def fixture_http_resource_public(http_config_public: HttpServiceDependencyConfig
         AioHttpClientResource: A test public HTTP resource.
     """
     return AioHttpClientResource(dependency_config=http_config_public)
-
-
-@pytest.fixture(name="application_config")
-def fixture_application_config() -> BaseApplicationConfig:
-    """Create a BaseApplicationConfig for testing.
-
-    Returns:
-        BaseApplicationConfig: A test application config.
-    """
-    return BaseApplicationConfig(
-        service_namespace="test",
-        environment=EnvironmentEnum.DEVELOPMENT,
-        service_name="test-service",
-        description="Test service",
-        version="1.0.0",
-        audience="test-audience",
-    )
 
 
 @pytest.fixture(name="hydra_jwt_config")
@@ -547,21 +528,27 @@ class TestHydraIntrospectService:
 class TestHydraOAuth2ClientCredentialsService:
     """Various tests for the HydraOAuth2ClientCredentialsService class."""
 
-    def test_init(self, http_resource_public: AioHttpClientResource, application_config: BaseApplicationConfig) -> None:
+    def test_init(
+        self,
+        http_resource_public: AioHttpClientResource,
+        hydra_jwt_config: JWTBearerAuthenticationConfig,
+    ) -> None:
         """Test that __init__ properly initializes the service.
 
         Args:
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
-            application_config (BaseApplicationConfig): Application config fixture.
+            hydra_jwt_config (JWTBearerAuthenticationConfig): JWT configuration for Hydra.
         """
         service = HydraOAuth2ClientCredentialsService(
             identifier="hydra-oauth2",
             hydra_public_http_resource=http_resource_public,
-            application_config=application_config,
+            config=hydra_jwt_config,
+            default_audience="test-audience",
         )
 
         assert service._hydra_public_http_resource == http_resource_public
-        assert service._application_config == application_config
+        assert service._config is hydra_jwt_config
+        assert service._default_audience == "test-audience"
         assert service.CLIENT_CREDENTIALS_ENDPOINT == "/oauth2/token"
 
     def test_build_bearer_header(self) -> None:
@@ -607,18 +594,21 @@ class TestHydraOAuth2ClientCredentialsService:
 
     @pytest.mark.asyncio
     async def test_oauth2_client_credentials_success(
-        self, http_resource_public: AioHttpClientResource, application_config: BaseApplicationConfig
+        self,
+        http_resource_public: AioHttpClientResource,
+        hydra_jwt_config: JWTBearerAuthenticationConfig,
     ) -> None:
         """Test successful oauth2_client_credentials call.
 
         Args:
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
-            application_config (BaseApplicationConfig): Application config fixture.
+            hydra_jwt_config (JWTBearerAuthenticationConfig): JWT configuration for Hydra.
         """
         service = HydraOAuth2ClientCredentialsService(
             identifier="hydra-oauth2",
             hydra_public_http_resource=http_resource_public,
-            application_config=application_config,
+            config=hydra_jwt_config,
+            default_audience="test-audience",
         )
 
         client_id: HydraClientId = HydraClientId("test_client_id")
@@ -643,18 +633,21 @@ class TestHydraOAuth2ClientCredentialsService:
 
     @pytest.mark.asyncio
     async def test_oauth2_client_credentials_single_scope(
-        self, http_resource_public: AioHttpClientResource, application_config: BaseApplicationConfig
+        self,
+        http_resource_public: AioHttpClientResource,
+        hydra_jwt_config: JWTBearerAuthenticationConfig,
     ) -> None:
         """Test oauth2_client_credentials with single scope.
 
         Args:
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
-            application_config (BaseApplicationConfig): Application config fixture.
+            hydra_jwt_config (JWTBearerAuthenticationConfig): JWT configuration for Hydra.
         """
         service = HydraOAuth2ClientCredentialsService(
             identifier="hydra-oauth2",
             hydra_public_http_resource=http_resource_public,
-            application_config=application_config,
+            config=hydra_jwt_config,
+            default_audience="test-audience",
         )
 
         client_id: HydraClientId = HydraClientId("test_client_id")
@@ -691,20 +684,21 @@ class TestHydraOAuth2ClientCredentialsService:
     async def test_oauth2_client_credentials_error_status(
         self,
         http_resource_public: AioHttpClientResource,
-        application_config: BaseApplicationConfig,
+        hydra_jwt_config: JWTBearerAuthenticationConfig,
         status_code: HTTPStatus,
     ) -> None:
         """Test oauth2_client_credentials raises HydraOperationError on non-200 status.
 
         Args:
             http_resource_public (AioHttpClientResource): Public HTTP resource fixture.
-            application_config (BaseApplicationConfig): Application config fixture.
+            hydra_jwt_config (JWTBearerAuthenticationConfig): JWT configuration for Hydra.
             status_code (HTTPStatus): HTTP status code.
         """
         service = HydraOAuth2ClientCredentialsService(
             identifier="hydra-oauth2",
             hydra_public_http_resource=http_resource_public,
-            application_config=application_config,
+            config=hydra_jwt_config,
+            default_audience="test-audience",
         )
 
         client_id: HydraClientId = HydraClientId("test_client_id")

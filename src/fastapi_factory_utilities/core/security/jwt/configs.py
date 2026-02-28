@@ -28,6 +28,7 @@ class JWTBearerAuthenticationConfig(BaseModel):
 
     authorized_audiences: list[str] | None = Field(default=None, description="The authorized audiences.")
     issuer: OAuth2Issuer = Field(description="The authorized issuers.")
+    audience: str | None = Field(default=None, description="The audience.")
 
     @field_validator("authorized_audiences", mode="before")
     @classmethod

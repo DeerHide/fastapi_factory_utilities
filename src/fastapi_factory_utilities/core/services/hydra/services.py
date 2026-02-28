@@ -8,7 +8,6 @@ import aiohttp
 import jwt
 from pydantic import ValidationError
 
-from fastapi_factory_utilities.core.app import BaseApplicationConfig
 from fastapi_factory_utilities.core.plugins.aiohttp import (
     AioHttpClientResource,
 )
@@ -121,18 +120,21 @@ class HydraOAuth2ClientCredentialsService:
         self,
         identifier: str,
         hydra_public_http_resource: AioHttpClientResource,
-        application_config: BaseApplicationConfig,
+        config: JWTBearerAuthenticationConfig,
+        default_audience: str,
     ) -> None:
         """Instanciate the Hydra service.
 
         Args:
             identifier (str): The identifier of the Hydra OAuth2 client credentials service.
             hydra_public_http_resource (AioHttpClientResource): The Hydra public HTTP resource.
-            application_config (BaseApplicationConfig): The application config.
+            config (JWTBearerAuthenticationConfig): The JWT bearer authentication configuration.
+            default_audience (str): The default audience.
         """
         self._identifier: str = identifier
         self._hydra_public_http_resource: AioHttpClientResource = hydra_public_http_resource
-        self._application_config: BaseApplicationConfig = application_config
+        self._config: JWTBearerAuthenticationConfig = config
+        self._default_audience: str = default_audience
 
     @classmethod
     def build_bearer_header(cls, client_id: HydraClientId, client_secret: HydraClientSecret) -> str:
@@ -167,7 +169,7 @@ class HydraOAuth2ClientCredentialsService:
         Raises:
             HydraOperationError: If the client credentials request fails.
         """
-        enforced_audience: str = audience if audience is not None else self._application_config.audience
+        enforced_audience: str = audience if audience is not None else self._default_audience
         try:
             async with self._hydra_public_http_resource.acquire_client_session() as session:
                 async with session.post(
