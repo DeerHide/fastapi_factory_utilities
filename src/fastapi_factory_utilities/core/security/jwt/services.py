@@ -11,6 +11,7 @@ from fastapi_factory_utilities.core.security.types import JWTToken, OAuth2Issuer
 from .configs import JWTBearerAuthenticationConfig
 from .decoders import JWTBearerTokenDecoderAbstract
 from .exceptions import InvalidJWTError, InvalidJWTPayploadError, MissingJWTCredentialsError, NotVerifiedJWTError
+from .extraction_strategies import extract_token_from_request
 from .objects import JWTPayload
 from .verifiers import JWTVerifierAbstract
 
@@ -70,41 +71,6 @@ class JWTAuthenticationServiceAbstract(AuthenticationAbstract, Generic[JWTBearer
         """
         return self._jwt_decoder
 
-    @classmethod
-    def extract_authorization_header_from_request(cls, request: Request) -> str:
-        """Extract the authorization header from the request.
-
-        Args:
-            request (Request): The request object.
-
-        Returns:
-            str: The authorization header.
-
-        Raises:
-            MissingJWTCredentialsError: If the authorization header is missing.
-        """
-        authorization_header: str | None = request.headers.get("Authorization", None)
-        if not authorization_header:
-            raise MissingJWTCredentialsError(message="Missing Credentials")
-        return authorization_header
-
-    @classmethod
-    def extract_bearer_token_from_authorization_header(cls, authorization_header: str) -> JWTToken:
-        """Extract the bearer token from the authorization header.
-
-        Args:
-            authorization_header (str): The authorization header.
-
-        Returns:
-            JWTToken: The bearer token.
-
-        Raises:
-            InvalidJWTError: If the authorization header is invalid.
-        """
-        if not authorization_header.startswith("Bearer "):
-            raise InvalidJWTError(message="Invalid Credentials")
-        return JWTToken(authorization_header.split(sep=" ")[1])
-
     @property
     def payload(self) -> JWTBearerPayloadGeneric | None:
         """Get the JWT bearer payload.
@@ -129,10 +95,10 @@ class JWTAuthenticationServiceAbstract(AuthenticationAbstract, Generic[JWTBearer
             InvalidJWTPayploadError: If the JWT bearer token payload is invalid.
             NotVerifiedJWTError: If the JWT bearer token is not verified.
         """
-        authorization_header: str
         try:
-            authorization_header = self.extract_authorization_header_from_request(request=request)
-            self._jwt = self.extract_bearer_token_from_authorization_header(authorization_header=authorization_header)
+            self._jwt = extract_token_from_request(
+                request=request, jwt_bearer_authentication_config=self._jwt_bearer_authentication_config
+            )
         except (MissingJWTCredentialsError, InvalidJWTError) as e:
             return self.raise_exception(HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=str(e)))
 

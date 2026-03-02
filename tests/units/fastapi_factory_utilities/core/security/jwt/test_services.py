@@ -15,7 +15,6 @@ from fastapi_factory_utilities.core.security.jwt.decoders import (
 from fastapi_factory_utilities.core.security.jwt.exceptions import (
     InvalidJWTError,
     InvalidJWTPayploadError,
-    MissingJWTCredentialsError,
     NotVerifiedJWTError,
 )
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
@@ -25,7 +24,13 @@ from fastapi_factory_utilities.core.security.jwt.verifiers import (
     JWTNoneVerifier,
     JWTVerifierAbstract,
 )
-from fastapi_factory_utilities.core.security.types import JWTToken
+from fastapi_factory_utilities.core.security.types import (
+    JWTToken,
+    OAuth2Audience,
+    OAuth2Issuer,
+    OAuth2Scope,
+    OAuth2Subject,
+)
 
 _TEST_IDENTIFIER: str = "test-jwt-auth"
 _DEFAULT_ISSUER: str = "https://example.com"
@@ -43,7 +48,7 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         """
         return JWTBearerAuthenticationConfig(
             authorized_algorithms=["RS256"],
-            issuer=_DEFAULT_ISSUER,
+            issuer=OAuth2Issuer(_DEFAULT_ISSUER),
         )
 
     @pytest.fixture
@@ -78,14 +83,14 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         exp = now + datetime.timedelta(hours=1)
         nbf = now - datetime.timedelta(minutes=5)
 
-        return JWTPayload(  # type: ignore[arg-type]
-            scp="read write",
-            aud="api1 api2",
-            iss="https://example.com",
-            exp=int(exp.timestamp()),
-            iat=int(now.timestamp()),
-            nbf=int(nbf.timestamp()),
-            sub="user123",
+        return JWTPayload(
+            scp=[OAuth2Scope("read"), OAuth2Scope("write")],
+            aud=[OAuth2Audience("api1"), OAuth2Audience("api2")],
+            iss=OAuth2Issuer("https://example.com"),
+            exp=exp,
+            iat=now,
+            nbf=nbf,
+            sub=OAuth2Subject("user123"),
         )
 
     @pytest.fixture
@@ -123,79 +128,6 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         with pytest.raises(TypeError):
             # pylint: disable=abstract-class-instantiated,no-value-for-parameter
             JWTAuthenticationServiceAbstract()  # type: ignore[abstract]
-
-    def test_extract_authorization_header_from_request_success(self) -> None:
-        """Test extracting authorization header from request successfully."""
-        request = MagicMock(spec=Request)
-        request.headers = {"Authorization": "Bearer test.token.here"}
-
-        result = JWTAuthenticationServiceAbstract.extract_authorization_header_from_request(request=request)
-
-        assert result == "Bearer test.token.here"
-
-    def test_extract_authorization_header_from_request_missing(self) -> None:
-        """Test extracting authorization header when it's missing."""
-        request = MagicMock(spec=Request)
-        request.headers = {}
-
-        with pytest.raises(MissingJWTCredentialsError) as exc_info:
-            JWTAuthenticationServiceAbstract.extract_authorization_header_from_request(request=request)
-
-        assert "Missing Credentials" in str(exc_info.value)
-
-    def test_extract_authorization_header_from_request_none(self) -> None:
-        """Test extracting authorization header when it's None."""
-        request = MagicMock(spec=Request)
-        request.headers = {"Authorization": None}
-
-        with pytest.raises(MissingJWTCredentialsError) as exc_info:
-            JWTAuthenticationServiceAbstract.extract_authorization_header_from_request(request=request)
-
-        assert "Missing Credentials" in str(exc_info.value)
-
-    def test_extract_bearer_token_from_authorization_header_success(self) -> None:
-        """Test extracting bearer token from authorization header successfully."""
-        authorization_header = "Bearer test.token.here"
-
-        result = JWTAuthenticationServiceAbstract.extract_bearer_token_from_authorization_header(
-            authorization_header=authorization_header
-        )
-
-        assert result == JWTToken("test.token.here")
-        assert str(result) == "test.token.here"
-
-    def test_extract_bearer_token_from_authorization_header_invalid_prefix(self) -> None:
-        """Test extracting bearer token when prefix is invalid."""
-        authorization_header = "Basic test.token.here"
-
-        with pytest.raises(InvalidJWTError) as exc_info:
-            JWTAuthenticationServiceAbstract.extract_bearer_token_from_authorization_header(
-                authorization_header=authorization_header
-            )
-
-        assert "Invalid Credentials" in str(exc_info.value)
-
-    def test_extract_bearer_token_from_authorization_header_no_space(self) -> None:
-        """Test extracting bearer token when there's no space after Bearer."""
-        authorization_header = "Bearertest.token.here"
-
-        with pytest.raises(InvalidJWTError) as exc_info:
-            JWTAuthenticationServiceAbstract.extract_bearer_token_from_authorization_header(
-                authorization_header=authorization_header
-            )
-
-        assert "Invalid Credentials" in str(exc_info.value)
-
-    def test_extract_bearer_token_from_authorization_header_empty_token(self) -> None:
-        """Test extracting bearer token when token is empty."""
-        authorization_header = "Bearer "
-
-        result = JWTAuthenticationServiceAbstract.extract_bearer_token_from_authorization_header(
-            authorization_header=authorization_header
-        )
-
-        assert result == JWTToken("")
-        assert str(result) == ""
 
     def test_has_errors_initially_false(self, concrete_service: JWTAuthenticationServiceAbstract[JWTPayload]) -> None:
         """Test that has_errors returns False initially.
@@ -655,7 +587,7 @@ class TestConcreteJWTAuthService:  # pylint: disable=protected-access
         """
         return JWTBearerAuthenticationConfig(
             authorized_algorithms=["RS256"],
-            issuer=_DEFAULT_ISSUER,
+            issuer=OAuth2Issuer(_DEFAULT_ISSUER),
         )
 
     @pytest.fixture
@@ -687,7 +619,7 @@ class TestConcreteJWTAuthService:  # pylint: disable=protected-access
             jwt_bearer_authentication_config=jwt_config,
             jwks_store=mock_jwks_store,
         )
-        decoder._payload_model = JWTPayload  # pylint: disable=protected-access
+        decoder._payload_model = JWTPayload  # type: ignore[assignment] # pylint: disable=protected-access
         return ConcreteJWTAuthService(
             identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
@@ -710,7 +642,7 @@ class TestConcreteJWTAuthService:  # pylint: disable=protected-access
             jwt_bearer_authentication_config=jwt_config,
             jwks_store=mock_jwks_store,
         )
-        decoder._payload_model = JWTPayload  # pylint: disable=protected-access
+        decoder._payload_model = JWTPayload  # type: ignore[assignment] # pylint: disable=protected-access
         service = ConcreteJWTAuthService(
             identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
@@ -765,7 +697,7 @@ class TestConcreteJWTAuthService:  # pylint: disable=protected-access
             jwt_bearer_authentication_config=jwt_config,
             jwks_store=mock_jwks_store,
         )
-        decoder._payload_model = JWTPayload  # pylint: disable=protected-access
+        decoder._payload_model = JWTPayload  # type: ignore[assignment] # pylint: disable=protected-access
         service = ConcreteJWTAuthService(
             identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
@@ -789,7 +721,7 @@ class TestConcreteJWTAuthService:  # pylint: disable=protected-access
             jwt_bearer_authentication_config=jwt_config,
             jwks_store=mock_jwks_store,
         )
-        decoder._payload_model = JWTPayload  # pylint: disable=protected-access
+        decoder._payload_model = JWTPayload  # type: ignore[assignment] # pylint: disable=protected-access
         service = ConcreteJWTAuthService(
             identifier=_TEST_IDENTIFIER,
             jwt_bearer_authentication_config=jwt_config,
@@ -816,14 +748,14 @@ class TestConcreteJWTAuthService:  # pylint: disable=protected-access
         exp = now + datetime.timedelta(hours=1)
         nbf = now - datetime.timedelta(minutes=5)
 
-        jwt_payload = JWTPayload(  # type: ignore[arg-type]
-            scp="read write",
-            aud="api1 api2",
-            iss="https://example.com",
-            exp=int(exp.timestamp()),
-            iat=int(now.timestamp()),
-            nbf=int(nbf.timestamp()),
-            sub="user123",
+        jwt_payload = JWTPayload(
+            scp=[OAuth2Scope("read"), OAuth2Scope("write")],
+            aud=[OAuth2Audience("api1"), OAuth2Audience("api2")],
+            iss=OAuth2Issuer("https://example.com"),
+            exp=exp,
+            iat=now,
+            nbf=nbf,
+            sub=OAuth2Subject("user123"),
         )
 
         service._jwt_decoder.decode_payload = AsyncMock(return_value=jwt_payload)  # type: ignore[assignment]

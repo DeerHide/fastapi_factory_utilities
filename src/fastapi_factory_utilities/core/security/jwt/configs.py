@@ -1,5 +1,6 @@
 """Provides the configurations for the JWT bearer token."""
 
+from enum import StrEnum
 from typing import ClassVar, Self
 
 from fastapi import Request
@@ -17,6 +18,14 @@ from fastapi_factory_utilities.core.utils.configs import (
 from .exceptions import JWTBearerAuthenticationConfigBuilderError
 
 
+class JWTLocation(StrEnum):
+    """JWT location."""
+
+    HEADER = "header"
+    AUTHORIZATION_BEARER = "authorization_bearer"
+    COOKIE = "cookie"
+
+
 class JWTBearerAuthenticationConfig(BaseModel):
     """JWT bearer token authentication configuration."""
 
@@ -29,6 +38,13 @@ class JWTBearerAuthenticationConfig(BaseModel):
     authorized_audiences: list[str] | None = Field(default=None, description="The authorized audiences.")
     issuer: OAuth2Issuer = Field(description="The authorized issuers.")
     audience: str | None = Field(default=None, description="The audience.")
+
+    # JWT location
+    authorized_locations: list[JWTLocation] = Field(
+        default_factory=lambda: [JWTLocation.AUTHORIZATION_BEARER], description="The authorized locations."
+    )
+    header_name: str | None = Field(default=None, description="The header name.")
+    cookie_name: str | None = Field(default=None, description="The cookie name.")
 
     @field_validator("authorized_audiences", mode="before")
     @classmethod
