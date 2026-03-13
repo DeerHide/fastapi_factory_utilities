@@ -1,6 +1,6 @@
 """Provide the configuration for the app server."""
 
-from typing import Any, ClassVar, Generic, TypeVar, get_args
+from typing import Any, ClassVar, Generic, Literal, TypeVar, get_args
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -18,6 +18,16 @@ from .enums import EnvironmentEnum
 def default_allow_all() -> list[str]:
     """Default allow all."""
     return ["*"]
+
+
+class AppCsrfConfig(BaseModel):
+    """App CSRF config."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    secret: str
+    cookie_samesite: Literal["Lax", "Strict", "None"] = "Strict"
+    cookie_secure: bool = True
 
 
 class CorsConfig(BaseModel):
@@ -83,6 +93,7 @@ class RootConfig(BaseModel):
     server: ServerConfig = Field(description="Server configuration", default_factory=ServerConfig)
     cors: CorsConfig = Field(description="CORS configuration", default_factory=CorsConfig)
     development: DevelopmentConfig = Field(description="Development configuration", default_factory=DevelopmentConfig)
+    csrf: AppCsrfConfig | None = Field(description="CSRF configuration", default=None)
     # Logging configuration
     logging: list[LoggingConfig] = Field(description="Logging configuration", default_factory=list)
     logging_mode: LogModeEnum = Field(default=LogModeEnum.CONSOLE, description="Log mode")

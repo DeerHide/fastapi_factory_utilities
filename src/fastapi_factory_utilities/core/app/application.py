@@ -7,13 +7,16 @@ from typing import Any, ClassVar
 
 from beanie import Document
 from fastapi import FastAPI
+from fastapi_csrf_protect import CsrfProtect
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.api import api
-from fastapi_factory_utilities.core.app.config import RootConfig
-from fastapi_factory_utilities.core.app.fastapi_builder import FastAPIBuilder
 from fastapi_factory_utilities.core.plugins import PluginAbstract
 from fastapi_factory_utilities.core.services.status.services import StatusService
+
+from .config import RootConfig
+from .csrf import DependsCsrfProtect
+from .fastapi_builder import FastAPIBuilder
 
 _logger: BoundLogger = get_logger(__name__)
 
@@ -89,9 +92,46 @@ class ApplicationAbstract(ABC):
             raise ValueError(f"Key {key} already exists in the state.")
         self._add_to_state[key] = value
 
+    def configure_csrf(self) -> None:
+        """Configure the CSRF protect.
+
+        This method is an optional method to configure the CSRF protect.
+        If you need CSRF protect, you must add it in your implementation of the configure method.
+
+        Example:
+        ```python
+        def configure(self) -> None:
+            self.configure_csrf()
+        ```
+        """
+        config: RootConfig = self.get_config()
+        csrf_config = config.csrf
+        if csrf_config is None:
+            raise ValueError("CSRF config not found in the root config.")
+        CsrfProtect.load_config(
+            settings=lambda: [
+                ("secret_key", csrf_config.secret),
+                ("cookie_samesite", csrf_config.cookie_samesite.lower()),
+                ("cookie_secure", csrf_config.cookie_secure),
+            ]
+        )
+        csrf_protect: CsrfProtect = CsrfProtect()
+        DependsCsrfProtect.import_to_state(state=self.get_asgi_app().state, csrf_protect=csrf_protect)
+
     @abstractmethod
     def configure(self) -> None:
-        """Configure the application."""
+        """Configure the application.
+
+        This method is the main method to configure the application.
+        It is called by the setup method and must be implemented by the subclass.
+
+        Example:
+        ```python
+        def configure(self) -> None:
+            # Configure the CSRF protect through the helper method
+            self.configure_csrf()
+        ```
+        """
         raise NotImplementedError
 
     @abstractmethod
