@@ -115,7 +115,6 @@ class TestIntegrationOpentelemetryPlugin:
                 service_namespace="test",
                 description="test",
                 version="0.0.0",
-                audience="test",
             )
         )
 
