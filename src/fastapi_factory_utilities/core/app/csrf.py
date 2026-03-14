@@ -1,10 +1,15 @@
 """Provides the dependencies for the CSRF protect."""
 
+from http import HTTPStatus
 from typing import ClassVar
 
 from fastapi import Request
 from fastapi.datastructures import State
+from fastapi.responses import JSONResponse
 from fastapi_csrf_protect import CsrfProtect
+from structlog.stdlib import BoundLogger, get_logger
+
+_logger: BoundLogger = get_logger(__package__)
 
 
 class DependsCsrfProtect:
@@ -28,3 +33,9 @@ class DependsCsrfProtect:
 
 
 depends_csrf_protect: DependsCsrfProtect = DependsCsrfProtect()
+
+
+async def csrf_protect_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """CSRF exception handler."""
+    _logger.warning("CSRF error", request=request, exc=exc)
+    return JSONResponse(status_code=HTTPStatus.FORBIDDEN, content={"detail": "CSRF token is invalid"})
