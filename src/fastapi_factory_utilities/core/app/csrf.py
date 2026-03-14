@@ -3,10 +3,11 @@
 from http import HTTPStatus
 from typing import ClassVar
 
-from fastapi import Request
+from fastapi import FastAPI, Request
 from fastapi.datastructures import State
 from fastapi.responses import JSONResponse
 from fastapi_csrf_protect import CsrfProtect
+from fastapi_csrf_protect.exceptions import CsrfProtectError
 from structlog.stdlib import BoundLogger, get_logger
 
 _logger: BoundLogger = get_logger(__package__)
@@ -39,3 +40,8 @@ async def csrf_protect_exception_handler(request: Request, exc: Exception) -> JS
     """CSRF exception handler."""
     _logger.warning("CSRF error", request=request, exc=exc)
     return JSONResponse(status_code=HTTPStatus.FORBIDDEN, content={"detail": "CSRF token is invalid"})
+
+
+def register_exception_handler(app: FastAPI) -> None:
+    """Register the CSRF exception handler."""
+    app.add_exception_handler(CsrfProtectError, csrf_protect_exception_handler)
