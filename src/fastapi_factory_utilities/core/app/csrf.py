@@ -42,6 +42,6 @@ async def csrf_protect_exception_handler(request: Request, exc: Exception) -> JS
     return JSONResponse(status_code=HTTPStatus.FORBIDDEN, content={"detail": "CSRF token is invalid"})
 
 
-def register_exception_handler(app: FastAPI) -> None:
+def register_csrf_protect_exception_handler(app: FastAPI) -> None:
     """Register the CSRF exception handler."""
     app.add_exception_handler(CsrfProtectError, csrf_protect_exception_handler)

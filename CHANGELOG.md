@@ -10,7 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Core: CSRF exception handler with structured logging returning 403 on invalid token
-- Core: `register_exception_handler(app)` to register CSRF exception handler on FastAPI app
+- Core: `register_csrf_protect_exception_handler(app)` to register CSRF exception handler on FastAPI app
+- Core: validation exception handler and `register_exception_handlers(app)` for FastAPI
+
+### Changed
+
+- Core: CSRF registration function renamed to `register_csrf_protect_exception_handler` (from `register_exception_handler`)
 
 ## [0.21.1] - 2026-03-14
 

@@ -7,6 +7,7 @@ from .config import (
     BaseApplicationConfig,
     RootConfig,
 )
+from .csrf import depends_csrf_protect, register_csrf_protect_exception_handler
 from .depends import (
     DependsApplicationConfig,
     DependsRootConfig,
@@ -16,6 +17,7 @@ from .depends import (
 )
 from .enums import EnvironmentEnum
 from .exceptions import ConfigBuilderError, UnableToAcquireApplicationConfigError
+from .handlers import register_exception_handlers
 
 __all__: list[str] = [
     "AppCsrfConfig",
@@ -30,5 +32,8 @@ __all__: list[str] = [
     "UnableToAcquireApplicationConfigError",
     "depends_application_config",
     "depends_csrf_config",
+    "depends_csrf_protect",
     "depends_root_config",
+    "register_csrf_protect_exception_handler",
+    "register_exception_handlers",
 ]
