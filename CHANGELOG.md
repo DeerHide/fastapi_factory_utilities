@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Dev: explicit black dependency from pyproject.toml (formatting remains via pre-commit)
+
 ## [0.21.0] - 2026-03-13
 
 ### Added
