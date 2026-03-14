@@ -184,9 +184,18 @@ jobs:
         run: |
           poetry self add poetry-dynamic-versioning
           poetry build
+      - name: Extract changelog for release
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md \
+            | sed '/^[[:space:]]*$/d' \
+            > release_notes.txt
+          echo "Extracted release notes for v$VERSION:"
+          cat release_notes.txt
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: release_notes.txt
           files: |
             dist/fastapi_factory_utilities-*.tar.gz
             dist/fastapi_factory_utilities-*.whl
