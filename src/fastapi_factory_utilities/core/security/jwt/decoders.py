@@ -7,14 +7,14 @@ https://www.iana.org/assignments/jwt/jwt.xhtml#claims
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar, get_args
 
-from jwt import InvalidTokenError, decode, get_unverified_header
+from jwt import ExpiredSignatureError, InvalidTokenError, decode, get_unverified_header
 from jwt.api_jwk import PyJWK
 from pydantic import ValidationError
 
 from fastapi_factory_utilities.core.security.types import JWTToken, OAuth2Issuer, OAuth2Subject
 
 from .configs import JWTBearerAuthenticationConfig
-from .exceptions import InvalidJWTError, InvalidJWTPayploadError
+from .exceptions import ExpiredJWTError, InvalidJWTError, InvalidJWTPayploadError
 from .objects import JWTPayload
 from .stores import JWKStoreAbstract
 
@@ -41,7 +41,8 @@ async def decode_jwt_token_payload(
         dict[str, Any]: The decoded JWT bearer token payload.
 
     Raises:
-        JWTBearerTokenDecoderError: If the JWT bearer token is invalid.
+        ExpiredJWTError: If the JWT bearer token is expired.
+        InvalidJWTError: If the JWT bearer token is invalid.
     """
     # Additional kwargs for the decode function
     kwargs: dict[str, Any] = {}
@@ -59,6 +60,8 @@ async def decode_jwt_token_payload(
             options={"verify_signature": True},
             **kwargs,
         )
+    except ExpiredSignatureError as e:
+        raise ExpiredJWTError("The JWT bearer token is expired") from e
     except InvalidTokenError as e:
         raise InvalidJWTError("Failed to decode the JWT bearer token payload") from e
 

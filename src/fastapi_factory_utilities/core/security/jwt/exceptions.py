@@ -29,3 +29,7 @@ class JWTBearerAuthenticationConfigBuilderError(FastAPIFactoryUtilitiesError):
 
 class HydraJWKSStoreError(FastAPIFactoryUtilitiesError):
     """Hydra JWKS store error."""
+
+
+class ExpiredJWTError(InvalidJWTError):
+    """Expired JWT error."""
