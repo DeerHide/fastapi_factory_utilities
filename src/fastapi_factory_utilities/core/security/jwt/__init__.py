@@ -7,6 +7,7 @@ from .configs import (
 )
 from .decoders import GenericJWTBearerTokenDecoder, JWTBearerTokenDecoderAbstract, decode_jwt_token_payload
 from .exceptions import (
+    ExpiredJWTError,
     InvalidJWTError,
     InvalidJWTPayploadError,
     JWTAuthenticationError,
@@ -27,6 +28,7 @@ from .verifiers import GenericHydraJWTVerifier, JWTNoneVerifier, JWTVerifierAbst
 __all__: list[str] = [
     "DependsHydraJWKStoreMemory",
     "DependsJWTBearerAuthenticationConfig",
+    "ExpiredJWTError",
     "GenericHydraJWTVerifier",
     "GenericJWTBearerTokenDecoder",
     "InvalidJWTError",
