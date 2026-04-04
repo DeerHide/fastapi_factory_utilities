@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-04-04
+
 ### Added
 
 - Core: `core.utils.queries` package — `QueryField`, `QuerySort`, `QueryFieldOperatorEnum`, `QueryResolver`, and `QueryAbstract` for filter/sort query parsing and coercion from FastAPI requests
@@ -143,7 +145,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v0.22.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v0.21.1...v0.22.0
 [0.21.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v0.21.0...v0.21.1
