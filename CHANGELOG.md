@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Core: `core.utils.queries` package — `QueryField`, `QuerySort`, `QueryFieldOperatorEnum`, `QueryResolver`, and `QueryAbstract` for filter/sort query parsing and coercion from FastAPI requests
+- Core: unit tests for query types, field names, resolver behavior, `QueryAbstract`, and docstring-aligned examples
+
+### Changed
+
+- Core: pagination helpers — `resolve_offset` moved to `paginations.helpers`; `paginations` re-exports `PaginationPageOffset`, `PaginationSize`, and `resolve_offset` only
+
 ## [0.22.1] - 2026-03-17
 
 ### Fixed
