@@ -1,15 +1,10 @@
 """Unit tests for pagination utilities."""
 
-from unittest.mock import MagicMock
-
 import pytest
-from fastapi import Request
 
 from fastapi_factory_utilities.core.utils.paginations import (
     PaginationPageOffset,
     PaginationSize,
-    depends_pagination_page_offset,
-    depends_pagination_page_size,
     resolve_offset,
 )
 
@@ -141,53 +136,3 @@ class TestResolveOffset:
         )
 
         assert result == expected
-
-
-class TestDependsPaginationPageOffset:
-    """Unit tests for depends_pagination_page_offset function."""
-
-    def test_returns_default_when_missing(self) -> None:
-        """Test returns default when query param is missing."""
-        mock_request = MagicMock(spec=Request)
-        mock_request.query_params.get = MagicMock(return_value=None)
-
-        result = depends_pagination_page_offset(mock_request)
-
-        assert isinstance(result, PaginationPageOffset)
-        assert result == PaginationPageOffset.default()
-
-    def test_returns_offset_when_valid(self) -> None:
-        """Test returns PaginationPageOffset when query param is valid."""
-        expected_offset = 5
-        mock_request = MagicMock(spec=Request)
-        mock_request.query_params.get = MagicMock(return_value=str(expected_offset))
-
-        result = depends_pagination_page_offset(mock_request)
-
-        assert isinstance(result, PaginationPageOffset)
-        assert result == PaginationPageOffset(expected_offset)
-
-
-class TestDependsPaginationPageSize:
-    """Unit tests for depends_pagination_page_size function."""
-
-    def test_returns_default_when_missing(self) -> None:
-        """Test returns default when query param is missing."""
-        mock_request = MagicMock(spec=Request)
-        mock_request.query_params.get = MagicMock(return_value=None)
-
-        result = depends_pagination_page_size(mock_request)
-
-        assert isinstance(result, PaginationSize)
-        assert result == PaginationSize.default()
-
-    def test_returns_size_when_valid(self) -> None:
-        """Test returns PaginationSize when query param is valid."""
-        expected_size = 100
-        mock_request = MagicMock(spec=Request)
-        mock_request.query_params.get = MagicMock(return_value=str(expected_size))
-
-        result = depends_pagination_page_size(mock_request)
-
-        assert isinstance(result, PaginationSize)
-        assert result == PaginationSize(expected_size)
