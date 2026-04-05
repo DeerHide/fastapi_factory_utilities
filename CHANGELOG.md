@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Core: `QueryResolver.from_model` registers query-string keys for nested filter models (non-`QueryAbstract` `BaseModel` fields produce dotted paths such as `object1.field1`) and for `Field` `validation_alias` / `AliasChoices`; optional-union nested models are supported when exactly one branch is such a model; self-referential nested graphs are skipped safely after the first visit
+- Core: `QueryAbstract.get_fields` flattens nested filter models into entries keyed by each nested `QueryField` name (so ODM filters keep dotted Mongo paths)
+- ODM: `ODMQueryBuilder` and `ODMFindQuery` in `odm_plugin.queries` to translate `QueryAbstract` into MongoDB match filters and Beanie `find` kwargs (`skip`, `limit`, `sort`), including multi-operation merge per field
+- Tests: unit tests for the ODM query builder; integration tests with Beanie/MongoDB and a FastAPI-style resolver chain
+
 ## [0.23.0] - 2026-04-04
 
 ### Added
