@@ -87,7 +87,9 @@ class TestQueryFields:
                 "page": 1,
                 "page_size": 10,
                 "sort": ["name"],
-                "fields": {"name": {"name": "name", "operator": "eq", "value": "John"}},
+                "fields": {
+                    "name": {"name": "name", "operations": [{"operator": "eq", "value": "John"}]},
+                },
             }
 
     def test_simple_fastapi_app_with_unauthorized_field(self, simple_fastapi_app_permissive: FastAPI) -> None:
@@ -147,7 +149,23 @@ class TestQueryFields:
             response = client.get("/?page=1&page_size=10&sort=name&age[gt]=21")
             assert response.status_code == HTTPStatus.OK
             assert response.json()["fields"] == {
-                "age": {"name": "age", "operator": "gt", "value": 21},
+                "age": {"name": "age", "operations": [{"operator": "gt", "value": 21}]},
+            }
+
+    def test_same_base_field_multiple_operators(self, extended_fastapi_app: FastAPI) -> None:
+        """``age[gt]`` and ``age[lt]`` both appear under one ``age`` field as two operations."""
+        client = TestClient(extended_fastapi_app)
+        with client:
+            response = client.get("/?page=1&page_size=10&sort=name&age[gt]=21&age[lt]=30")
+            assert response.status_code == HTTPStatus.OK
+            assert response.json()["fields"] == {
+                "age": {
+                    "name": "age",
+                    "operations": [
+                        {"operator": "gt", "value": 21},
+                        {"operator": "lt", "value": 30},
+                    ],
+                },
             }
 
     def test_in_operator_list_coercion(self, extended_fastapi_app: FastAPI) -> None:
@@ -157,5 +175,5 @@ class TestQueryFields:
             response = client.get("/?page=1&page_size=10&sort=name&id[in]=7&id[in]=8&id[in]=9")
             assert response.status_code == HTTPStatus.OK
             assert response.json()["fields"] == {
-                "id": {"name": "id", "operator": "in", "value": [7, 8, 9]},
+                "id": {"name": "id", "operations": [{"operator": "in", "value": [7, 8, 9]}]},
             }

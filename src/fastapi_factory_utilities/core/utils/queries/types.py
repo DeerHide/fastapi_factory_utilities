@@ -1,9 +1,9 @@
 """Provides the types for the query utilities."""
 
 import re
-from typing import Any, ClassVar, Generic, TypeVar, override
+from typing import Any, ClassVar, Generic, TypeVar
 
-from pydantic import GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic import BaseModel, ConfigDict, Field, GetCoreSchemaHandler, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
@@ -98,16 +98,26 @@ class RawQueryFieldName(str):
 T = TypeVar("T")
 
 
-class QueryField(Generic[T]):
+class QueryFieldOperation(BaseModel, Generic[T]):
+    """Query field operation type."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    operator: QueryFieldOperatorEnum
+    value: T
+
+
+class QueryField(BaseModel, Generic[T]):
     """Query field type."""
 
-    __hash__ = None  # type: ignore[assignment]
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
-    @classmethod
-    def extract_field_and_operator_from_query_field(
-        cls, query_field: str
-    ) -> tuple[QueryFieldName, QueryFieldOperatorEnum]:
-        """Extract the field and operator from the query field."""
+    name: QueryFieldName
+    operations: list[QueryFieldOperation[T]] = Field(default_factory=list)
+
+    @staticmethod
+    def extract_field_and_operator_from_query_field(query_field: str) -> tuple[QueryFieldName, QueryFieldOperatorEnum]:
+        """Parse a raw query parameter name into base field name and operator."""
         if "[" in query_field:
             if query_field.count("[") != 1 or not query_field.endswith("]"):
                 raise ValueError("Malformed bracket operator in query field name.")
@@ -124,112 +134,6 @@ class QueryField(Generic[T]):
         if "]" in query_field:
             raise ValueError("Malformed query field name: stray ']'.")
         return QueryFieldName(query_field.strip()), QueryFieldOperatorEnum.EQ
-
-    def __init__(self, raw_query_field: RawQueryFieldName, value: T) -> None:
-        """Initialize the QueryField."""
-        self._name: QueryFieldName
-        self._operator: QueryFieldOperatorEnum
-        self._value: T
-        self._name, self._operator = self.extract_field_and_operator_from_query_field(query_field=raw_query_field)
-        self._value = value
-
-    @property
-    def name(self) -> QueryFieldName:
-        """Get the name of the query field."""
-        return self._name
-
-    @property
-    def operator(self) -> QueryFieldOperatorEnum:
-        """Get the operator of the query field."""
-        return self._operator
-
-    @property
-    def value(self) -> T:
-        """Get the value of the query field."""
-        return self._value
-
-    def __str__(self) -> str:
-        """Get the string representation of the query field."""
-        return f"{self.name}[{self.operator}]={self.value}"
-
-    def __repr__(self) -> str:
-        """Get the representation of the query field."""
-        return f"QueryField(name={self.name}, operator={self.operator}, value={self.value})"
-
-    def __eq__(self, other: object) -> bool:
-        """Return whether another field matches name, operator, and value."""
-        if not isinstance(other, QueryField):
-            return NotImplemented
-        return self.name == other.name and self.operator == other.operator and self.value == other.value
-
-    @override
-    def __dict__(self) -> dict[str, Any]:  # type: ignore[override]
-        """Get the dictionary representation of the query field."""
-        return {
-            "name": self.name,
-            "operator": self.operator,
-            "value": self.value,
-        }
-
-    @classmethod
-    def _serialize_query_field(cls, instance: "QueryField[T]") -> dict[str, Any]:
-        """Serialize ``QueryField`` to a JSON-compatible dict for Pydantic / FastAPI."""
-        return {
-            "name": str(instance.name),
-            "operator": instance.operator.value,
-            "value": instance.value,
-        }
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls,
-        _source: Any,  # pylint: disable=invalid-name
-        _handler: GetCoreSchemaHandler,  # pylint: disable=invalid-name
-    ) -> core_schema.CoreSchema:
-        """Core schema: accept ``QueryField`` instances or dicts; serialize to a JSON object."""
-        ser_schema = core_schema.plain_serializer_function_ser_schema(
-            cls._serialize_query_field,
-            return_schema=core_schema.dict_schema(
-                keys_schema=core_schema.str_schema(),
-                values_schema=core_schema.any_schema(),
-            ),
-        )
-        from_dict = core_schema.no_info_after_validator_function(
-            lambda value: cls(RawQueryFieldName(value["name"]), value["value"]),
-            core_schema.dict_schema(
-                keys_schema=core_schema.str_schema(),
-                values_schema=core_schema.any_schema(),
-            ),
-            serialization=ser_schema,
-        )
-        return core_schema.union_schema(
-            [
-                core_schema.is_instance_schema(cls, serialization=ser_schema),
-                from_dict,
-            ],
-        )
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        _core_schema: core_schema.CoreSchema,  # pylint: disable=invalid-name
-        _handler: GetJsonSchemaHandler,  # pylint: disable=invalid-name
-    ) -> JsonSchemaValue:
-        """Get the JSON schema for the ``QueryField`` type."""
-        return {
-            "type": "object",
-            "description": "Query field.",
-            "properties": {
-                "name": {"type": "string", "description": "Query field name."},
-                "operator": {
-                    "type": "string",
-                    "description": "Query field operator.",
-                    "enum": [operator.value for operator in QueryFieldOperatorEnum],
-                },
-                "value": {"description": "Filter value."},
-            },
-            "required": ["name", "operator", "value"],
-        }
 
 
 class RawQuerySort(str):
@@ -274,125 +178,27 @@ class RawQuerySort(str):
         return {"type": "string", "description": "Raw query sort"}
 
 
-class QuerySort:
+class QuerySort(BaseModel):
     """Query sort type."""
 
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    name: QueryFieldName
+    direction: QuerySortDirectionEnum
+
+    @staticmethod
+    def _raw_sort_to_parts(raw: str) -> dict[str, Any]:
+        if raw.startswith("-"):
+            return {"name": QueryFieldName(raw[1:]), "direction": QuerySortDirectionEnum.DESCENDING}
+        if raw.startswith("+"):
+            return {"name": QueryFieldName(raw[1:]), "direction": QuerySortDirectionEnum.ASCENDING}
+        return {"name": QueryFieldName(raw), "direction": QuerySortDirectionEnum.ASCENDING}
+
+    @model_validator(mode="before")
     @classmethod
-    def extract_field_and_order_from_query_sort(cls, query_sort: str) -> tuple[QueryFieldName, QuerySortDirectionEnum]:
-        """Extract the field and order from the query sort."""
-        if query_sort.startswith("-"):
-            return QueryFieldName(query_sort[1:]), QuerySortDirectionEnum.DESCENDING
-        if query_sort.startswith("+"):
-            return QueryFieldName(query_sort[1:]), QuerySortDirectionEnum.ASCENDING
-        return QueryFieldName(query_sort), QuerySortDirectionEnum.ASCENDING
-
-    def __init__(self, value: RawQuerySort) -> None:
-        """Initialize the QuerySort."""
-        self._name: QueryFieldName
-        self._direction: QuerySortDirectionEnum
-        self._name, self._direction = self.extract_field_and_order_from_query_sort(query_sort=value)
-
-    @property
-    def name(self) -> QueryFieldName:
-        """Get the name of the query sort."""
-        return self._name
-
-    @property
-    def direction(self) -> QuerySortDirectionEnum:
-        """Get the direction of the query sort."""
-        return self._direction
-
-    def __str__(self) -> str:
-        """Get the string representation of the query sort."""
-        return f"{self.name}[{self.direction}]"
-
-    def __repr__(self) -> str:
-        """Get the representation of the query sort."""
-        return f"QuerySort(name={self.name}, direction={self.direction})"
-
-    def __eq__(self, other: object) -> bool:
-        """Return whether another sort has the same field name and direction."""
-        if not isinstance(other, QuerySort):
-            return NotImplemented
-        return self.name == other.name and self.direction == other.direction
-
-    def __hash__(self) -> int:
-        """Hash by field name and direction."""
-        return hash((self.name, self.direction))
-
-    @override
-    def __dict__(self) -> dict[str, Any]:  # type: ignore[override]
-        """Get the dictionary representation of the query sort."""
-        return {"name": self.name, "direction": self.direction}
-
-    @classmethod
-    def _serialize_query_sort(cls, instance: "QuerySort") -> dict[str, Any]:
-        """Serialize ``QuerySort`` to a JSON-compatible dict for Pydantic / FastAPI."""
-        return {
-            "name": str(instance.name),
-            "direction": instance.direction.value,
-        }
-
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls,
-        _source: Any,  # pylint: disable=invalid-name
-        _handler: GetCoreSchemaHandler,  # pylint: disable=invalid-name
-    ) -> core_schema.CoreSchema:
-        """Core schema: accept ``QuerySort`` instances, raw sort strings, or serialized dicts."""
-
-        def from_dict(value: dict[str, Any]) -> QuerySort:
-            name = value["name"]
-            direction = value["direction"]
-            if direction in (QuerySortDirectionEnum.DESCENDING, QuerySortDirectionEnum.DESCENDING.value):
-                return cls(RawQuerySort(f"-{name}"))
-            return cls(RawQuerySort(str(name)))
-
-        ser_schema = core_schema.plain_serializer_function_ser_schema(
-            cls._serialize_query_sort,
-            return_schema=core_schema.dict_schema(
-                keys_schema=core_schema.str_schema(),
-                values_schema=core_schema.any_schema(),
-            ),
-        )
-        from_str = core_schema.no_info_after_validator_function(
-            lambda v: cls(RawQuerySort(v)),
-            core_schema.str_schema(),
-            serialization=ser_schema,
-        )
-        from_dict_schema = core_schema.no_info_after_validator_function(
-            from_dict,
-            core_schema.dict_schema(
-                keys_schema=core_schema.str_schema(),
-                values_schema=core_schema.any_schema(),
-            ),
-            serialization=ser_schema,
-        )
-        return core_schema.union_schema(
-            [
-                core_schema.is_instance_schema(cls, serialization=ser_schema),
-                from_str,
-                from_dict_schema,
-            ],
-        )
-
-    @classmethod
-    def __get_pydantic_json_schema__(
-        cls,
-        _core_schema: core_schema.CoreSchema,  # pylint: disable=invalid-name
-        _handler: GetJsonSchemaHandler,  # pylint: disable=invalid-name
-    ) -> JsonSchemaValue:
-        """Get the JSON schema for the QuerySort type."""
-        return {
-            "type": "object",
-            "description": "Query sort list.",
-            "properties": {
-                "name": {"type": "string", "description": "Query sort name."},
-                "direction": {
-                    "type": "string",
-                    "description": "Query sort direction.",
-                    "enum": [direction.value for direction in QuerySortDirectionEnum],
-                },
-            },
-            "required": ["name", "direction"],
-        }
+    def _from_raw_sort(cls, data: Any) -> Any:
+        if isinstance(data, RawQuerySort):
+            return cls._raw_sort_to_parts(str(data))
+        if isinstance(data, str):
+            return cls._raw_sort_to_parts(data)
+        return data

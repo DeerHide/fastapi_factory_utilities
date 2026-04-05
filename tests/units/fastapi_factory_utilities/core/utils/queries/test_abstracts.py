@@ -13,9 +13,10 @@ from fastapi_factory_utilities.core.utils.queries import (
     QueryAbstract,
     QueryField,
     QueryFieldName,
+    QueryFieldOperation,
+    QueryFieldOperatorEnum,
     QueryResolver,
     QuerySort,
-    RawQueryFieldName,
     RawQuerySort,
 )
 
@@ -67,10 +68,14 @@ class TestQueryAbstract:
             assert response.status_code == HTTPStatus.OK
             assert content.page == PaginationPageOffset(1)
             assert content.page_size == PaginationSize(10)
-            assert content.sorts == [QuerySort(value=RawQuerySort("name"))]
+            assert content.sorts == [QuerySort.model_validate(RawQuerySort("name"))]
             assert content.get_fields() == {
-                QueryFieldName("name"): QueryField(raw_query_field=RawQueryFieldName("name"), value="Ada"),
+                QueryFieldName("name"): QueryField(
+                    name=QueryFieldName("name"),
+                    operations=[QueryFieldOperation(operator=QueryFieldOperatorEnum.EQ, value="Ada")],
+                ),
                 QueryFieldName("email"): QueryField(
-                    raw_query_field=RawQueryFieldName("email"), value="ada@example.com"
+                    name=QueryFieldName("email"),
+                    operations=[QueryFieldOperation(operator=QueryFieldOperatorEnum.EQ, value="ada@example.com")],
                 ),
             }

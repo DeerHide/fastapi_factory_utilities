@@ -17,7 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from fastapi_factory_utilities.core.utils.paginations import PaginationPageOffset, PaginationSize, resolve_offset
 
-from .types import QueryField, QueryFieldName, QuerySort, RawQueryFieldName
+from .enums import QueryFieldOperatorEnum
+from .types import QueryField, QueryFieldName, QueryFieldOperation, QuerySort
 
 
 class QueryAbstract(BaseModel, ABC):
@@ -39,6 +40,10 @@ class QueryAbstract(BaseModel, ABC):
     def get_fields(self) -> dict[QueryFieldName, QueryField[Any]]:
         """Get the fields.
 
+        Keys match each :class:`QueryField` :attr:`~QueryField.name` (e.g. dotted paths from the
+        resolver). Nested filter models (:class:`pydantic.BaseModel` subclasses other than
+        :class:`QueryAbstract`) are walked recursively.
+
         Returns:
             dict[QueryFieldName, QueryField[Any]]: The fields as a dictionary of query fields.
         """
@@ -51,7 +56,28 @@ class QueryAbstract(BaseModel, ABC):
             if value is None:
                 continue
             if isinstance(value, QueryField):
-                result[QueryFieldName(key)] = value
+                result[value.name] = value
+            elif isinstance(value, BaseModel) and not isinstance(value, QueryAbstract):
+                result.update(QueryAbstract._nested_query_fields_from_model(value))
             else:
-                result[QueryFieldName(key)] = QueryField(raw_query_field=RawQueryFieldName(key), value=value)
+                result[QueryFieldName(key)] = QueryField(
+                    name=QueryFieldName(key),
+                    operations=[
+                        QueryFieldOperation(operator=QueryFieldOperatorEnum.EQ, value=value),
+                    ],
+                )
         return result
+
+    @staticmethod
+    def _nested_query_fields_from_model(nested: BaseModel) -> dict[QueryFieldName, QueryField[Any]]:
+        """Collect :class:`QueryField` instances from a nested filter model by ``QueryField.name``."""
+        acc: dict[QueryFieldName, QueryField[Any]] = {}
+        for sub_key in nested.model_fields_set:
+            sub_val = getattr(nested, sub_key, None)
+            if sub_val is None:
+                continue
+            if isinstance(sub_val, QueryField):
+                acc[sub_val.name] = sub_val
+            elif isinstance(sub_val, BaseModel) and not isinstance(sub_val, QueryAbstract):
+                acc.update(QueryAbstract._nested_query_fields_from_model(sub_val))
+        return acc

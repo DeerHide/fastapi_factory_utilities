@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 import pytest
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from starlette.requests import Request
 
 from fastapi_factory_utilities.core.utils.queries.abstracts import QueryAbstract
@@ -36,6 +37,46 @@ class _SampleQuery(QueryAbstract):
 
     label: str | None = None
     score: int | None = None
+
+
+class _NestedObject1Filter(BaseModel):
+    """Nested filter segment for dotted query keys."""
+
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    field1: QueryField[str] | None = Field(default=None)
+
+
+class _RootNestedQuery(QueryAbstract):
+    """Root query with nested filter model (``object1.field1``)."""
+
+    object1: _NestedObject1Filter | None = Field(default=None)
+
+
+class _FlatAliasDottedQuery(QueryAbstract):
+    """Flat field: dotted key only via ``validation_alias``."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    object1__field1: QueryField[str] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("object1.field1"),
+    )
+
+
+class _CycleNested(BaseModel):
+    """Self-referential nested model (cycle guard)."""
+
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    child: _CycleNested | None = Field(default=None)
+    leaf: QueryField[str] | None = Field(default=None)
+
+
+class _CycleRootQuery(QueryAbstract):
+    """Query with a nested graph that cycles on ``child``."""
+
+    node: _CycleNested | None = Field(default=None)
 
 
 class TestQueryFieldExtract:
@@ -115,7 +156,7 @@ class TestQuerySort:
     )
     def test_directions(self, raw: str, name: str, direction: QuerySortDirectionEnum) -> None:
         """Prefix sets ascending or descending; default is ascending."""
-        qs = QuerySort(RawQuerySort(raw))
+        qs = QuerySort.model_validate(RawQuerySort(raw))
         assert str(qs.name) == name
         assert qs.direction is direction
 
@@ -136,19 +177,19 @@ class TestCoerceValue:
         req = _request("num=42&ids[in]=1&ids[in]=2&ids[in]=3")
         resolver.resolve(req)
         fields = cast(dict[str, QueryField[Any]], resolver.fields)
-        assert fields["num"].value == 42  # noqa: PLR2004
-        assert fields["ids"].value == [1, 2, 3]
+        assert fields["num"].operations[0].value == 42  # noqa: PLR2004
+        assert fields["ids"].operations[0].value == [1, 2, 3]
 
     def test_bool_via_resolver(self) -> None:
         """``true`` / ``0`` coerce to booleans."""
         resolver = QueryResolver()
         resolver.add_authorized_field(QueryFieldName("active"), bool)
         resolver.resolve(_request("active=true"))
-        assert cast(dict[str, QueryField[Any]], resolver.fields)["active"].value is True
+        assert cast(dict[str, QueryField[Any]], resolver.fields)["active"].operations[0].value is True
         r2 = QueryResolver()
         r2.add_authorized_field(QueryFieldName("active"), bool)
         r2.resolve(_request("active=0"))
-        assert cast(dict[str, QueryField[Any]], r2.fields)["active"].value is False
+        assert cast(dict[str, QueryField[Any]], r2.fields)["active"].operations[0].value is False
 
     def test_invalid_int_raises_via_resolver(self) -> None:
         """Non-numeric string for ``int`` field raises ``ValueError``."""
@@ -169,8 +210,8 @@ class TestQueryResolver:
         resolver.resolve(req)
         fields = cast(dict[str, QueryField[Any]], resolver.fields)
         assert list(fields.keys()) == ["field1"]
-        assert fields["field1"].operator is QueryFieldOperatorEnum.IN
-        assert fields["field1"].value == [1, 2, 3]
+        assert fields["field1"].operations[0].operator is QueryFieldOperatorEnum.IN
+        assert fields["field1"].operations[0].value == [1, 2, 3]
 
     def test_non_in_last_value_wins(self) -> None:
         """Duplicate keys for non-list operators keep the last value."""
@@ -179,18 +220,22 @@ class TestQueryResolver:
         req = _request("status=a&status=b")
         resolver.resolve(req)
         fields = cast(dict[str, QueryField[Any]], resolver.fields)
-        assert fields["status"].value == "b"
+        assert fields["status"].operations[0].value == "b"
 
     def test_range_two_raw_keys(self) -> None:
-        """Same base field with two operators: :attr:`fields` is keyed by base name; last raw key wins."""
+        """Same base field with two operators: both appear under one :class:`QueryField` in request order."""
         resolver = QueryResolver()
         resolver.add_authorized_field(QueryFieldName("age"), int)
         req = _request("age[gt]=10&age[lt]=20")
         resolver.resolve(req)
         fields = cast(dict[str, QueryField[Any]], resolver.fields)
         assert set(fields) == {"age"}
-        assert fields["age"].operator is QueryFieldOperatorEnum.LT
-        assert fields["age"].value == 20  # noqa: PLR2004
+        ops = fields["age"].operations
+        assert len(ops) == 2  # noqa: PLR2004
+        assert ops[0].operator is QueryFieldOperatorEnum.GT
+        assert ops[0].value == 10  # noqa: PLR2004
+        assert ops[1].operator is QueryFieldOperatorEnum.LT
+        assert ops[1].value == 20  # noqa: PLR2004
 
     def test_unauthorized_strict_raises(self) -> None:
         """Strict mode raises for unknown base field names."""
@@ -208,7 +253,7 @@ class TestQueryResolver:
         resolver.resolve(req)
         fields = cast(dict[str, QueryField[Any]], resolver.fields)
         assert set(fields) == {"name"}
-        assert fields["name"].value == "ok"
+        assert fields["name"].operations[0].value == "ok"
 
     def test_excluded_params_not_in_fields(self) -> None:
         """Pagination and sort keys are not returned as filters; ``sort`` fills :attr:`sorts`."""
@@ -258,8 +303,8 @@ class TestQueryResolver:
         req = _request("label=hi&score=7&page=1&page_size=10")
         resolver.resolve(req)
         fields = cast(dict[str, QueryField[Any]], resolver.fields)
-        assert fields["label"].value == "hi"
-        assert fields["score"].value == 7  # noqa: PLR2004
+        assert fields["label"].operations[0].value == "hi"
+        assert fields["score"].operations[0].value == 7  # noqa: PLR2004
 
     def test_coerce_failure_raises(self) -> None:
         """Invalid value for declared ``int`` field raises ``ValueError``."""
@@ -268,3 +313,38 @@ class TestQueryResolver:
         req = _request("count=notint")
         with pytest.raises(ValueError, match="Invalid integer"):
             resolver.resolve(req)
+
+    def test_from_model_nested_registers_dotted_query_key(self) -> None:
+        """Nested ``BaseModel`` field registers ``parent.child`` for :meth:`QueryResolver.resolve`."""
+        resolver = QueryResolver().from_model(_RootNestedQuery)
+        req = _request("object1.field1=abc&page=0&page_size=10")
+        resolver.resolve(req)
+        key = QueryFieldName("object1.field1")
+        assert key in resolver.fields
+        assert resolver.fields[key].operations[0].value == "abc"
+
+    def test_from_model_validation_alias_registers_dotted_key(self) -> None:
+        """Leaf field with string ``validation_alias`` registers the dotted query name."""
+        resolver = QueryResolver().from_model(_FlatAliasDottedQuery)
+        req = _request("object1.field1=xyz&page=0&page_size=10")
+        resolver.resolve(req)
+        key = QueryFieldName("object1.field1")
+        assert key in resolver.fields
+        assert resolver.fields[key].operations[0].value == "xyz"
+
+    def test_from_model_populate_by_name_also_authorizes_python_field_name(self) -> None:
+        """With ``populate_by_name=True``, both alias and Python names are authorized."""
+        resolver = QueryResolver().from_model(_FlatAliasDottedQuery)
+        req = _request("object1__field1=via-python-name&page=0&page_size=10")
+        resolver.resolve(req)
+        key = QueryFieldName("object1__field1")
+        assert key in resolver.fields
+        assert resolver.fields[key].operations[0].value == "via-python-name"
+
+    def test_from_model_cycle_on_nested_model_terminates(self) -> None:
+        """Recursive model graphs do not loop forever; first-level leaves still register."""
+        resolver = QueryResolver().from_model(_CycleRootQuery)
+        req = _request("node.leaf=ok&page=0&page_size=10")
+        resolver.resolve(req)
+        assert QueryFieldName("node.leaf") in resolver.fields
+        assert resolver.fields[QueryFieldName("node.leaf")].operations[0].value == "ok"

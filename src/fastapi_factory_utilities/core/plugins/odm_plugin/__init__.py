@@ -12,6 +12,7 @@ from .exceptions import (
 )
 from .helpers import PersistedEntity
 from .plugins import ODMPlugin
+from .queries import ODMFindQuery, ODMQueryBuilder
 from .repositories import AbstractRepository
 
 __all__: list[str] = []  # pylint: disable=invalid-name
@@ -27,9 +28,11 @@ if find_spec(name="pytest"):
 __all__ += [
     "AbstractRepository",
     "BaseDocument",
+    "ODMFindQuery",
     "ODMPlugin",
     "ODMPluginBaseException",
     "ODMPluginConfigError",
+    "ODMQueryBuilder",
     "OperationError",
     "PersistedEntity",
     "UnableToCreateEntityDueToDuplicateKeyError",

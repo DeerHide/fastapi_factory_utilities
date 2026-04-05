@@ -91,8 +91,8 @@ class TestDocstringFilterExamples:
         key = QueryFieldName(expected_base_name)
         assert set(resolver.fields) == {key}
         field: QueryField[Any] = resolver.fields[key]
-        assert field.operator is expected_op
-        assert field.value == expected_value
+        assert field.operations[0].operator is expected_op
+        assert field.operations[0].value == expected_value
 
 
 class TestDocstringSortExamples:

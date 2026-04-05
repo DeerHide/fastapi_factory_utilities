@@ -4,6 +4,8 @@ Examples:
 - Filtering:
     - GET /api/v1/resources?field1=value1
     - GET /api/v1/resources?object1.field1=value1
+      (dotted keys: use a nested ``BaseModel`` field on your :class:`QueryAbstract`, or a leaf
+      ``Field(validation_alias=...)``, or :meth:`QueryResolver.add_authorized_field`.)
     - GET /api/v1/resources?field1[gt]=value1
     - GET /api/v1/resources?field1[lt]=value1
     - GET /api/v1/resources?field1[gte]=value1
@@ -24,12 +26,13 @@ Examples:
 from .abstracts import QueryAbstract
 from .enums import QueryFieldOperatorEnum, QuerySortDirectionEnum
 from .resolvers import QueryResolver
-from .types import QueryField, QueryFieldName, QuerySort, RawQueryFieldName, RawQuerySort
+from .types import QueryField, QueryFieldName, QueryFieldOperation, QuerySort, RawQueryFieldName, RawQuerySort
 
 __all__: list[str] = [
     "QueryAbstract",
     "QueryField",
     "QueryFieldName",
+    "QueryFieldOperation",
     "QueryFieldOperatorEnum",
     "QueryResolver",
     "QuerySort",
