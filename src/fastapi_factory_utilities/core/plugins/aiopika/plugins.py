@@ -69,8 +69,10 @@ class AiopikaPlugin(PluginAbstract):
             tracer_provider=tracer_provider,
             meter_provider=meter_provider,
         )
-
-        self._robust_connection = await connect_robust(url=str(self._rabbitmq_credentials_config.amqp_url))
+        try:
+            self._robust_connection = await connect_robust(url=str(self._rabbitmq_credentials_config.amqp_url))
+        except Exception as exception:
+            raise AiopikaPluginBaseError("Unable to connect to the AMQP server.") from exception
         self._add_to_state(key=DEPENDS_AIOPIKA_ROBUST_CONNECTION_KEY, value=self._robust_connection)
         _logger.debug(
             "Aiopika plugin connected to the AMQP server.", amqp_url=self._rabbitmq_credentials_config.amqp_url
