@@ -73,6 +73,9 @@ class AuditEventObject(BaseModel, Generic[AuditEventActorGeneric]):
     where: ServiceName
     when: datetime.datetime
     who: dict[str, Any]
+    entity: AuditEventActorGeneric
+    domain: DomainName
+    service: ServiceName
 
     @field_validator("who")
     @classmethod

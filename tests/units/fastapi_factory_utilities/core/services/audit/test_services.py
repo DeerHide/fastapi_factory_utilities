@@ -2,7 +2,6 @@
 
 import datetime
 import uuid
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -15,7 +14,9 @@ from fastapi_factory_utilities.core.plugins.aiopika import (
 )
 from fastapi_factory_utilities.core.services.audit.exceptions import AuditServiceError
 from fastapi_factory_utilities.core.services.audit.objects import (
+    AuditableEntity,
     AuditEventObject,
+    DomainName,
     EntityFunctionalEventName,
     EntityName,
     ServiceName,
@@ -23,8 +24,20 @@ from fastapi_factory_utilities.core.services.audit.objects import (
 from fastapi_factory_utilities.core.services.audit.services import AbstractAuditPublisherService
 
 
+def _sample_auditable_entity() -> AuditableEntity:
+    """Minimal entity for audit service tests."""
+    return AuditableEntity(
+        id=uuid.uuid4(),
+        created_at=datetime.datetime.now(datetime.timezone.utc),
+        updated_at=datetime.datetime.now(datetime.timezone.utc),
+        entity_name=EntityName("test_entity"),
+        domain_name=DomainName("dom_testing"),
+        service_name=ServiceName("ent_service"),
+    )
+
+
 # Test model class for generic service testing
-class MockAuditEventObject(AuditEventObject[Any]):
+class MockAuditEventObject(AuditEventObject[AuditableEntity]):
     """Mock audit event object for testing."""
 
     pass
@@ -35,7 +48,7 @@ class ConcreteAuditPublisherService(AbstractAuditPublisherService[MockAuditEvent
 
     def build_routing_key_pattern(self, audit_event: MockAuditEventObject) -> RoutingKey:
         """Build the routing key pattern for the audit event."""
-        return RoutingKey(f"audit.{audit_event.where}.{audit_event.what}.{audit_event.why}")
+        return RoutingKey(f"audit.{audit_event.domain}.{audit_event.service}.{audit_event.what}.{audit_event.why}")
 
 
 @pytest.fixture(name="mock_publisher")
@@ -71,6 +84,9 @@ def fixture_audit_event() -> MockAuditEventObject:
         where=ServiceName("test_service"),
         when=datetime.datetime.now(datetime.timezone.utc),
         who={"id": str(uuid.uuid4())},
+        entity=_sample_auditable_entity(),
+        domain=DomainName("dom_testing"),
+        service=ServiceName("evt_service"),
     )
 
 
@@ -123,7 +139,7 @@ class TestAbstractAuditPublisherService:
 
         # Verify routing key
         routing_key: RoutingKey = call_args.kwargs["routing_key"]
-        expected_routing_key = f"audit.{audit_event.where}.{audit_event.what}.{audit_event.why}"
+        expected_routing_key = f"audit.{audit_event.domain}.{audit_event.service}.{audit_event.what}.{audit_event.why}"
         assert routing_key == expected_routing_key
 
     @pytest.mark.asyncio
@@ -198,7 +214,7 @@ class TestAbstractAuditPublisherService:
 
         routing_key = service.build_routing_key_pattern(audit_event=audit_event)
 
-        expected_routing_key = f"audit.{audit_event.where}.{audit_event.what}.{audit_event.why}"
+        expected_routing_key = f"audit.{audit_event.domain}.{audit_event.service}.{audit_event.what}.{audit_event.why}"
         assert routing_key == expected_routing_key
         assert isinstance(routing_key, str)
 
@@ -231,3 +247,6 @@ class TestAbstractAuditPublisherService:
         assert message.data.where == audit_event.where
         assert message.data.when == audit_event.when
         assert message.data.who == audit_event.who
+        assert message.data.entity == audit_event.entity
+        assert message.data.domain == audit_event.domain
+        assert message.data.service == audit_event.service

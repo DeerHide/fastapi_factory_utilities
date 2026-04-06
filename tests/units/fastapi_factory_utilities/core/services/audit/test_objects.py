@@ -35,6 +35,31 @@ def _auditable_names() -> _AuditableNamesKw:
     }
 
 
+def _sample_auditable_entity() -> AuditableEntity:
+    """Minimal `AuditableEntity` for `AuditEventObject` tests."""
+    return AuditableEntity(
+        id=uuid.uuid4(),
+        created_at=datetime.datetime.now(datetime.timezone.utc),
+        updated_at=datetime.datetime.now(datetime.timezone.utc),
+        **_auditable_names(),
+    )
+
+
+def _audit_event_base_kwargs() -> dict[str, Any]:
+    """Full valid kwargs for `AuditEventObject` construction in tests."""
+    when = datetime.datetime.now(datetime.timezone.utc)
+    return {
+        "what": EntityName("test_entity"),
+        "why": EntityFunctionalEventName("created"),
+        "where": ServiceName("test_service"),
+        "when": when,
+        "who": {"id": str(uuid.uuid4())},
+        "entity": _sample_auditable_entity(),
+        "domain": DomainName("dom_testing"),
+        "service": ServiceName("evt_service"),
+    }
+
+
 class TestAuditableEntity:
     """Unit tests for AuditableEntity."""
 
@@ -165,20 +190,18 @@ class TestAuditEventObject:
     def test_valid_creation_with_all_required_fields(self) -> None:
         """Test valid creation with all required fields."""
         # Arrange
-        what = EntityName("test_entity")
-        why = EntityFunctionalEventName("created")
-        where = ServiceName("test_service")
-        when = datetime.datetime.now(datetime.timezone.utc)
-        who = {"id": str(uuid.uuid4())}
+        kwargs = _audit_event_base_kwargs()
+        what = kwargs["what"]
+        why = kwargs["why"]
+        where = kwargs["where"]
+        when = kwargs["when"]
+        who = kwargs["who"]
+        entity = kwargs["entity"]
+        domain = kwargs["domain"]
+        service = kwargs["service"]
 
         # Act
-        audit_event: AuditEventObject[Any] = AuditEventObject(
-            what=what,
-            why=why,
-            where=where,
-            when=when,
-            who=who,
-        )
+        audit_event: AuditEventObject[Any] = AuditEventObject(**kwargs)
 
         # Assert
         assert audit_event.what == what
@@ -186,28 +209,23 @@ class TestAuditEventObject:
         assert audit_event.where == where
         assert audit_event.when == when
         assert audit_event.who == who
+        assert audit_event.entity == entity
+        assert audit_event.domain == domain
+        assert audit_event.service == service
 
     def test_valid_creation_with_additional_who_fields(self) -> None:
         """Test valid creation with additional fields in who."""
         # Arrange
-        what = EntityName("test_entity")
-        why = EntityFunctionalEventName("created")
-        where = ServiceName("test_service")
-        when = datetime.datetime.now(datetime.timezone.utc)
+        kwargs = _audit_event_base_kwargs()
         who = {
             "id": str(uuid.uuid4()),
             "realm_id": str(uuid.uuid4()),
             "group_id": str(uuid.uuid4()),
         }
+        kwargs["who"] = who
 
         # Act
-        audit_event: AuditEventObject[Any] = AuditEventObject(
-            what=what,
-            why=why,
-            where=where,
-            when=when,
-            who=who,
-        )
+        audit_event: AuditEventObject[Any] = AuditEventObject(**kwargs)
 
         # Assert
         assert audit_event.who == who
@@ -216,13 +234,10 @@ class TestAuditEventObject:
 
     def test_missing_what_raises_validation_error(self) -> None:
         """Test that missing what raises ValidationError."""
+        kwargs = _audit_event_base_kwargs()
+        del kwargs["what"]
         with pytest.raises(ValidationError) as exc_info:
-            AuditEventObject(
-                why=EntityFunctionalEventName("created"),
-                where=ServiceName("test_service"),
-                when=datetime.datetime.now(datetime.timezone.utc),
-                who={"id": str(uuid.uuid4())},
-            )  # type: ignore[call-arg]
+            AuditEventObject(**kwargs)
 
         errors = exc_info.value.errors()
         assert len(errors) == 1
@@ -230,13 +245,10 @@ class TestAuditEventObject:
 
     def test_missing_who_raises_validation_error(self) -> None:
         """Test that missing who raises ValidationError."""
+        kwargs = _audit_event_base_kwargs()
+        del kwargs["who"]
         with pytest.raises(ValidationError) as exc_info:
-            AuditEventObject(
-                what=EntityName("test_entity"),
-                why=EntityFunctionalEventName("created"),
-                where=ServiceName("test_service"),
-                when=datetime.datetime.now(datetime.timezone.utc),
-            )  # type: ignore[call-arg]
+            AuditEventObject(**kwargs)
 
         errors = exc_info.value.errors()
         assert len(errors) == 1
@@ -244,14 +256,10 @@ class TestAuditEventObject:
 
     def test_empty_who_raises_validation_error(self) -> None:
         """Test that empty who raises ValidationError."""
+        kwargs = _audit_event_base_kwargs()
+        kwargs["who"] = {}
         with pytest.raises(ValidationError) as exc_info:
-            AuditEventObject(
-                what=EntityName("test_entity"),
-                why=EntityFunctionalEventName("created"),
-                where=ServiceName("test_service"),
-                when=datetime.datetime.now(datetime.timezone.utc),
-                who={},
-            )
+            AuditEventObject(**kwargs)
 
         errors = exc_info.value.errors()
         assert len(errors) == 1
@@ -260,27 +268,19 @@ class TestAuditEventObject:
 
     def test_who_without_id_allowed_when_non_empty(self) -> None:
         """Who is only required to be a non-empty dict (id key not enforced)."""
-        audit_event: AuditEventObject[Any] = AuditEventObject(
-            what=EntityName("test_entity"),
-            why=EntityFunctionalEventName("created"),
-            where=ServiceName("test_service"),
-            when=datetime.datetime.now(datetime.timezone.utc),
-            who={"realm_id": str(uuid.uuid4())},
-        )
+        kwargs = _audit_event_base_kwargs()
+        kwargs["who"] = {"realm_id": str(uuid.uuid4())}
+        audit_event: AuditEventObject[Any] = AuditEventObject(**kwargs)
 
         assert "realm_id" in audit_event.who
         assert "id" not in audit_event.who
 
     def test_invalid_who_type_raises_validation_error(self) -> None:
         """Test that invalid who type raises ValidationError."""
+        kwargs = _audit_event_base_kwargs()
+        kwargs["who"] = "not_a_dict"  # type: ignore[assignment]
         with pytest.raises(ValidationError) as exc_info:
-            AuditEventObject(
-                what=EntityName("test_entity"),
-                why=EntityFunctionalEventName("created"),
-                where=ServiceName("test_service"),
-                when=datetime.datetime.now(datetime.timezone.utc),
-                who="not_a_dict",  # type: ignore[arg-type]
-            )
+            AuditEventObject(**kwargs)
 
         errors = exc_info.value.errors()
         assert len(errors) == 1
@@ -290,46 +290,27 @@ class TestAuditEventObject:
     def test_model_dump(self) -> None:
         """Test model serialization using model_dump."""
         # Arrange
-        what = EntityName("test_entity")
-        why = EntityFunctionalEventName("created")
-        where = ServiceName("test_service")
-        when = datetime.datetime.now(datetime.timezone.utc)
-        who = {"id": str(uuid.uuid4())}
-
-        audit_event: AuditEventObject[Any] = AuditEventObject(
-            what=what,
-            why=why,
-            where=where,
-            when=when,
-            who=who,
-        )
+        kwargs = _audit_event_base_kwargs()
+        audit_event: AuditEventObject[Any] = AuditEventObject(**kwargs)
 
         # Act
         dumped = audit_event.model_dump()
 
         # Assert
-        assert dumped["what"] == what
-        assert dumped["why"] == why
-        assert dumped["where"] == where
-        assert dumped["when"] == when
-        assert dumped["who"] == who
+        assert dumped["what"] == kwargs["what"]
+        assert dumped["why"] == kwargs["why"]
+        assert dumped["where"] == kwargs["where"]
+        assert dumped["when"] == kwargs["when"]
+        assert dumped["who"] == kwargs["who"]
+        assert dumped["entity"] == kwargs["entity"].model_dump()
+        assert dumped["domain"] == kwargs["domain"]
+        assert dumped["service"] == kwargs["service"]
 
     def test_model_dump_json(self) -> None:
         """Test model serialization using model_dump_json."""
         # Arrange
-        what = EntityName("test_entity")
-        why = EntityFunctionalEventName("created")
-        where = ServiceName("test_service")
-        when = datetime.datetime.now(datetime.timezone.utc)
-        who = {"id": str(uuid.uuid4())}
-
-        audit_event: AuditEventObject[Any] = AuditEventObject(
-            what=what,
-            why=why,
-            where=where,
-            when=when,
-            who=who,
-        )
+        kwargs = _audit_event_base_kwargs()
+        audit_event: AuditEventObject[Any] = AuditEventObject(**kwargs)
 
         # Act
         json_str = audit_event.model_dump_json()
@@ -337,54 +318,57 @@ class TestAuditEventObject:
         # Assert
         assert isinstance(json_str, str)
         data = json.loads(json_str)
-        assert data["what"] == what
-        assert data["why"] == why
-        assert data["where"] == where
-        assert data["who"] == who
+        assert data["what"] == kwargs["what"]
+        assert data["why"] == kwargs["why"]
+        assert data["where"] == kwargs["where"]
+        assert data["who"] == kwargs["who"]
+        assert data["domain"] == kwargs["domain"]
+        assert data["service"] == kwargs["service"]
+        assert data["entity"]["id"] == str(kwargs["entity"].id)
 
     def test_model_validate(self) -> None:
         """Test model deserialization using model_validate."""
         # Arrange
-        what = EntityName("test_entity")
-        why = EntityFunctionalEventName("created")
-        where = ServiceName("test_service")
-        when = datetime.datetime.now(datetime.timezone.utc)
-        who = {"id": str(uuid.uuid4())}
-
-        data: dict[str, Any] = {
-            "what": what,
-            "why": why,
-            "where": where,
-            "when": when,
-            "who": who,
-        }
+        kwargs = _audit_event_base_kwargs()
+        data: dict[str, Any] = dict(kwargs)
 
         # Act
         audit_event: AuditEventObject[Any] = AuditEventObject.model_validate(data)
 
         # Assert
-        assert audit_event.what == what
-        assert audit_event.why == why
-        assert audit_event.where == where
-        assert audit_event.when == when
-        assert audit_event.who == who
+        assert audit_event.what == kwargs["what"]
+        assert audit_event.why == kwargs["why"]
+        assert audit_event.where == kwargs["where"]
+        assert audit_event.when == kwargs["when"]
+        assert audit_event.who == kwargs["who"]
+        assert audit_event.entity == kwargs["entity"]
+        assert audit_event.domain == kwargs["domain"]
+        assert audit_event.service == kwargs["service"]
 
     def test_model_validate_json(self) -> None:
         """Test model deserialization using model_validate_json."""
         # Arrange
-        what = EntityName("test_entity")
-        why = EntityFunctionalEventName("created")
-        where = ServiceName("test_service")
-        when = datetime.datetime.now(datetime.timezone.utc)
-        who = {"id": str(uuid.uuid4())}
-
+        kwargs = _audit_event_base_kwargs()
+        entity = kwargs["entity"]
+        when = kwargs["when"]
         json_str = json.dumps(
             {
-                "what": what,
-                "why": why,
-                "where": where,
+                "what": kwargs["what"],
+                "why": kwargs["why"],
+                "where": kwargs["where"],
                 "when": when.isoformat(),
-                "who": who,
+                "who": kwargs["who"],
+                "domain": kwargs["domain"],
+                "service": kwargs["service"],
+                "entity": {
+                    "id": str(entity.id),
+                    "created_at": entity.created_at.isoformat(),
+                    "updated_at": entity.updated_at.isoformat(),
+                    "deleted_at": None,
+                    "entity_name": entity.entity_name,
+                    "domain_name": entity.domain_name,
+                    "service_name": entity.service_name,
+                },
             }
         )
 
@@ -392,33 +376,33 @@ class TestAuditEventObject:
         audit_event: AuditEventObject[Any] = AuditEventObject.model_validate_json(json_str)
 
         # Assert
-        assert audit_event.what == what
-        assert audit_event.why == why
-        assert audit_event.where == where
-        assert audit_event.who == who
+        assert audit_event.what == kwargs["what"]
+        assert audit_event.why == kwargs["why"]
+        assert audit_event.where == kwargs["where"]
+        assert audit_event.who == kwargs["who"]
+        assert audit_event.domain == kwargs["domain"]
+        assert audit_event.service == kwargs["service"]
+        assert audit_event.entity.id == entity.id
 
     def test_round_trip_serialization(self) -> None:
         """Test round-trip serialization: create → serialize → deserialize."""
         # Arrange
-        what = EntityName("test_entity")
-        why = EntityFunctionalEventName("created")
-        where = ServiceName("test_service")
-        when = datetime.datetime.now(datetime.timezone.utc)
-        who = {
+        kwargs = _audit_event_base_kwargs()
+        kwargs["who"] = {
             "id": str(uuid.uuid4()),
             "realm_id": str(uuid.uuid4()),
         }
+        original: AuditEventObject[Any] = AuditEventObject(**kwargs)
 
-        original: AuditEventObject[Any] = AuditEventObject(
-            what=what,
-            why=why,
-            where=where,
-            when=when,
-            who=who,
-        )
-
-        # Act
+        # Act: default dump omits auditable metadata on nested entity (Field exclude).
         dumped = original.model_dump()
+        ent = original.entity
+        dumped["entity"] = {
+            **ent.model_dump(),
+            "entity_name": ent.entity_name,
+            "domain_name": ent.domain_name,
+            "service_name": ent.service_name,
+        }
         restored: AuditEventObject[Any] = AuditEventObject.model_validate(dumped)
 
         # Assert
@@ -427,3 +411,6 @@ class TestAuditEventObject:
         assert restored.where == original.where
         assert restored.when == original.when
         assert restored.who == original.who
+        assert restored.entity == original.entity
+        assert restored.domain == original.domain
+        assert restored.service == original.service

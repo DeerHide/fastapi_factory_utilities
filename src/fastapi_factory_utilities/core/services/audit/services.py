@@ -1,7 +1,7 @@
 """Provides the services for the audit service."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from fastapi_factory_utilities.core.plugins.aiopika import (
     AbstractListener,
@@ -12,9 +12,9 @@ from fastapi_factory_utilities.core.plugins.aiopika import (
 )
 
 from .exceptions import AuditServiceError
-from .objects import AuditEventObject, ServiceName
+from .objects import AuditableEntity, AuditEventObject, ServiceName
 
-AuditEventGeneric = TypeVar("AuditEventGeneric", bound=AuditEventObject[Any])
+AuditEventGeneric = TypeVar("AuditEventGeneric", bound=AuditEventObject[AuditableEntity])
 
 
 class AbstractAuditPublisherService(ABC, Generic[AuditEventGeneric]):
@@ -29,9 +29,10 @@ class AbstractAuditPublisherService(ABC, Generic[AuditEventGeneric]):
     def build_routing_key_pattern(self, audit_event: AuditEventGeneric) -> RoutingKey:
         """Build the routing key pattern for the audit event.
 
-        The routing key should follow the pattern: {prefix}.{where}.{what}.{why}
+        The routing key should follow the pattern: {prefix}.{domain}.{service}.{what}.{why}
         where:
-        - where: The service name from audit_event.where
+        - domain: The domain name from audit_event.domain
+        - service: The service name from audit_event.service
         - what: The entity name from audit_event.what
         - why: The functional event name from audit_event.why
 
