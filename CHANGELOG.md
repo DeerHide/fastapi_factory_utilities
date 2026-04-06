@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Aiopika: validated `PartStr`, `AbstractName`, `RoutingKey`, `QueueName`, and `ExchangeName`; fluent builders for routing keys, queue names, and exchange names; topic wildcard `*` support for listener-style patterns; unit tests for types, builders, `GenericMessage`, and `AbstractPublisher.publish`
+- Audit: `AuditServiceError` includes `audit_event` and `routing_key` context when audit publish fails
+
+### Changed
+
+- Aiopika: `GenericMessage` initializes an optional incoming delivery reference; publisher treats failed serialization, broker errors, missing confirmation, and `Basic.Return` as `AiopikaPluginBaseError`
+
+### Fixed
+
+- Aiopika: `GenericMessage.ack` / `reject` behave when no incoming message is bound
+
+### Removed
+
+- Audit (**breaking**): `AuditableEntity` no longer uses private attributes for metadata; callers must pass `entity_name`, `domain_name`, and `service_name` (excluded from default serialization)
+
 ## [0.24.0] - 2026-04-05
 
 ### Added
