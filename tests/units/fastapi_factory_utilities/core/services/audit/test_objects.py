@@ -3,7 +3,7 @@
 import datetime
 import json
 import uuid
-from typing import Any
+from typing import Any, TypedDict
 
 import pytest
 from pydantic import ValidationError
@@ -11,10 +11,28 @@ from pydantic import ValidationError
 from fastapi_factory_utilities.core.services.audit.objects import (
     AuditableEntity,
     AuditEventObject,
+    DomainName,
     EntityFunctionalEventName,
     EntityName,
     ServiceName,
 )
+
+
+class _AuditableNamesKw(TypedDict):
+    """Keyword bundle for AuditableEntity construction in tests."""
+
+    entity_name: EntityName
+    domain_name: DomainName
+    service_name: ServiceName
+
+
+def _auditable_names() -> _AuditableNamesKw:
+    """Defaults for required auditable metadata (PartStr segments >= 3 chars)."""
+    return {
+        "entity_name": EntityName("test_entity"),
+        "domain_name": DomainName("dom_testing"),
+        "service_name": ServiceName("test_service"),
+    }
 
 
 class TestAuditableEntity:
@@ -32,6 +50,7 @@ class TestAuditableEntity:
             id=entity_id,
             created_at=created_at,
             updated_at=updated_at,
+            **_auditable_names(),
         )
 
         # Assert
@@ -54,40 +73,39 @@ class TestAuditableEntity:
             created_at=created_at,
             updated_at=updated_at,
             deleted_at=deleted_at,
+            **_auditable_names(),
         )
 
         # Assert
         assert entity.deleted_at == deleted_at
 
-    def test_get_audit_name_raises_value_error_when_not_set(self) -> None:
-        """Test that get_audit_name raises ValueError when audit name is not set."""
-        # Arrange
+    def test_missing_auditable_metadata_raises_validation_error(self) -> None:
+        """Entity, domain, and service names are required."""
+        with pytest.raises(ValidationError) as exc_info:
+            AuditableEntity(
+                id=uuid.uuid4(),
+                created_at=datetime.datetime.now(datetime.timezone.utc),
+                updated_at=datetime.datetime.now(datetime.timezone.utc),
+            )
+
+        locs = {err["loc"][0] for err in exc_info.value.errors()}
+        assert "entity_name" in locs
+        assert "domain_name" in locs
+        assert "service_name" in locs
+
+    def test_getters_return_constructor_metadata(self) -> None:
+        """get_* accessors return the same values passed into the model."""
+        names = _auditable_names()
         entity = AuditableEntity(
             id=uuid.uuid4(),
             created_at=datetime.datetime.now(datetime.timezone.utc),
             updated_at=datetime.datetime.now(datetime.timezone.utc),
+            **names,
         )
 
-        # Act & Assert
-        with pytest.raises(ValueError, match="Audit name is not set"):
-            entity.get_audit_name()
-
-    def test_get_audit_name_returns_audit_name_when_set(self) -> None:
-        """Test that get_audit_name returns the audit name when set."""
-        # Arrange
-        entity = AuditableEntity(
-            id=uuid.uuid4(),
-            created_at=datetime.datetime.now(datetime.timezone.utc),
-            updated_at=datetime.datetime.now(datetime.timezone.utc),
-        )
-        audit_name = EntityName("test_entity")
-        entity._audit_name = audit_name  # type: ignore[attr-defined] # pylint: disable=protected-access
-
-        # Act
-        result = entity.get_audit_name()
-
-        # Assert
-        assert result == audit_name
+        assert entity.get_entity_name() == names["entity_name"]
+        assert entity.get_domain_name() == names["domain_name"]
+        assert entity.get_service_name() == names["service_name"]
 
     def test_model_dump(self) -> None:
         """Test model serialization using model_dump."""
@@ -102,6 +120,7 @@ class TestAuditableEntity:
             created_at=created_at,
             updated_at=updated_at,
             deleted_at=deleted_at,
+            **_auditable_names(),
         )
 
         # Act
@@ -112,6 +131,9 @@ class TestAuditableEntity:
         assert dumped["created_at"] == created_at
         assert dumped["updated_at"] == updated_at
         assert dumped["deleted_at"] == deleted_at
+        assert "entity_name" not in dumped
+        assert "domain_name" not in dumped
+        assert "service_name" not in dumped
 
     def test_model_dump_json(self) -> None:
         """Test model serialization using model_dump_json."""
@@ -124,6 +146,7 @@ class TestAuditableEntity:
             id=entity_id,
             created_at=created_at,
             updated_at=updated_at,
+            **_auditable_names(),
         )
 
         # Act
@@ -235,21 +258,18 @@ class TestAuditEventObject:
         assert errors[0]["loc"] == ("who",)
         assert "must not be empty" in str(errors[0]["msg"]).lower()
 
-    def test_who_without_id_raises_validation_error(self) -> None:
-        """Test that who without id key raises ValidationError."""
-        with pytest.raises(ValidationError) as exc_info:
-            AuditEventObject(
-                what=EntityName("test_entity"),
-                why=EntityFunctionalEventName("created"),
-                where=ServiceName("test_service"),
-                when=datetime.datetime.now(datetime.timezone.utc),
-                who={"realm_id": str(uuid.uuid4())},
-            )
+    def test_who_without_id_allowed_when_non_empty(self) -> None:
+        """Who is only required to be a non-empty dict (id key not enforced)."""
+        audit_event: AuditEventObject[Any] = AuditEventObject(
+            what=EntityName("test_entity"),
+            why=EntityFunctionalEventName("created"),
+            where=ServiceName("test_service"),
+            when=datetime.datetime.now(datetime.timezone.utc),
+            who={"realm_id": str(uuid.uuid4())},
+        )
 
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert errors[0]["loc"] == ("who",)
-        assert "must contain id key" in str(errors[0]["msg"]).lower()
+        assert "realm_id" in audit_event.who
+        assert "id" not in audit_event.who
 
     def test_invalid_who_type_raises_validation_error(self) -> None:
         """Test that invalid who type raises ValidationError."""

@@ -147,8 +147,13 @@ class TestAbstractAuditPublisherService:
         with pytest.raises(AuditServiceError) as exc_info:
             await service.publish(audit_event=audit_event)
 
-        assert "Failed to publish the audit event" in str(exc_info.value)
-        assert exc_info.value.__cause__ == publisher_error  # type: ignore[attr-defined]
+        err = exc_info.value
+        assert "Failed to publish the audit event" in str(err)
+        assert err.__cause__ == publisher_error
+        expected_key = service.build_routing_key_pattern(audit_event=audit_event)
+        # FastAPIFactoryUtilitiesError stringifies model attributes for safe logging.
+        assert getattr(err, "audit_event", None) == str(audit_event)
+        assert getattr(err, "routing_key", None) == str(expected_key)
 
     @pytest.mark.asyncio
     async def test_build_routing_key_pattern_called_with_correct_event(

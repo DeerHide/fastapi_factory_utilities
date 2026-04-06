@@ -4,37 +4,50 @@ import datetime
 import uuid
 from typing import Any, Generic, NewType, TypeVar, cast
 
-from pydantic import BaseModel, PrivateAttr, field_validator
+from pydantic import BaseModel, Field, field_validator
 
-EntityName = NewType("EntityName", str)
-EntityFunctionalEventName = NewType("EntityFunctionalEventName", str)
-ServiceName = NewType("ServiceName", str)
+from fastapi_factory_utilities.core.plugins.aiopika.types import PartStr
+
+EntityName = NewType("EntityName", PartStr)
+EntityFunctionalEventName = NewType("EntityFunctionalEventName", PartStr)
+ServiceName = NewType("ServiceName", PartStr)
+DomainName = NewType("DomainName", PartStr)
 
 
 class AuditableEntity(BaseModel):
     """Auditable entity.
 
     Attributes:
-        _audit_name: The name of the audit. This is used to identify the entity in the audit trail.
-            It's must be unique on the whole ecosystem.
+        entity_name: Name used to identify the entity in the audit trail; must be unique in the ecosystem.
+            Excluded from serialized model output by default.
+        domain_name: Owning domain name (excluded from serialization).
+        service_name: Owning service name (excluded from serialization).
         id: The ID of the entity.
         created_at: The creation date of the entity.
         updated_at: The last update date of the entity.
         deleted_at: The deletion date of the entity.
     """
 
-    _audit_name: EntityName = PrivateAttr(default=EntityName(""))
+    entity_name: EntityName = Field(exclude=True)
+    domain_name: DomainName = Field(exclude=True)
+    service_name: ServiceName = Field(exclude=True)
 
     id: uuid.UUID
     created_at: datetime.datetime
     updated_at: datetime.datetime
     deleted_at: datetime.datetime | None = None
 
-    def get_audit_name(self) -> str:
-        """Get the audit name."""
-        if self._audit_name == EntityName(""):
-            raise ValueError("Audit name is not set.")
-        return self._audit_name
+    def get_domain_name(self) -> DomainName:
+        """Get the domain name."""
+        return self.domain_name
+
+    def get_service_name(self) -> ServiceName:
+        """Get the service name."""
+        return self.service_name
+
+    def get_entity_name(self) -> EntityName:
+        """Get the entity audit name."""
+        return self.entity_name
 
 
 AuditEventActorGeneric = TypeVar("AuditEventActorGeneric", bound=AuditableEntity)
@@ -44,6 +57,7 @@ class AuditEventObject(BaseModel, Generic[AuditEventActorGeneric]):
     """Audit event object.
 
     Attributes:
+        id: The ID of the entity that triggered the event if has one (optional).
         what: The name of the entity.
         why: The name of the functional event.
         where: The name of the service.
@@ -53,6 +67,7 @@ class AuditEventObject(BaseModel, Generic[AuditEventActorGeneric]):
         segmentation ids (realms, groups, etc.))
     """
 
+    id: uuid.UUID | None = None
     what: EntityName
     why: EntityFunctionalEventName
     where: ServiceName
@@ -70,7 +85,4 @@ class AuditEventObject(BaseModel, Generic[AuditEventActorGeneric]):
         # Check if the dictionary is empty
         if len(value_dict) == 0:
             raise ValueError("Who must not be empty.")
-        # Check if the dictionary contains id key
-        if "id" not in value_dict:
-            raise ValueError("Who must contain id key.")
         return value_dict

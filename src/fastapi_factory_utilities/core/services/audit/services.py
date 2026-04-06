@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
 from fastapi_factory_utilities.core.plugins.aiopika import (
+    AbstractListener,
     AbstractPublisher,
     AiopikaPluginBaseError,
     GenericMessage,
@@ -55,3 +56,9 @@ class AbstractAuditPublisherService(ABC, Generic[AuditEventGeneric]):
                 audit_event=audit_event,
                 routing_key=routing_key,
             ) from exception
+
+
+class AbstractAuditListenerService(
+    AbstractListener[GenericMessage[AuditEventGeneric]], ABC, Generic[AuditEventGeneric]
+):
+    """Audit listener service."""
