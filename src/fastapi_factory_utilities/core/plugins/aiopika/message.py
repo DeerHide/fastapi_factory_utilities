@@ -16,7 +16,7 @@ class GenericMessage(BaseModel, Generic[GenericMessageData]):
 
     data: GenericMessageData = Field(description="The data of the message.")
 
-    _incoming_message: AbstractIncomingMessage | None = PrivateAttr()
+    _incoming_message: AbstractIncomingMessage | None = PrivateAttr(default=None)
     _headers: HeadersType = PrivateAttr(default_factory=dict)
 
     def get_headers(self) -> HeadersType:

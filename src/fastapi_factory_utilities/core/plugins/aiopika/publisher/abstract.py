@@ -11,6 +11,7 @@ from ..abstract import AbstractAiopikaResource
 from ..exceptions import AiopikaPluginBaseError
 from ..exchange import Exchange
 from ..message import GenericMessage
+from ..types import RoutingKey
 
 GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])  # pylint: disable=invalid-name
 
@@ -32,7 +33,7 @@ class AbstractPublisher(AbstractAiopikaResource, Generic[GenericMessageType]):
         await self._exchange.setup()
         return self
 
-    async def publish(self, message: GenericMessageType, routing_key: str) -> None:
+    async def publish(self, message: GenericMessageType, routing_key: RoutingKey) -> None:
         """Publish a message."""
         # Transform the message to an Aiopika message
         aiopika_message: Message
