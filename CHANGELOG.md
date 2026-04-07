@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Aiopika: listener decodes message bodies as UTF-8 JSON; malformed JSON, decode errors, and validation failures are logged and the delivery is rejected with requeue
+
+### Added
+
+- Tests: unit tests for `AbstractListener` setup, consume registration, close, and `_on_message` success and error paths
+
 ## [2.0.0] - 2026-04-06
 
 ### Added
