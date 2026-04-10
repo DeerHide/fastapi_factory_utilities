@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-04-10
+
+### Added
+
+- Dynamic API response model builder (`ApiResponseModelAbstract`, `ApiResponseSchemaBase`) for nested Pydantic projections using dotted field paths.
+- Shared `pydantic_path_fields` helpers to resolve dotted paths and detect prefix conflicts.
+- `QueryFilterAbstract` and `SearchableEntity` to build optional `QueryField`-typed filter models from searchable field lists, with unit tests for API and query utilities.
+
 ## [2.0.1] - 2026-04-07
 
 ### Fixed
@@ -197,7 +205,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v0.24.0...v1.0.0
