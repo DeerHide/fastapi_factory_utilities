@@ -24,6 +24,7 @@ Examples:
 """
 
 from .abstracts import QueryAbstract
+from .entities import QueryFilterAbstract, SearchableEntity
 from .enums import QueryFieldOperatorEnum, QuerySortDirectionEnum
 from .resolvers import QueryResolver
 from .types import QueryField, QueryFieldName, QueryFieldOperation, QuerySort, RawQueryFieldName, RawQuerySort
@@ -34,9 +35,11 @@ __all__: list[str] = [
     "QueryFieldName",
     "QueryFieldOperation",
     "QueryFieldOperatorEnum",
+    "QueryFilterAbstract",
     "QueryResolver",
     "QuerySort",
     "QuerySortDirectionEnum",
     "RawQueryFieldName",
     "RawQuerySort",
+    "SearchableEntity",
 ]
