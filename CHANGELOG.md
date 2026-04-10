@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Queries: `SearchableEntity.build_query_filter_model` subclasses `QueryAbstract`, so generated filter models include pagination and sort fields; the previous standalone `QueryFilterAbstract` model was removed and `QueryFilterAbstract` is now an alias to `QueryAbstract` in `core.utils.queries`.
+
 ## [2.1.0] - 2026-04-10
 
 ### Added

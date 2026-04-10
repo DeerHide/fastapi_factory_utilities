@@ -7,7 +7,7 @@ from typing import Any, ClassVar, cast
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from fastapi_factory_utilities.core.utils.queries.entities import QueryFilterAbstract, SearchableEntity
+from fastapi_factory_utilities.core.utils.queries import QueryAbstract, SearchableEntity
 from fastapi_factory_utilities.core.utils.queries.enums import QueryFieldOperatorEnum
 from fastapi_factory_utilities.core.utils.queries.types import QueryField, QueryFieldName, QueryFieldOperation
 
@@ -21,12 +21,12 @@ class _FilterNestedSubIdOnly(BaseModel):
     id: str
 
 
-class TestQueryFilterAbstract:
-    """Tests for QueryFilterAbstract."""
+class TestQueryAbstract:
+    """Tests for QueryAbstract (base of dynamic filter models from SearchableEntity)."""
 
     def test_empty_instance_validates(self) -> None:
         """Base filter model with no fields constructs successfully."""
-        instance = QueryFilterAbstract()
+        instance = QueryAbstract()
         assert instance.model_fields_set == set()
 
 
@@ -50,15 +50,15 @@ class TestSearcheableEntityBuildQueryFilterModel:
         filter_model = self.EmptyEntity.build_query_filter_model()
         assert filter_model.__name__ == "EmptyEntityQueryFilter"
         assert filter_model.__doc__ == "Query filter for EmptyEntity"
-        assert filter_model.model_fields == {}
+        assert set(filter_model.model_fields) == {"page", "page_size", "sorts"}
         instance = filter_model()
         assert instance.model_fields_set == set()
 
     def test_happy_path_subclass_and_defaults(self) -> None:
-        """Generated model subclasses QueryFilterAbstract and defaults filter fields to None."""
+        """Generated model subclasses QueryAbstract and defaults filter fields to None."""
         filter_model = self.ProductEntity.build_query_filter_model()
-        assert issubclass(filter_model, QueryFilterAbstract)
-        assert set(filter_model.model_fields) == {"id", "count"}
+        assert issubclass(filter_model, QueryAbstract)
+        assert set(filter_model.model_fields) == {"id", "count", "page", "page_size", "sorts"}
         instance = cast(Any, filter_model())
         assert instance.id is None
         assert instance.count is None
@@ -114,13 +114,13 @@ class TestSearcheableEntityBuildQueryFilterModel:
             label: str
 
         base_filter = BaseResource.build_query_filter_model()
-        assert set(base_filter.model_fields) == {"id"}
+        assert set(base_filter.model_fields) == {"id", "page", "page_size", "sorts"}
         base_inst = cast(Any, base_filter())
         assert base_inst.id is None
 
         derived_filter = DerivedResource.build_query_filter_model()
         assert derived_filter.__name__ == "DerivedResourceQueryFilter"
-        assert set(derived_filter.model_fields) == {"id", "label"}
+        assert set(derived_filter.model_fields) == {"id", "label", "page", "page_size", "sorts"}
         derived_inst = cast(Any, derived_filter())
         assert derived_inst.id is None
         assert derived_inst.label is None
@@ -137,7 +137,7 @@ class TestSearcheableEntityBuildQueryFilterModel:
             sku: str
 
         filter_model = cast(Any, SkuVariant.build_query_filter_model())
-        assert set(filter_model.model_fields) == {"sku"}
+        assert set(filter_model.model_fields) == {"sku", "page", "page_size", "sorts"}
         assert filter_model().sku is None
 
     def test_dotted_searchable_field_resolves_leaf_type(self) -> None:
@@ -149,7 +149,14 @@ class TestSearcheableEntityBuildQueryFilterModel:
             sku: str
 
         filter_model = cast(Any, WithNested.build_query_filter_model())
-        assert set(filter_model.model_fields) == {"subfield.id", "subfield.name", "sku"}
+        assert set(filter_model.model_fields) == {
+            "subfield.id",
+            "subfield.name",
+            "sku",
+            "page",
+            "page_size",
+            "sorts",
+        }
         assert filter_model().model_fields_set == set()
         qid = QueryField(
             name=QueryFieldName("subfield.id"),

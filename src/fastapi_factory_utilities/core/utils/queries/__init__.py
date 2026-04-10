@@ -24,10 +24,14 @@ Examples:
 """
 
 from .abstracts import QueryAbstract
-from .entities import QueryFilterAbstract, SearchableEntity
+from .entities import SearchableEntity
 from .enums import QueryFieldOperatorEnum, QuerySortDirectionEnum
 from .resolvers import QueryResolver
 from .types import QueryField, QueryFieldName, QueryFieldOperation, QuerySort, RawQueryFieldName, RawQuerySort
+
+# Backward-compatible alias: dynamic filter models from :meth:`SearchableEntity.build_query_filter_model`
+# subclass :class:`QueryAbstract`.
+QueryFilterAbstract = QueryAbstract
 
 __all__: list[str] = [
     "QueryAbstract",
