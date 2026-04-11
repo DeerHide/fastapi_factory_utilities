@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
+from enum import Enum, IntEnum, IntFlag, StrEnum, auto
 from typing import Any, NewType, cast
 
 import pytest
@@ -47,6 +49,48 @@ class _NewTypeStrQuery(QueryAbstract):
     """Query model with ``typing.NewType`` over ``str`` (e.g. YouTube channel id)."""
 
     channel_id: QueryField[_TestChannelId] | None = Field(default=None)
+
+
+class _StrEnumKind(StrEnum):
+    """Sample :class:`enum.StrEnum` for coercion tests."""
+
+    SHORT = "short"
+    LONG = "long"
+
+
+class _IntEnumRank(IntEnum):
+    """Sample :class:`enum.IntEnum` for coercion tests."""
+
+    FIRST = 1
+    SECOND = 2
+
+
+class _PlainLabels(Enum):
+    """Plain :class:`enum.Enum` with string values."""
+
+    ALPHA = "alpha"
+    BETA = "beta"
+
+
+class _Access(IntFlag):
+    """Sample :class:`enum.IntFlag` (``auto()`` values 1, 2, 4, …)."""
+
+    R = auto()
+    W = auto()
+    X = auto()
+
+
+_TestVideoKindNt = NewType("_TestVideoKindNt", _StrEnumKind)
+
+
+class _EnumCoerceQuery(QueryAbstract):
+    """Query model mixing enum kinds for :meth:`QueryResolver.from_model` coercion tests."""
+
+    kind: QueryField[_StrEnumKind] | None = Field(default=None)
+    rank: QueryField[_IntEnumRank] | None = Field(default=None)
+    label: QueryField[_PlainLabels] | None = Field(default=None)
+    access: QueryField[_Access] | None = Field(default=None)
+    vid: QueryField[_TestVideoKindNt] | None = Field(default=None)
 
 
 class _SampleQuery(QueryAbstract):
@@ -214,6 +258,87 @@ class TestCoerceValue:
         resolver.add_authorized_field(QueryFieldName("count"), int)
         with pytest.raises(ValueError, match="Invalid integer"):
             resolver.resolve(_request("count=x"))
+
+    def test_datetime_iso_via_typeadapter_fallback(self) -> None:
+        """Leaf types such as ``datetime`` coerce via :class:`~pydantic.TypeAdapter`."""
+        resolver = QueryResolver()
+        resolver.add_authorized_field(QueryFieldName("created"), datetime)
+        resolver.resolve(_request("created=2024-01-15T12:30:00"))
+        fields = cast(dict[str, QueryField[Any]], resolver.fields)
+        value = fields["created"].operations[0].value
+        assert value == datetime(2024, 1, 15, 12, 30, 0)
+
+
+class TestCoerceEnumFlagAndFallback:
+    """``Enum`` / ``Flag`` coercion and invalid enum raises ``ValueError`` (not ``TypeError``)."""
+
+    def test_strenum_by_value_and_member_name(self) -> None:
+        """:class:`enum.StrEnum` accepts the wire value and the member name."""
+        resolver = QueryResolver()
+        resolver.add_authorized_field(QueryFieldName("kind"), _StrEnumKind)
+        resolver.resolve(_request("kind=short"))
+        assert cast(dict[str, QueryField[Any]], resolver.fields)["kind"].operations[0].value is _StrEnumKind.SHORT
+        r2 = QueryResolver()
+        r2.add_authorized_field(QueryFieldName("kind"), _StrEnumKind)
+        r2.resolve(_request("kind=LONG"))
+        assert cast(dict[str, QueryField[Any]], r2.fields)["kind"].operations[0].value is _StrEnumKind.LONG
+
+    def test_intenum_by_decimal_string_and_name(self) -> None:
+        """:class:`enum.IntEnum` accepts numeric strings and member names."""
+        resolver = QueryResolver()
+        resolver.add_authorized_field(QueryFieldName("rank"), _IntEnumRank)
+        resolver.resolve(_request("rank=2"))
+        assert cast(dict[str, QueryField[Any]], resolver.fields)["rank"].operations[0].value is _IntEnumRank.SECOND
+        r2 = QueryResolver()
+        r2.add_authorized_field(QueryFieldName("rank"), _IntEnumRank)
+        r2.resolve(_request("rank=FIRST"))
+        assert cast(dict[str, QueryField[Any]], r2.fields)["rank"].operations[0].value is _IntEnumRank.FIRST
+
+    def test_plain_enum_by_value(self) -> None:
+        """Non-:class:`enum.StrEnum` :class:`enum.Enum` coerces via member name or value."""
+        resolver = QueryResolver()
+        resolver.add_authorized_field(QueryFieldName("label"), _PlainLabels)
+        resolver.resolve(_request("label=beta"))
+        assert cast(dict[str, QueryField[Any]], resolver.fields)["label"].operations[0].value is _PlainLabels.BETA
+
+    def test_intflag_numeric_mask_and_composite_names(self) -> None:
+        """:class:`enum.IntFlag` accepts an integer mask or combined member names."""
+        resolver = QueryResolver()
+        resolver.add_authorized_field(QueryFieldName("access"), _Access)
+        resolver.resolve(_request("access=3"))
+        v = cast(dict[str, QueryField[Any]], resolver.fields)["access"].operations[0].value
+        assert v == (_Access.R | _Access.W)
+        r2 = QueryResolver()
+        r2.add_authorized_field(QueryFieldName("access"), _Access)
+        r2.resolve(_request("access=R|W"))
+        v2 = cast(dict[str, QueryField[Any]], r2.fields)["access"].operations[0].value
+        assert v2 == (_Access.R | _Access.W)
+
+    def test_newtype_over_strenum_recurses(self) -> None:
+        """``typing.NewType`` over an enum coerces through ``__supertype__``."""
+        resolver = QueryResolver()
+        resolver.add_authorized_field(QueryFieldName("vid"), _TestVideoKindNt)
+        resolver.resolve(_request("vid=long"))
+        assert cast(dict[str, QueryField[Any]], resolver.fields)["vid"].operations[0].value == _StrEnumKind.LONG
+
+    def test_invalid_strenum_raises_valueerror(self) -> None:
+        """Unknown enum token raises ``ValueError``, not ``TypeError``."""
+        resolver = QueryResolver()
+        resolver.add_authorized_field(QueryFieldName("kind"), _StrEnumKind)
+        with pytest.raises(ValueError, match="Invalid _StrEnumKind"):
+            resolver.resolve(_request("kind=not-a-member"))
+
+    def test_from_model_registers_enum_leaf_types(self) -> None:
+        """``from_model`` + ``resolve`` coerces ``QueryField`` enums and ``NewType`` over enum."""
+        resolver = QueryResolver().from_model(_EnumCoerceQuery)
+        req = _request("kind=short&rank=SECOND&label=alpha&access=7&vid=LONG&page=0&page_size=10")
+        resolver.resolve(req)
+        fields = cast(dict[str, QueryField[Any]], resolver.fields)
+        assert fields["kind"].operations[0].value is _StrEnumKind.SHORT
+        assert fields["rank"].operations[0].value is _IntEnumRank.SECOND
+        assert fields["label"].operations[0].value is _PlainLabels.ALPHA
+        assert fields["access"].operations[0].value == (_Access.R | _Access.W | _Access.X)
+        assert fields["vid"].operations[0].value == _StrEnumKind.LONG
 
 
 class TestQueryResolver:

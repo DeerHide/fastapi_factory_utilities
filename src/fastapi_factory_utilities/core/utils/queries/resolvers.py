@@ -1,11 +1,12 @@
 """Provides resolvers for the query utilities."""
 
 import uuid
+from enum import Enum, Flag, IntEnum
 from types import NoneType, UnionType
 from typing import Annotated, Any, ClassVar, Self, Union, get_args, get_origin
 
 from fastapi import Request
-from pydantic import AliasChoices, BaseModel
+from pydantic import AliasChoices, BaseModel, TypeAdapter, ValidationError
 
 from .abstracts import QueryAbstract
 from .enums import QueryFieldOperatorEnum
@@ -42,7 +43,48 @@ def _annotation_to_field_type(annotation: Any) -> Any:  # noqa: PLR0911
     return str
 
 
-def _coerce_scalar(item: str, field_type: Any) -> Any:  # noqa: PLR0911
+def _coerce_flag(item: str, field_type: type[Flag]) -> Flag:
+    """Coerce a query string to a :class:`enum.Flag` (including :class:`enum.IntFlag`)."""
+    stripped = item.strip()
+    if not stripped:
+        raise ValueError(f"Invalid {field_type.__name__} query value: {item!r}.")
+    for sep in ("|", ",", "+"):
+        if sep in stripped:
+            parts = [p.strip() for p in stripped.split(sep) if p.strip()]
+            if not parts:
+                raise ValueError(f"Invalid {field_type.__name__} query value: {item!r}.")
+            combined = field_type(0)
+            for part in parts:
+                if part not in field_type.__members__:
+                    raise ValueError(f"Invalid {field_type.__name__} query value: {item!r}.")
+                combined |= field_type[part]
+            return combined
+    try:
+        return field_type(int(stripped, 0))
+    except ValueError:
+        pass
+    if stripped in field_type.__members__:
+        return field_type[stripped]
+    raise ValueError(f"Invalid {field_type.__name__} query value: {item!r}.")
+
+
+def _coerce_enum(item: str, field_type: type[Enum]) -> Enum:
+    """Coerce a query string to a non-flag :class:`enum.Enum` (including :class:`enum.StrEnum`)."""
+    if item in field_type.__members__:
+        return field_type[item]
+    try:
+        return field_type(item)
+    except ValueError:
+        pass
+    if issubclass(field_type, IntEnum) and not issubclass(field_type, Flag):
+        try:
+            return field_type(int(item, 10))
+        except ValueError:
+            pass
+    raise ValueError(f"Invalid {field_type.__name__} query value: {item!r}.")
+
+
+def _coerce_scalar(item: str, field_type: Any) -> Any:  # noqa: PLR0911, PLR0912
     """Coerce a single query string to ``field_type``."""
     if field_type is str:
         return item
@@ -73,10 +115,22 @@ def _coerce_scalar(item: str, field_type: Any) -> Any:  # noqa: PLR0911
         # ``typing.NewType`` (any supertype we already support: str, int, UUID, …).
         coerced = _coerce_scalar(item, supertype)
         return field_type(coerced)
+    if isinstance(field_type, type):
+        try:
+            if issubclass(field_type, Flag):
+                return _coerce_flag(item, field_type)
+            if issubclass(field_type, Enum):
+                return _coerce_enum(item, field_type)
+        except TypeError:
+            pass
+        try:
+            return TypeAdapter(field_type).validate_python(item)
+        except ValidationError as exc:
+            raise ValueError(f"Invalid query value for {field_type!r}: {item!r}.") from exc
     raise TypeError(f"Unsupported field_type for query coercion: {field_type!r}.")
 
 
-def _coerce_value(value: str | list[str], field_type: type) -> Any:
+def _coerce_value(value: str | list[str], field_type: Any) -> Any:
     """Coerce a scalar or list (``in`` / ``nin``) of query strings."""
     if isinstance(value, list):
         return [_coerce_scalar(v, field_type) for v in value]

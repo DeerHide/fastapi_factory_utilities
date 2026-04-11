@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Queries: `QueryResolver` coerces query strings to `enum.Flag` / `enum.IntFlag`, `enum.Enum` (including `StrEnum` and `IntEnum`), and other leaf types via a `TypeAdapter` fallback (for example `datetime`).
+
 ## [3.3.0] - 2026-04-11
 
 ### Added
