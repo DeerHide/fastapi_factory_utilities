@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-04-11
+
 ### Added
 
 - Services: Audit (`AuditableEntity`, `AuditEventObject`), Hydra (`HydraTokenIntrospectObject`), and Kratos session/identity DTOs mix in `SearchableEntity` and `ApiResponseModelAbstract`, with fields marked via `Annotated[..., ApiResponseField, SearchableField]` for the shared query and response model builders.
@@ -229,7 +231,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v2.1.1...v3.0.0
 [2.1.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v2.0.1...v2.1.0
