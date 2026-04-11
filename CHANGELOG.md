@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Queries: `QueryResolver` preserves `typing.NewType` annotations when deriving field types so values such as `NewType(..., uuid.UUID)` coerce from query strings to `uuid.UUID` (not plain `str`).
+
 ## [3.1.0] - 2026-04-11
 
 ### Added
