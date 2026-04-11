@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.1] - 2026-04-11
+
 ### Fixed
 
 - ODM: `ODMQueryBuilder` maps filter field `id` to MongoDB `_id` so match documents align with Beanie primary key storage.
@@ -247,7 +249,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.2.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.2.1...HEAD
+[3.2.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.1.1...v3.2.0
 [3.1.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.1.0...v3.1.1
 [3.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.0.0...v3.1.0
