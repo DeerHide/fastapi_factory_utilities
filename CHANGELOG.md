@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Services: Audit (`AuditableEntity`, `AuditEventObject`), Hydra (`HydraTokenIntrospectObject`), and Kratos session/identity DTOs mix in `SearchableEntity` and `ApiResponseModelAbstract`, with fields marked via `Annotated[..., ApiResponseField, SearchableField]` for the shared query and response model builders.
+- Tests: OpenTelemetry integration teardown flushes and shuts down the meter provider using the configured closing timeout.
+
 ## [3.0.0] - 2026-04-11
 
 ### Added
