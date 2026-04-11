@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-04-11
+
+### Added
+
+- Queries: `QueryFieldOperation` accepts `T | list[T]` for `value` and validates that lists are only used with `in` / `nin` operators; ODM builder tests cover UUID `id` filters.
+
+### Fixed
+
+- Queries: `QueryResolver` coerces `typing.NewType` over any supported scalar supertype (for example `NewType(..., str)`), not only `uuid.UUID`.
+
 ## [3.2.1] - 2026-04-11
 
 ### Fixed
@@ -249,7 +259,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.2.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.3.0...HEAD
+[3.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.2.1...v3.3.0
 [3.2.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.1.1...v3.2.0
 [3.1.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.1.0...v3.1.1
