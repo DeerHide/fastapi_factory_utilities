@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- API: `ApiResponseField` marker; `ApiResponseModelAbstract.build_response_model` derives exposed fields from `Annotated[..., ApiResponseField]` instead of `FIELDS_ALLOWED_FOR_RESPONSE`.
+- Queries: `SearchableField` marker, `QueryFilterNestedAbstract`, and `SearchableEntity.build_nested_query_filter_model` for nested filter segments; `SearchableEntity.build_query_filter_model` derives searchable fields from `Annotated[..., SearchableField]` instead of `SEARCHABLE_FIELDS` or dotted path lists.
+- Queries: `QueryResolver` coerces `uuid.UUID` (including `NewType` wrappers over `UUID`) from query strings.
+
+### Changed
+
+- **Breaking:** `ApiResponseModelAbstract` drops `FIELDS_ALLOWED_FOR_RESPONSE` and dotted nested path configuration; nest `ApiResponseModelAbstract` subclasses to shape nested responses.
+- **Breaking:** `SearchableEntity` drops `SEARCHABLE_FIELDS` and dotted nested paths; nest `SearchableEntity` subclasses so nested filters map to inner models (with dotted query keys via existing resolver rules).
+
 ## [2.1.1] - 2026-04-10
 
 ### Changed
