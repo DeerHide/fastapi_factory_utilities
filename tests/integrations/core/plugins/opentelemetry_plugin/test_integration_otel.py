@@ -139,8 +139,14 @@ class TestIntegrationOpentelemetryPlugin:
         span: Span = tracer.start_span("test_span")
         span.end()
 
+        closing_timeout_ms: int = settings.closing_timeout * 1000
+
         assert builder.tracer_provider.force_flush()
         builder.tracer_provider.shutdown()
+
+        assert builder.meter_provider is not None
+        builder.meter_provider.force_flush(timeout_millis=closing_timeout_ms)
+        builder.meter_provider.shutdown(timeout_millis=closing_timeout_ms)
 
     def test_simple(self, fixture_otel_collector: OtelCollectorDict) -> None:
         """Test the OpenTelemetry plugin.
