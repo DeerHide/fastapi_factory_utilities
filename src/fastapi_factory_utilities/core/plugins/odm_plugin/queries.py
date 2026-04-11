@@ -66,6 +66,11 @@ def _op_to_rhs(operator: QueryFieldOperatorEnum, value: Any) -> Any:  # noqa: PL
     raise ValueError(f"Unsupported query field operator: {operator!r}")
 
 
+def _mongo_field_path(name: str) -> str:
+    """Map query model field names to MongoDB document paths (Beanie PK is ``_id``)."""
+    return "_id" if name == "id" else name
+
+
 _COMPARISON_KEYS = frozenset({"$gt", "$lt", "$gte", "$lte", "$ne"})
 _ARRAY_KEYS = frozenset({"$in", "$nin"})
 
@@ -133,7 +138,7 @@ def _build_mongo_filter(query_filter: QueryAbstract) -> dict[str, Any]:
 
     path_to_rhss: dict[str, list[Any]] = {}
     for field in fields.values():
-        path = str(field.name)
+        path = _mongo_field_path(str(field.name))
         for op in field.operations:
             path_to_rhss.setdefault(path, []).append(_op_to_rhs(op.operator, op.value))
 

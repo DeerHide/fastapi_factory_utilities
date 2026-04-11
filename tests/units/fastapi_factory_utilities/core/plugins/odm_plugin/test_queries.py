@@ -25,6 +25,7 @@ class _BaseQuery(QueryAbstract):
     """Concrete query model for builder tests."""
 
     title: str | None = None
+    id: QueryField[Any] | None = Field(default=None)
     count: QueryField[int] | None = Field(default=None)
     label: QueryField[str] | None = Field(default=None)
     flex: QueryField[Any] | None = Field(default=None)
@@ -60,6 +61,26 @@ def test_plain_scalar_field_becomes_eq() -> None:
     """get_fields wraps bare values as EQ QueryField."""
     built = _Builder().set_query_filter(_q(title="hello")).build()
     assert built.mongo_filter == {"title": "hello"}
+
+
+def test_id_field_maps_to_mongo_primary_key() -> None:
+    """Filter field ``id`` becomes ``_id`` in the match document (Beanie storage)."""
+    field = QueryField(
+        name=QueryFieldName("id"),
+        operations=[QueryFieldOperation(operator=QueryFieldOperatorEnum.EQ, value="pk-value")],
+    )
+    built = _Builder().set_query_filter(_q(id=field)).build()
+    assert built.mongo_filter == {"_id": "pk-value"}
+
+
+def test_id_field_in_operator_uses_primary_key_path() -> None:
+    """Merged and operator RHS shapes keep ``_id`` as the path key."""
+    field = QueryField(
+        name=QueryFieldName("id"),
+        operations=[QueryFieldOperation(operator=QueryFieldOperatorEnum.IN, value=["a", "b"])],
+    )
+    built = _Builder().set_query_filter(_q(id=field)).build()
+    assert built.mongo_filter == {"_id": {"$in": ["a", "b"]}}
 
 
 @pytest.mark.parametrize(
