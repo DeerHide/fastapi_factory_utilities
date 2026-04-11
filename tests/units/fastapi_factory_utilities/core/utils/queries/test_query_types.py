@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+import uuid
+from typing import Any, NewType, cast
 
 import pytest
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
@@ -30,6 +31,15 @@ def _request(query_string: str) -> Request:
             "query_string": query_string.encode("utf-8"),
         }
     )
+
+
+_TestRealmId = NewType("_TestRealmId", uuid.UUID)
+
+
+class _NewTypeUuidQuery(QueryAbstract):
+    """Query model with a ``typing.NewType`` wrapping ``uuid.UUID`` (Velmios-style ``RealmId``)."""
+
+    realm_id: QueryField[_TestRealmId] | None = Field(default=None)
 
 
 class _SampleQuery(QueryAbstract):
@@ -305,6 +315,25 @@ class TestQueryResolver:
         fields = cast(dict[str, QueryField[Any]], resolver.fields)
         assert fields["label"].operations[0].value == "hi"
         assert fields["score"].operations[0].value == 7  # noqa: PLR2004
+
+    def test_from_model_newtype_uuid_string_coerces_to_uuid(self) -> None:
+        """Query strings for ``NewType(..., uuid.UUID)`` must become ``UUID``, not ``str`` (Mongo parity)."""
+        expected = uuid.uuid4()
+        resolver = QueryResolver().from_model(_NewTypeUuidQuery)
+        req = _request(f"realm_id={expected}&page=0&page_size=10")
+        resolver.resolve(req)
+        fields = cast(dict[str, QueryField[Any]], resolver.fields)
+        value = fields["realm_id"].operations[0].value
+        assert value == expected
+        assert isinstance(value, uuid.UUID)
+        assert not isinstance(value, str)
+
+    def test_from_model_newtype_uuid_invalid_raises(self) -> None:
+        """Invalid UUID strings for a ``NewType``-UUID field raise ``ValueError``."""
+        resolver = QueryResolver().from_model(_NewTypeUuidQuery)
+        req = _request("realm_id=not-a-uuid&page=0&page_size=10")
+        with pytest.raises(ValueError, match="Invalid UUID"):
+            resolver.resolve(req)
 
     def test_coerce_failure_raises(self) -> None:
         """Invalid value for declared ``int`` field raises ``ValueError``."""

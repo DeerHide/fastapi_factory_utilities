@@ -12,8 +12,8 @@ from .enums import QueryFieldOperatorEnum
 from .types import QueryField, QueryFieldName, QueryFieldOperation, QuerySort, RawQueryFieldName, RawQuerySort
 
 
-def _annotation_to_field_type(annotation: Any) -> type:  # noqa: PLR0911
-    """Pick a concrete ``type`` from a field annotation for coercion defaults."""
+def _annotation_to_field_type(annotation: Any) -> Any:  # noqa: PLR0911
+    """Pick a coercion target from a field annotation (``type``, ``typing.NewType``, etc.)."""
     if annotation is None:
         return str
     while get_origin(annotation) is Annotated:
@@ -34,12 +34,15 @@ def _annotation_to_field_type(annotation: Any) -> type:  # noqa: PLR0911
         if len(non_none) == 1:
             return _annotation_to_field_type(non_none[0])
         return str
+    # typing.NewType is a callable, not a ``type``; _coerce_scalar uses ``__supertype__``.
+    if getattr(annotation, "__supertype__", None) is not None:
+        return annotation
     if isinstance(annotation, type):
         return annotation
     return str
 
 
-def _coerce_scalar(item: str, field_type: type) -> Any:  # noqa: PLR0911
+def _coerce_scalar(item: str, field_type: Any) -> Any:  # noqa: PLR0911
     """Coerce a single query string to ``field_type``."""
     if field_type is str:
         return item
@@ -179,12 +182,12 @@ class QueryResolver:
         self._fields: dict[QueryFieldName, QueryField[Any]] = {}
         self._sorts: list[QuerySort] = []
 
-    def add_authorized_field(self, field_name: QueryFieldName, field_type: type = str) -> Self:
+    def add_authorized_field(self, field_name: QueryFieldName, field_type: Any = str) -> Self:
         """Add an authorized field.
 
         Args:
             field_name (QueryFieldName): The name of the field.
-            field_type (type): The type of the field. Defaults to str.
+            field_type: The type or ``typing.NewType`` wrapper used to coerce query values. Defaults to ``str``.
 
         Raises:
             ValueError: If the field is already authorized.
