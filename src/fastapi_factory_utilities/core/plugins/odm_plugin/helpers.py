@@ -3,14 +3,17 @@
 import datetime
 import uuid
 from collections.abc import Callable
-from typing import Generic, TypeVar, cast
+from typing import Annotated, Generic, TypeVar, cast
 
 from pydantic import BaseModel, Field
+
+from fastapi_factory_utilities.core.utils.api import ApiResponseField, ApiResponseModelAbstract
+from fastapi_factory_utilities.core.utils.queries import SearchableEntity, SearchableField
 
 GenericPersistedEntityId = TypeVar("GenericPersistedEntityId", bound=uuid.UUID)
 
 
-class PersistedEntity(BaseModel, Generic[GenericPersistedEntityId]):
+class PersistedEntity(SearchableEntity, ApiResponseModelAbstract, BaseModel, Generic[GenericPersistedEntityId]):
     """Base class for persisted entities.
 
     Attributes:
@@ -32,8 +35,14 @@ class PersistedEntity(BaseModel, Generic[GenericPersistedEntityId]):
     ```
     """
 
-    id: GenericPersistedEntityId = Field(default_factory=cast(Callable[[], GenericPersistedEntityId], uuid.uuid4))
+    id: Annotated[GenericPersistedEntityId, ApiResponseField, SearchableField] = Field(
+        default_factory=cast(Callable[[], GenericPersistedEntityId], uuid.uuid4)
+    )
 
     revision_id: uuid.UUID | None = Field(default=None)
-    created_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
-    updated_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
+    created_at: Annotated[datetime.datetime, ApiResponseField, SearchableField] = Field(
+        default_factory=datetime.datetime.now
+    )
+    updated_at: Annotated[datetime.datetime, ApiResponseField, SearchableField] = Field(
+        default_factory=datetime.datetime.now
+    )

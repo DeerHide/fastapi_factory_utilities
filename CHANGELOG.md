@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- ODM: `PersistedEntity` mixes in `SearchableEntity` and `ApiResponseModelAbstract`; `id`, `created_at`, and `updated_at` use `ApiResponseField` and `SearchableField` so shared query and response model builders apply consistently.
+
 ## [3.1.1] - 2026-04-11
 
 ### Fixed
