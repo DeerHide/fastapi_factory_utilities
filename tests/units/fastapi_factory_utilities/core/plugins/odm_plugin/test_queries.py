@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID, uuid4
 
 import pytest
 from beanie import SortDirection
-from pydantic import Field
+from pydantic import Field, ValidationError
 
 from fastapi_factory_utilities.core.plugins.odm_plugin.queries import ODMFindQuery, ODMQueryBuilder
 from fastapi_factory_utilities.core.utils.paginations import PaginationPageOffset, PaginationSize
@@ -19,6 +20,12 @@ from fastapi_factory_utilities.core.utils.queries import (
     QuerySort,
     RawQuerySort,
 )
+
+
+class _UuidIdQuery(QueryAbstract):
+    """Query model with typed UUID ``id`` (matches realm-isolated filters)."""
+
+    id: QueryField[UUID] | None = Field(default=None)
 
 
 class _BaseQuery(QueryAbstract):
@@ -81,6 +88,49 @@ def test_id_field_in_operator_uses_primary_key_path() -> None:
     )
     built = _Builder().set_query_filter(_q(id=field)).build()
     assert built.mongo_filter == {"_id": {"$in": ["a", "b"]}}
+
+
+def test_query_field_uuid_in_accepts_uuid_list() -> None:
+    """``QueryField[UUID]`` allows a list of UUIDs for ``in`` (Pydantic + ODM path)."""
+    u1, u2 = uuid4(), uuid4()
+    field = QueryField(
+        name=QueryFieldName("id"),
+        operations=[QueryFieldOperation(operator=QueryFieldOperatorEnum.IN, value=[u1, u2])],
+    )
+    q = _UuidIdQuery.model_validate({"page": 0, "page_size": 10, "sorts": [], "id": field})
+    built = ODMQueryBuilder[_UuidIdQuery]().set_query_filter(q).build()
+    assert built.mongo_filter == {"_id": {"$in": [u1, u2]}}
+
+
+def test_query_field_uuid_nin_accepts_uuid_list() -> None:
+    """``QueryField[UUID]`` allows a list of UUIDs for ``nin``."""
+    u1 = uuid4()
+    field = QueryField(
+        name=QueryFieldName("id"),
+        operations=[QueryFieldOperation(operator=QueryFieldOperatorEnum.NIN, value=[u1])],
+    )
+    q = _UuidIdQuery.model_validate({"page": 0, "page_size": 10, "sorts": [], "id": field})
+    built = ODMQueryBuilder[_UuidIdQuery]().set_query_filter(q).build()
+    assert built.mongo_filter == {"_id": {"$nin": [u1]}}
+
+
+def test_query_field_uuid_in_accepts_scalar_uuid() -> None:
+    """``IN`` with a single UUID still validates on ``QueryField[UUID]``."""
+    u = uuid4()
+    field = QueryField(
+        name=QueryFieldName("id"),
+        operations=[QueryFieldOperation(operator=QueryFieldOperatorEnum.IN, value=u)],
+    )
+    q = _UuidIdQuery.model_validate({"page": 0, "page_size": 10, "sorts": [], "id": field})
+    built = ODMQueryBuilder[_UuidIdQuery]().set_query_filter(q).build()
+    assert built.mongo_filter == {"_id": {"$in": [u]}}
+
+
+def test_query_field_uuid_eq_rejects_list() -> None:
+    """Operators other than ``in`` / ``nin`` must not use a list ``value``."""
+    u = uuid4()
+    with pytest.raises(ValidationError, match="list value is only allowed"):
+        QueryFieldOperation[UUID](operator=QueryFieldOperatorEnum.EQ, value=[u])
 
 
 @pytest.mark.parametrize(

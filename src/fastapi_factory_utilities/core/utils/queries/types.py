@@ -1,7 +1,7 @@
 """Provides the types for the query utilities."""
 
 import re
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import Any, ClassVar, Generic, Self, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, GetCoreSchemaHandler, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
@@ -104,7 +104,14 @@ class QueryFieldOperation(BaseModel, Generic[T]):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     operator: QueryFieldOperatorEnum
-    value: T
+    value: T | list[T]
+
+    @model_validator(mode="after")
+    def _list_value_only_for_in_or_nin(self) -> Self:
+        if isinstance(self.value, list):
+            if self.operator not in (QueryFieldOperatorEnum.IN, QueryFieldOperatorEnum.NIN):
+                raise ValueError("A list value is only allowed for 'in' and 'nin' operators.")
+        return self
 
 
 class QueryField(BaseModel, Generic[T]):
