@@ -81,3 +81,14 @@ class QueryAbstract(BaseModel, ABC):
             elif isinstance(sub_val, BaseModel) and not isinstance(sub_val, QueryAbstract):
                 acc.update(QueryAbstract._nested_query_fields_from_model(sub_val))
         return acc
+
+
+class QueryFilterNestedAbstract(BaseModel, ABC):
+    """Base for nested filter groups (dotted query keys under a parent field).
+
+    Use for hand-authored nested segments on :class:`QueryAbstract`, or rely on
+    :meth:`SearchableEntity.build_query_filter_model` which builds inner types that subclass this
+    class. Unlike :class:`QueryAbstract`, this type has no pagination or sort fields.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", arbitrary_types_allowed=True)

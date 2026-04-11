@@ -1,15 +1,16 @@
-"""Provides utilities for the API."""
+"""Provides utilities for the API.
 
-from typing import Any, ClassVar, cast, get_type_hints
+Mark fields with :data:`ApiResponseField` inside :class:`typing.Annotated` on an
+:class:`ApiResponseModelAbstract` subclass, then subclass the model returned by
+:meth:`ApiResponseModelAbstract.build_response_model` or use it as a response schema.
+"""
+
+from typing import Annotated, Any, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 from pydantic.fields import FieldInfo
 
-from fastapi_factory_utilities.core.utils.pydantic_path_fields import (
-    build_path_tree,
-    nested_basemodel_for_annotation,
-    raise_if_dotted_path_prefix_conflict,
-)
+from fastapi_factory_utilities.core.utils.pydantic_path_fields import nested_basemodel_for_annotation
 
 
 class ApiResponseSchemaBase(BaseModel):
@@ -20,6 +21,27 @@ class ApiResponseSchemaBase(BaseModel):
     """
 
     model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
+
+
+class ApiResponseFieldMarker:
+    """Marker class for API response fields."""
+
+
+ApiResponseField = ApiResponseFieldMarker()  # pylint: disable=invalid-name
+
+
+def _strip_api_response_to_value_type(hint: Any) -> Any:
+    """Return ``T`` from ``Annotated[T, ..., ApiResponseField, ...]`` (unwrap nested ``Annotated``)."""
+    ann: Any = hint
+    while get_origin(ann) is Annotated:
+        args = get_args(ann)
+        if not args:
+            break
+        metadata = args[1:]
+        if any(m is ApiResponseField or isinstance(m, ApiResponseFieldMarker) for m in metadata):
+            return args[0]
+        ann = args[0]
+    return ann
 
 
 def _field_to_create_model_spec(field_info: FieldInfo, annotation: Any) -> tuple[Any, Any]:
@@ -38,127 +60,96 @@ def _container_response_annotation(field_info: FieldInfo, inner_model: type[Base
     return inner_model | None
 
 
-def _build_dynamic_subset_model(
-    source: type[BaseModel],
-    subtree: dict[str, Any],
-    model_name: str,
-    *,
-    include_extras: bool,
-    module: str,
-) -> type[BaseModel]:
-    """Recursively build a response model that exposes only paths under ``subtree``."""
-    hints: dict[str, Any] = get_type_hints(source, include_extras=include_extras)
-    fields: dict[str, Any] = {}
-
-    for seg, val in subtree.items():
-        if seg not in source.model_fields:
-            msg = f"Field {seg!r} is not defined on {source.__name__}."
-            raise ValueError(msg) from None
-        field_info = source.model_fields[seg]
-        if val is True:
-            annotation = hints.get(seg, field_info.annotation)
-            if annotation is None:
-                annotation = Any
-            fields[seg] = _field_to_create_model_spec(field_info, annotation)
-        elif isinstance(val, dict):
-            annotation = hints.get(seg, field_info.annotation)
-            nested_cls = nested_basemodel_for_annotation(annotation)
-            if nested_cls is None:
-                msg = f"Field {seg!r} on {source.__name__} is not a single nested model type."
-                raise ValueError(msg) from None
-            safe_seg = seg.replace(".", "_")
-            inner_name = f"{model_name}_{safe_seg}"
-            inner_model = _build_dynamic_subset_model(
-                nested_cls,
-                cast(dict[str, Any], val),
-                inner_name,
-                include_extras=include_extras,
-                module=module,
-            )
-            inner_ann = _container_response_annotation(field_info, inner_model)
-            fields[seg] = _field_to_create_model_spec(field_info, inner_ann)
-        else:
-            msg = f"Invalid path subtree for segment {seg!r}."
-            raise TypeError(msg)
-
-    return create_model(
-        model_name,
-        __base__=ApiResponseSchemaBase,
-        __module__=module,
-        __doc__=f"Nested API response subset for {source.__name__}",
-        **fields,
-    )
-
-
 class ApiResponseModelAbstract(BaseModel):
-    """Abstract base class for the API response."""
+    """Abstract base for domain models that declare an API response projection.
 
-    FIELDS_ALLOWED_FOR_RESPONSE: ClassVar[list[str]] = []
+    Exposed fields are those annotated with :data:`ApiResponseField`. Nested models must
+    subclass :class:`ApiResponseModelAbstract` so their own marked fields define the nested
+    response shape.
+
+    Examples:
+        Flat fields::
+
+            class ProductEntity(ApiResponseModelAbstract):
+                id: Annotated[int, ApiResponseField]
+                label: Annotated[str, ApiResponseField] = "default"
+                internal_note: str = "secret"
+
+
+            ProductApi = ProductEntity.build_response_model()
+
+        Nested entity::
+
+            class AddressEntity(ApiResponseModelAbstract):
+                city: Annotated[str, ApiResponseField]
+                street: Annotated[str, ApiResponseField] = ""
+
+
+            class UserEntity(ApiResponseModelAbstract):
+                name: Annotated[str, ApiResponseField]
+                address: Annotated[AddressEntity, ApiResponseField]
+
+
+            UserApi = UserEntity.build_response_model()
+
+        Optional nested container::
+
+            class UserEntityOptional(ApiResponseModelAbstract):
+                name: Annotated[str, ApiResponseField]
+                address: Annotated[AddressEntity | None, ApiResponseField] = None
+    """
 
     @classmethod
     def build_response_model(cls) -> type[ApiResponseSchemaBase]:
-        """Build a new Pydantic model with only the allowed fields.
+        """Build a new Pydantic model containing only fields marked with :data:`ApiResponseField`.
 
         The result subclasses :class:`ApiResponseSchemaBase` so you can extend it::
 
-            UserApi = User.build_response_model()
+            UserApi = UserEntity.build_response_model()
 
 
             class UserApiWithMeta(UserApi):
                 request_id: str
         """
-        allowed = list(cls.FIELDS_ALLOWED_FOR_RESPONSE)
-        raise_if_dotted_path_prefix_conflict(allowed)
-
         model_name: str = f"{cls.__name__}ApiResponse"
         hints: dict[str, Any] = get_type_hints(cls, include_extras=True)
+
+        annotated_response: list[str] = []
+        for field_name, hint in hints.items():
+            if get_origin(hint) is Annotated:
+                metadata = get_args(hint)[1:]
+                if any(m is ApiResponseField or isinstance(m, ApiResponseFieldMarker) for m in metadata):
+                    annotated_response.append(field_name)
+
+        allowed = list(dict.fromkeys(annotated_response))
+        model_fields_map: dict[str, FieldInfo] = dict(cls.model_fields.items())
         fields: dict[str, Any] = {}
 
-        plain = [f for f in allowed if "." not in f]
-        dotted = [f for f in allowed if "." in f]
-
-        model_fields_map: dict[str, FieldInfo] = dict(cls.model_fields.items())
-
-        for field_name in plain:
+        for field_name in allowed:
             try:
                 field_info = model_fields_map[field_name]
             except KeyError as exc:
-                msg = f"Field {field_name} is not defined on {cls.__name__}."
+                msg = f"Field {field_name!r} is not defined on {cls.__name__}."
                 raise ValueError(msg) from exc
-            annotation = hints.get(field_name, field_info.annotation)
-            if annotation is None:
-                annotation = Any
-            fields[field_name] = _field_to_create_model_spec(field_info, annotation)
 
-        if dotted:
-            tree = build_path_tree(dotted)
-            for prefix, subtree in tree.items():
-                if prefix not in model_fields_map:
-                    msg = f"Field {prefix} is not defined on {cls.__name__}."
-                    raise ValueError(msg) from None
-                field_info = model_fields_map[prefix]
-                annotation = hints.get(prefix, field_info.annotation)
-                nested_cls = nested_basemodel_for_annotation(annotation)
-                if nested_cls is None:
+            stripped = _strip_api_response_to_value_type(hints[field_name])
+            nested_cls = nested_basemodel_for_annotation(stripped)
+
+            if nested_cls is not None:
+                if not issubclass(nested_cls, ApiResponseModelAbstract):
                     msg = (
-                        f"Field {prefix!r} is not a nested model on {cls.__name__}; "
-                        f"cannot build nested response fields {subtree!r}."
+                        f"Field {field_name!r} on {cls.__name__} nests type {nested_cls.__name__!r}; "
+                        "nested API fields must use a type that subclasses ApiResponseModelAbstract."
                     )
                     raise ValueError(msg) from None
-                if not isinstance(subtree, dict):
-                    msg = f"Invalid nested path tree for field {prefix!r}."
-                    raise TypeError(msg)
-                safe_prefix = prefix.replace(".", "_")
-                inner_name = f"{model_name}_{safe_prefix}"
-                inner_model = _build_dynamic_subset_model(
-                    nested_cls,
-                    cast(dict[str, Any], subtree),
-                    inner_name,
-                    include_extras=True,
-                    module=cls.__module__,
-                )
+                inner_model = nested_cls.build_response_model()
                 inner_ann = _container_response_annotation(field_info, inner_model)
-                fields[prefix] = _field_to_create_model_spec(field_info, inner_ann)
+                fields[field_name] = _field_to_create_model_spec(field_info, inner_ann)
+            else:
+                annotation: Any = stripped
+                if annotation is None:
+                    annotation = Any
+                fields[field_name] = _field_to_create_model_spec(field_info, annotation)
 
         return create_model(
             model_name,

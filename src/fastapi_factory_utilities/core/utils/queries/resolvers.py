@@ -1,5 +1,6 @@
 """Provides resolvers for the query utilities."""
 
+import uuid
 from types import NoneType, UnionType
 from typing import Annotated, Any, ClassVar, Self, Union, get_args, get_origin
 
@@ -38,7 +39,7 @@ def _annotation_to_field_type(annotation: Any) -> type:  # noqa: PLR0911
     return str
 
 
-def _coerce_scalar(item: str, field_type: type) -> Any:
+def _coerce_scalar(item: str, field_type: type) -> Any:  # noqa: PLR0911
     """Coerce a single query string to ``field_type``."""
     if field_type is str:
         return item
@@ -59,6 +60,17 @@ def _coerce_scalar(item: str, field_type: type) -> Any:
         if lower in ("false", "0", "no"):
             return False
         raise ValueError(f"Invalid boolean query value: {item!r}.")
+    if field_type is uuid.UUID:
+        try:
+            return uuid.UUID(item)
+        except ValueError as exc:
+            raise ValueError(f"Invalid UUID query value: {item!r}.") from exc
+    supertype = getattr(field_type, "__supertype__", None)
+    if supertype is uuid.UUID:
+        try:
+            return field_type(uuid.UUID(item))
+        except (ValueError, TypeError) as exc:
+            raise ValueError(f"Invalid UUID query value: {item!r}.") from exc
     raise TypeError(f"Unsupported field_type for query coercion: {field_type!r}.")
 
 

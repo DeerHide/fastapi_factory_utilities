@@ -21,10 +21,14 @@ Examples:
 - Sorting (ascending order if no prefix is provided):
     - GET /api/v1/users?sort=name
     - GET /api/v1/users?sort=-name&sort=+age
+
+Dynamic filter models from entities: mark fields with ``Annotated[..., SearchableField]`` on a
+:class:`SearchableEntity` subclass, then subclass the model returned by
+:meth:`SearchableEntity.build_query_filter_model`.
 """
 
-from .abstracts import QueryAbstract
-from .entities import SearchableEntity
+from .abstracts import QueryAbstract, QueryFilterNestedAbstract
+from .entities import SearchableEntity, SearchableField, SearchableMarker
 from .enums import QueryFieldOperatorEnum, QuerySortDirectionEnum
 from .resolvers import QueryResolver
 from .types import QueryField, QueryFieldName, QueryFieldOperation, QuerySort, RawQueryFieldName, RawQuerySort
@@ -40,10 +44,13 @@ __all__: list[str] = [
     "QueryFieldOperation",
     "QueryFieldOperatorEnum",
     "QueryFilterAbstract",
+    "QueryFilterNestedAbstract",
     "QueryResolver",
     "QuerySort",
     "QuerySortDirectionEnum",
     "RawQueryFieldName",
     "RawQuerySort",
     "SearchableEntity",
+    "SearchableField",
+    "SearchableMarker",
 ]

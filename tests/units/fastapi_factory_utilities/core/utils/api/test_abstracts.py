@@ -3,32 +3,26 @@
 from __future__ import annotations
 
 from types import NoneType
-from typing import Any, ClassVar, cast
+from typing import Annotated, Any, cast
 
 import pytest
 from pydantic import BaseModel, Field, ValidationError
 
-from fastapi_factory_utilities.core.utils.api import ApiResponseModelAbstract, ApiResponseSchemaBase
-
-
-class _ApiNestedSubEntity(BaseModel):
-    """Module-level nested model so :func:`get_type_hints` can resolve annotations."""
-
-    id: int
-    name: str = "anon"
-    hidden: str = "x"
+from fastapi_factory_utilities.core.utils.api import (
+    ApiResponseField,
+    ApiResponseModelAbstract,
+    ApiResponseSchemaBase,
+)
 
 
 class TestBuildResponseModelEmpty:
-    """``FIELDS_ALLOWED_FOR_RESPONSE`` may be empty."""
+    """Models with no ``Annotated[..., ApiResponseField]`` fields yield an empty schema."""
 
     class EmptyEntity(ApiResponseModelAbstract):
         """Entity exposing no fields in API responses."""
 
-        FIELDS_ALLOWED_FOR_RESPONSE: ClassVar[list[str]] = []
-
     def test_empty_allowed_fields(self) -> None:
-        """Empty list yields a response type with no fields."""
+        """No marked fields yields a response type with no fields."""
         response_model = self.EmptyEntity.build_response_model()
         assert response_model.__name__ == "EmptyEntityApiResponse"
         assert response_model.__doc__ == "API response model for EmptyEntity"
@@ -44,12 +38,10 @@ class TestBuildResponseModelHappyPath:
     class ProductEntity(ApiResponseModelAbstract):
         """Sample entity with mixed field kinds."""
 
-        FIELDS_ALLOWED_FOR_RESPONSE: ClassVar[list[str]] = ["id", "label", "tags", "count_or_none"]
-
-        id: int
-        label: str = "default-label"
-        tags: list[str] = Field(default_factory=list)
-        count_or_none: int | None = None
+        id: Annotated[int, ApiResponseField]
+        label: Annotated[str, ApiResponseField] = "default-label"
+        tags: Annotated[list[str], ApiResponseField] = Field(default_factory=list)
+        count_or_none: Annotated[int | None, ApiResponseField] = None
         internal_note: str = "secret"
 
     def test_subclass_name_doc_and_base(self) -> None:
@@ -61,7 +53,7 @@ class TestBuildResponseModelHappyPath:
         assert response_model.__module__ == self.ProductEntity.__module__
 
     def test_only_allowed_fields_on_response_model(self) -> None:
-        """Internal fields are omitted from the response schema."""
+        """Unmarked fields are omitted from the response schema."""
         response_model = self.ProductEntity.build_response_model()
         assert set(response_model.model_fields) == {"id", "label", "tags", "count_or_none"}
         assert "internal_note" not in response_model.model_fields
@@ -95,19 +87,21 @@ class TestBuildResponseModelHappyPath:
         assert b.tags == []
 
 
-class TestBuildResponseModelInvalidField:
-    """Invalid configuration raises ``ValueError``."""
+class _PlainNestedBaseModel(BaseModel):
+    id: int
+
+
+class TestBuildResponseModelNestedMustSubclassAbstract:
+    """Nested ``BaseModel`` types that are not ``ApiResponseModelAbstract`` are rejected."""
 
     class BadEntity(ApiResponseModelAbstract):
-        """Entity listing a non-existent field for responses."""
+        """Entity whose nested field is a plain ``BaseModel``."""
 
-        FIELDS_ALLOWED_FOR_RESPONSE: ClassVar[list[str]] = ["missing"]
+        subfield: Annotated[_PlainNestedBaseModel, ApiResponseField]
 
-        id: int
-
-    def test_unknown_field_name_raises_value_error(self) -> None:
-        """``FIELDS_ALLOWED_FOR_RESPONSE`` entries must exist on the model."""
-        with pytest.raises(ValueError, match="Field missing is not defined on BadEntity"):
+    def test_plain_nested_raises_value_error(self) -> None:
+        """Nested API fields must subclass ``ApiResponseModelAbstract``."""
+        with pytest.raises(ValueError, match="must use a type that subclasses ApiResponseModelAbstract"):
             self.BadEntity.build_response_model()
 
 
@@ -117,9 +111,7 @@ class TestBuildResponseModelExtension:
     class ItemEntity(ApiResponseModelAbstract):
         """Minimal entity."""
 
-        FIELDS_ALLOWED_FOR_RESPONSE: ClassVar[list[str]] = ["sku"]
-
-        sku: str
+        sku: Annotated[str, ApiResponseField]
 
     def test_subclass_adds_fields(self) -> None:
         """Extending the generated class keeps base fields and adds new ones."""
@@ -136,33 +128,46 @@ class TestBuildResponseModelExtension:
         assert instance.request_id == "req-1"
 
 
-class TestBuildResponseModelNestedPaths:
-    """Dotted ``FIELDS_ALLOWED_FOR_RESPONSE`` entries produce nested response models."""
+class ApiNestedSubEntity(ApiResponseModelAbstract):
+    """Module-level nested model: id and name exposed; hidden is internal."""
+
+    id: Annotated[int, ApiResponseField]
+    name: Annotated[str, ApiResponseField] = "anon"
+    hidden: str = "x"
+
+
+class ApiNestedSubEntityIdOnly(ApiResponseModelAbstract):
+    """Nested model exposing only ``id`` (for optional-container test)."""
+
+    id: Annotated[int, ApiResponseField]
+    name: str = "anon"
+    hidden: str = "x"
+
+
+class TestBuildResponseModelNestedMarkedTypes:
+    """Nested ``ApiResponseModelAbstract`` types become nested response models."""
 
     class ParentEntity(ApiResponseModelAbstract):
         """Entity with nested subfield and top-level attribute."""
 
-        FIELDS_ALLOWED_FOR_RESPONSE: ClassVar[list[str]] = ["subfield.id", "subfield.name", "top"]
-
-        subfield: _ApiNestedSubEntity
-        top: str
+        subfield: Annotated[ApiNestedSubEntity, ApiResponseField]
+        top: Annotated[str, ApiResponseField]
         internal: int = 0
 
     class ParentEntityOptionalSub(ApiResponseModelAbstract):
         """Optional nested subfield preserves optionality on the API model."""
 
-        FIELDS_ALLOWED_FOR_RESPONSE: ClassVar[list[str]] = ["subfield.id", "top"]
-
-        subfield: _ApiNestedSubEntity | None = None
-        top: str
+        subfield: Annotated[ApiNestedSubEntityIdOnly | None, ApiResponseField] = None
+        top: Annotated[str, ApiResponseField]
 
     def test_nested_fields_grouped_under_subfield(self) -> None:
-        """Allowed nested paths become one nested model with only those leaves."""
+        """Marked nested type becomes one nested model with only its marked leaves."""
         response_model = cast(Any, self.ParentEntity.build_response_model())
         assert set(response_model.model_fields) == {"subfield", "top"}
         sub_ann = response_model.model_fields["subfield"].annotation
         assert sub_ann is not None
-        sub_fields = set(sub_ann.model_fields) if isinstance(sub_ann, type) else set()
+        assert isinstance(sub_ann, type) and issubclass(sub_ann, BaseModel)
+        sub_fields = set(sub_ann.model_fields)
         assert sub_fields == {"id", "name"}
         assert "hidden" not in sub_fields
         obj = response_model(subfield={"id": 1, "name": "n"}, top="ok")
@@ -182,24 +187,3 @@ class TestBuildResponseModelNestedPaths:
         assert len(non_none) == 1
         inner_model = non_none[0]
         assert set(inner_model.model_fields) == {"id"}
-
-    def test_prefix_conflict_raises(self) -> None:
-        """Listing both a container and a descendant path is rejected."""
-
-        class Bad(ApiResponseModelAbstract):
-            FIELDS_ALLOWED_FOR_RESPONSE: ClassVar[list[str]] = ["subfield", "subfield.id"]
-            subfield: _ApiNestedSubEntity
-            top: str
-
-        with pytest.raises(ValueError, match="Conflicting field paths"):
-            Bad.build_response_model()
-
-    def test_non_nested_field_for_dotted_prefix_raises(self) -> None:
-        """First segment of a dotted path must be a nested ``BaseModel`` field."""
-
-        class Flat(ApiResponseModelAbstract):
-            FIELDS_ALLOWED_FOR_RESPONSE: ClassVar[list[str]] = ["top.oops"]
-            top: str
-
-        with pytest.raises(ValueError, match="not a nested model"):
-            Flat.build_response_model()
