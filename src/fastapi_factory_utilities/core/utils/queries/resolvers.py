@@ -69,11 +69,10 @@ def _coerce_scalar(item: str, field_type: Any) -> Any:  # noqa: PLR0911
         except ValueError as exc:
             raise ValueError(f"Invalid UUID query value: {item!r}.") from exc
     supertype = getattr(field_type, "__supertype__", None)
-    if supertype is uuid.UUID:
-        try:
-            return field_type(uuid.UUID(item))
-        except (ValueError, TypeError) as exc:
-            raise ValueError(f"Invalid UUID query value: {item!r}.") from exc
+    if supertype is not None:
+        # ``typing.NewType`` (any supertype we already support: str, int, UUID, …).
+        coerced = _coerce_scalar(item, supertype)
+        return field_type(coerced)
     raise TypeError(f"Unsupported field_type for query coercion: {field_type!r}.")
 
 

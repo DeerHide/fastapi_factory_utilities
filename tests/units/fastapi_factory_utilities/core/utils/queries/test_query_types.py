@@ -34,12 +34,19 @@ def _request(query_string: str) -> Request:
 
 
 _TestRealmId = NewType("_TestRealmId", uuid.UUID)
+_TestChannelId = NewType("_TestChannelId", str)
 
 
 class _NewTypeUuidQuery(QueryAbstract):
     """Query model with a ``typing.NewType`` wrapping ``uuid.UUID`` (Velmios-style ``RealmId``)."""
 
     realm_id: QueryField[_TestRealmId] | None = Field(default=None)
+
+
+class _NewTypeStrQuery(QueryAbstract):
+    """Query model with ``typing.NewType`` over ``str`` (e.g. YouTube channel id)."""
+
+    channel_id: QueryField[_TestChannelId] | None = Field(default=None)
 
 
 class _SampleQuery(QueryAbstract):
@@ -334,6 +341,17 @@ class TestQueryResolver:
         req = _request("realm_id=not-a-uuid&page=0&page_size=10")
         with pytest.raises(ValueError, match="Invalid UUID"):
             resolver.resolve(req)
+
+    def test_from_model_newtype_str_coerces_via_constructor(self) -> None:
+        """``NewType(..., str)`` query values coerce like ``str`` (runtime value is plain ``str``)."""
+        raw = "UCv1E9DE0fopEQ-SVdlN07IQ"
+        resolver = QueryResolver().from_model(_NewTypeStrQuery)
+        req = _request(f"channel_id={raw}&page=0&page_size=10")
+        resolver.resolve(req)
+        fields = cast(dict[str, QueryField[Any]], resolver.fields)
+        value = fields["channel_id"].operations[0].value
+        assert value == raw
+        assert isinstance(value, str)
 
     def test_coerce_failure_raises(self) -> None:
         """Invalid value for declared ``int`` field raises ``ValueError``."""
