@@ -3,7 +3,7 @@
 import datetime
 import json
 import uuid
-from typing import Any, TypedDict
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -18,30 +18,12 @@ from fastapi_factory_utilities.core.services.audit.objects import (
 )
 
 
-class _AuditableNamesKw(TypedDict):
-    """Keyword bundle for AuditableEntity construction in tests."""
-
-    entity_name: EntityName
-    domain_name: DomainName
-    service_name: ServiceName
-
-
-def _auditable_names() -> _AuditableNamesKw:
-    """Defaults for required auditable metadata (PartStr segments >= 3 chars)."""
-    return {
-        "entity_name": EntityName("test_entity"),
-        "domain_name": DomainName("dom_testing"),
-        "service_name": ServiceName("test_service"),
-    }
-
-
 def _sample_auditable_entity() -> AuditableEntity:
     """Minimal `AuditableEntity` for `AuditEventObject` tests."""
     return AuditableEntity(
         id=uuid.uuid4(),
         created_at=datetime.datetime.now(datetime.timezone.utc),
         updated_at=datetime.datetime.now(datetime.timezone.utc),
-        **_auditable_names(),
     )
 
 
@@ -75,7 +57,6 @@ class TestAuditableEntity:
             id=entity_id,
             created_at=created_at,
             updated_at=updated_at,
-            **_auditable_names(),
         )
 
         # Assert
@@ -98,39 +79,31 @@ class TestAuditableEntity:
             created_at=created_at,
             updated_at=updated_at,
             deleted_at=deleted_at,
-            **_auditable_names(),
         )
 
         # Assert
         assert entity.deleted_at == deleted_at
 
-    def test_missing_auditable_metadata_raises_validation_error(self) -> None:
-        """Entity, domain, and service names are required."""
+    def test_missing_id_raises_validation_error(self) -> None:
+        """Primary key is required."""
         with pytest.raises(ValidationError) as exc_info:
             AuditableEntity(
-                id=uuid.uuid4(),
                 created_at=datetime.datetime.now(datetime.timezone.utc),
                 updated_at=datetime.datetime.now(datetime.timezone.utc),
             )
 
         locs = {err["loc"][0] for err in exc_info.value.errors()}
-        assert "entity_name" in locs
-        assert "domain_name" in locs
-        assert "service_name" in locs
+        assert "id" in locs
 
-    def test_getters_return_constructor_metadata(self) -> None:
-        """get_* accessors return the same values passed into the model."""
-        names = _auditable_names()
+    def test_published_fields_defaults(self) -> None:
+        """Published and published_at default when omitted."""
         entity = AuditableEntity(
             id=uuid.uuid4(),
             created_at=datetime.datetime.now(datetime.timezone.utc),
             updated_at=datetime.datetime.now(datetime.timezone.utc),
-            **names,
         )
-
-        assert entity.get_entity_name() == names["entity_name"]
-        assert entity.get_domain_name() == names["domain_name"]
-        assert entity.get_service_name() == names["service_name"]
+        assert entity.published is False
+        assert entity.published_at is None
 
     def test_model_dump(self) -> None:
         """Test model serialization using model_dump."""
@@ -145,7 +118,6 @@ class TestAuditableEntity:
             created_at=created_at,
             updated_at=updated_at,
             deleted_at=deleted_at,
-            **_auditable_names(),
         )
 
         # Act
@@ -156,9 +128,8 @@ class TestAuditableEntity:
         assert dumped["created_at"] == created_at
         assert dumped["updated_at"] == updated_at
         assert dumped["deleted_at"] == deleted_at
-        assert "entity_name" not in dumped
-        assert "domain_name" not in dumped
-        assert "service_name" not in dumped
+        assert dumped["published"] is False
+        assert dumped["published_at"] is None
 
     def test_model_dump_json(self) -> None:
         """Test model serialization using model_dump_json."""
@@ -171,7 +142,6 @@ class TestAuditableEntity:
             id=entity_id,
             created_at=created_at,
             updated_at=updated_at,
-            **_auditable_names(),
         )
 
         # Act
@@ -365,9 +335,8 @@ class TestAuditEventObject:
                     "created_at": entity.created_at.isoformat(),
                     "updated_at": entity.updated_at.isoformat(),
                     "deleted_at": None,
-                    "entity_name": entity.entity_name,
-                    "domain_name": entity.domain_name,
-                    "service_name": entity.service_name,
+                    "published": False,
+                    "published_at": None,
                 },
             }
         )
@@ -382,7 +351,7 @@ class TestAuditEventObject:
         assert audit_event.who == kwargs["who"]
         assert audit_event.domain == kwargs["domain"]
         assert audit_event.service == kwargs["service"]
-        assert audit_event.entity.id == entity.id
+        assert str(audit_event.entity.id) == str(entity.id)
 
     def test_round_trip_serialization(self) -> None:
         """Test round-trip serialization: create → serialize → deserialize."""
@@ -394,15 +363,7 @@ class TestAuditEventObject:
         }
         original: AuditEventObject[Any] = AuditEventObject(**kwargs)
 
-        # Act: default dump omits auditable metadata on nested entity (Field exclude).
         dumped = original.model_dump()
-        ent = original.entity
-        dumped["entity"] = {
-            **ent.model_dump(),
-            "entity_name": ent.entity_name,
-            "domain_name": ent.domain_name,
-            "service_name": ent.service_name,
-        }
         restored: AuditEventObject[Any] = AuditEventObject.model_validate(dumped)
 
         # Assert

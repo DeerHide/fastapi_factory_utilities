@@ -1,7 +1,7 @@
 """Provides the services for the audit service."""
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from fastapi_factory_utilities.core.plugins.aiopika import (
     AbstractListener,
@@ -14,7 +14,7 @@ from fastapi_factory_utilities.core.plugins.aiopika import (
 from .exceptions import AuditServiceError
 from .objects import AuditableEntity, AuditEventObject, ServiceName
 
-AuditEventGeneric = TypeVar("AuditEventGeneric", bound=AuditEventObject[AuditableEntity])
+AuditEventGeneric = TypeVar("AuditEventGeneric", bound=AuditEventObject[AuditableEntity[Any]])
 
 
 class AbstractAuditPublisherService(ABC, Generic[AuditEventGeneric]):

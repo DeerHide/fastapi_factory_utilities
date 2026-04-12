@@ -1,7 +1,16 @@
 """Audit service module."""
 
 from .exceptions import AuditServiceError
-from .objects import AuditableEntity, AuditEventObject, DomainName, EntityFunctionalEventName, EntityName, ServiceName
+from .objects import (
+    AuditableEntity,
+    AuditEventObject,
+    DomainName,
+    EntityFunctionalEventName,
+    EntityName,
+    PersistedAuditableEntity,
+    ServiceName,
+    UseCaseName,
+)
 from .services import AbstractAuditListenerService, AbstractAuditPublisherService
 
 __all__: list[str] = [
@@ -13,5 +22,7 @@ __all__: list[str] = [
     "DomainName",
     "EntityFunctionalEventName",
     "EntityName",
+    "PersistedAuditableEntity",
     "ServiceName",
+    "UseCaseName",
 ]
