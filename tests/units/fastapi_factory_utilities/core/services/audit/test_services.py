@@ -30,9 +30,6 @@ def _sample_auditable_entity() -> AuditableEntity:
         id=uuid.uuid4(),
         created_at=datetime.datetime.now(datetime.timezone.utc),
         updated_at=datetime.datetime.now(datetime.timezone.utc),
-        entity_name=EntityName("test_entity"),
-        domain_name=DomainName("dom_testing"),
-        service_name=ServiceName("ent_service"),
     )
 
 

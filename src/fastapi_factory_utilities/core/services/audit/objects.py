@@ -7,52 +7,44 @@ from typing import Annotated, Any, Generic, NewType, TypeVar, cast
 from pydantic import BaseModel, Field, field_validator
 
 from fastapi_factory_utilities.core.plugins.aiopika.types import PartStr
+from fastapi_factory_utilities.core.plugins.odm_plugin.helpers import PersistedEntity
 from fastapi_factory_utilities.core.utils.api import ApiResponseField, ApiResponseModelAbstract
 from fastapi_factory_utilities.core.utils.queries import SearchableEntity, SearchableField
 
 EntityName = NewType("EntityName", PartStr)
+UseCaseName = NewType("UseCaseName", PartStr)
 EntityFunctionalEventName = NewType("EntityFunctionalEventName", PartStr)
 ServiceName = NewType("ServiceName", PartStr)
 DomainName = NewType("DomainName", PartStr)
 
+GenericPersistedEntityId = TypeVar("GenericPersistedEntityId", bound=uuid.UUID)
 
-class AuditableEntity(SearchableEntity, ApiResponseModelAbstract, BaseModel):
-    """Auditable entity.
+
+class AuditableEntity(PersistedEntity[GenericPersistedEntityId], Generic[GenericPersistedEntityId]):
+    """Auditable entity persisted in the platform sense.
 
     Attributes:
-        entity_name: Name used to identify the entity in the audit trail; must be unique in the ecosystem.
-            Excluded from serialized model output by default.
-        domain_name: Owning domain name (excluded from serialization).
-        service_name: Owning service name (excluded from serialization).
-        id: The ID of the entity.
+        id: The ID of the entity (required; overrides ``PersistedEntity`` auto-generated default).
         created_at: The creation date of the entity.
         updated_at: The last update date of the entity.
         deleted_at: The deletion date of the entity.
+        published: Whether the entity is published.
+        published_at: When the entity was published, if applicable.
     """
 
-    entity_name: EntityName = Field(exclude=True)
-    domain_name: DomainName = Field(exclude=True)
-    service_name: ServiceName = Field(exclude=True)
-
-    id: Annotated[uuid.UUID, ApiResponseField, SearchableField]
-    created_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    updated_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
+    id: Annotated[GenericPersistedEntityId, ApiResponseField, SearchableField]
     deleted_at: Annotated[datetime.datetime | None, ApiResponseField, SearchableField] = None
-
-    def get_domain_name(self) -> DomainName:
-        """Get the domain name."""
-        return self.domain_name
-
-    def get_service_name(self) -> ServiceName:
-        """Get the service name."""
-        return self.service_name
-
-    def get_entity_name(self) -> EntityName:
-        """Get the entity audit name."""
-        return self.entity_name
+    published: Annotated[bool, ApiResponseField, SearchableField] = False
+    published_at: Annotated[datetime.datetime | None, ApiResponseField, SearchableField] = None
 
 
-AuditEventActorGeneric = TypeVar("AuditEventActorGeneric", bound=AuditableEntity)
+class PersistedAuditableEntity(AuditableEntity[GenericPersistedEntityId], Generic[GenericPersistedEntityId]):
+    """Auditable entity backed by ODM persistence (Beanie document base)."""
+
+    pass
+
+
+AuditEventActorGeneric = TypeVar("AuditEventActorGeneric", bound=AuditableEntity[Any])
 
 
 class AuditEventObject(SearchableEntity, ApiResponseModelAbstract, BaseModel, Generic[AuditEventActorGeneric]):
@@ -78,6 +70,8 @@ class AuditEventObject(SearchableEntity, ApiResponseModelAbstract, BaseModel, Ge
     entity: Annotated[AuditEventActorGeneric, ApiResponseField, SearchableField]
     domain: Annotated[DomainName, ApiResponseField, SearchableField]
     service: Annotated[ServiceName, ApiResponseField, SearchableField]
+    use_case: Annotated[UseCaseName, ApiResponseField, SearchableField] = Field(default=UseCaseName(PartStr("unknown")))
+    metadata: Annotated[dict[str, Any], ApiResponseField, SearchableField] = Field(default_factory=dict)
 
     @field_validator("who")
     @classmethod
