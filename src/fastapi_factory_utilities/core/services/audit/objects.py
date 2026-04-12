@@ -2,12 +2,12 @@
 
 import datetime
 import uuid
+from collections.abc import Callable
 from typing import Annotated, Any, Generic, NewType, TypeVar, cast
 
 from pydantic import BaseModel, Field, field_validator
 
 from fastapi_factory_utilities.core.plugins.aiopika.types import PartStr
-from fastapi_factory_utilities.core.plugins.odm_plugin.helpers import PersistedEntity
 from fastapi_factory_utilities.core.utils.api import ApiResponseField, ApiResponseModelAbstract
 from fastapi_factory_utilities.core.utils.queries import SearchableEntity, SearchableField
 
@@ -20,28 +20,33 @@ DomainName = NewType("DomainName", PartStr)
 GenericPersistedEntityId = TypeVar("GenericPersistedEntityId", bound=uuid.UUID)
 
 
-class AuditableEntity(PersistedEntity[GenericPersistedEntityId], Generic[GenericPersistedEntityId]):
-    """Auditable entity persisted in the platform sense.
+class AuditableEntity(
+    SearchableEntity,
+    ApiResponseModelAbstract,
+    BaseModel,
+    Generic[GenericPersistedEntityId],
+):
+    """Auditable entity that does not assume ODM persistence metadata.
 
-    Attributes:
-        id: The ID of the entity (required; overrides ``PersistedEntity`` auto-generated default).
-        created_at: The creation date of the entity.
-        updated_at: The last update date of the entity.
-        deleted_at: The deletion date of the entity.
-        published: Whether the entity is published.
-        published_at: When the entity was published, if applicable.
+    Subclass :class:`PersistedAuditableEntity` when the actor is a stored document
+    (revision id and optional auto-generated id, matching :class:`PersistedEntity`).
     """
 
     id: Annotated[GenericPersistedEntityId, ApiResponseField, SearchableField]
+    created_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
+    updated_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
     deleted_at: Annotated[datetime.datetime | None, ApiResponseField, SearchableField] = None
     published: Annotated[bool, ApiResponseField, SearchableField] = False
     published_at: Annotated[datetime.datetime | None, ApiResponseField, SearchableField] = None
 
 
 class PersistedAuditableEntity(AuditableEntity[GenericPersistedEntityId], Generic[GenericPersistedEntityId]):
-    """Auditable entity backed by ODM persistence (Beanie document base)."""
+    """Auditable entity with persistence fields aligned to ``PersistedEntity``."""
 
-    pass
+    id: Annotated[GenericPersistedEntityId, ApiResponseField, SearchableField] = Field(
+        default_factory=cast(Callable[[], GenericPersistedEntityId], uuid.uuid4)
+    )
+    revision_id: uuid.UUID | None = Field(default=None)
 
 
 AuditEventActorGeneric = TypeVar("AuditEventActorGeneric", bound=AuditableEntity[Any])
