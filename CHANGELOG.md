@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Audit: `AuditableEntity` uses a permissive Pydantic `model_config` (`extra="allow"`, `arbitrary_types_allowed=True`) so auditable actors can carry extended or non-JSON-native fields when needed.
+
 ## [4.0.1] - 2026-04-12
 
 ### Changed
