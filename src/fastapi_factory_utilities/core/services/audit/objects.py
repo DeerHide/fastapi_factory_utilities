@@ -3,9 +3,9 @@
 import datetime
 import uuid
 from collections.abc import Callable
-from typing import Annotated, Any, Generic, NewType, TypeVar, cast
+from typing import Annotated, Any, ClassVar, Generic, NewType, TypeVar, cast
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from fastapi_factory_utilities.core.plugins.aiopika.types import PartStr
 from fastapi_factory_utilities.core.utils.api import ApiResponseField, ApiResponseModelAbstract
@@ -31,6 +31,8 @@ class AuditableEntity(
     Subclass :class:`PersistedAuditableEntity` when the actor is a stored document
     (revision id and optional auto-generated id, matching :class:`PersistedEntity`).
     """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow", arbitrary_types_allowed=True)
 
     id: Annotated[GenericPersistedEntityId, ApiResponseField, SearchableField]
     created_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
