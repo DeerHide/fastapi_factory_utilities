@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Audit: `AuditableEntity` is a standalone model again; `PersistedAuditableEntity` subclasses it with `revision_id` and optional auto-generated `id` aligned to `PersistedEntity` without multiple `BaseModel` inheritance.
+
 ## [4.0.0] - 2026-04-12
 
 ### Added
