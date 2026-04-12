@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-04-12
+
 ### Changed
 
 - Audit: `AuditableEntity` uses a permissive Pydantic `model_config` (`extra="allow"`, `arbitrary_types_allowed=True`) so auditable actors can carry extended or non-JSON-native fields when needed.
@@ -285,7 +287,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.0.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.1.0...HEAD
+[4.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.0.1...v4.1.0
 [4.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.4.0...v4.0.0
 [3.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v3.3.0...v3.4.0
