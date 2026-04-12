@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Audit: `UseCaseName`, optional `AuditEventObject.use_case` (default `unknown`) and `metadata`, and `PersistedAuditableEntity` for ODM-backed documents.
+
+### Changed
+
+- **Breaking:** `AuditableEntity` now subclasses `PersistedEntity` with a required `id`, adds `published` / `published_at`, and drops embedded `entity_name`, `domain_name`, `service_name` fields and their getters (domain/service remain on `AuditEventObject`).
+
 ## [3.4.0] - 2026-04-11
 
 ### Added
