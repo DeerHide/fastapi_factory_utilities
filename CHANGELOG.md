@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.3.0] - 2026-04-14
+
+### Added
+
+- Application builder: `build_as_uvicorn_utils`, `build_as_hypercorn_utils`, and `build_and_serve` forward `**kwargs` to `build()` for callers that need late FastAPI wiring.
+
+### Changed
+
+- Queries: narrow mypy noise on dynamic `create_model` when building nested `SearchableEntity` query filter models.
+
 ## [4.2.1] - 2026-04-14
 
 ### Fixed
@@ -310,7 +320,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.2.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.3.0...HEAD
+[4.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.2.1...v4.3.0
 [4.2.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.2.0...v4.2.1
 [4.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.1.1...v4.2.0
 [4.1.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.1.0...v4.1.1
