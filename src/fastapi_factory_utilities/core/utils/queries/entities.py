@@ -161,7 +161,7 @@ class SearchableEntity(BaseModel):
                 **cast(dict[str, Any], fields),
             )
         else:
-            model = create_model(
+            model = create_model(  # type: ignore[misc]
                 model_name,
                 __base__=QueryFilterNestedAbstract,  # type: ignore[arg-type]
                 **cast(dict[str, Any], fields),

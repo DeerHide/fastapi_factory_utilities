@@ -118,22 +118,22 @@ class ApplicationGenericBuilder(Generic[T]):
         """
         setup_log(mode=mode, logging_config=logging_config)
 
-    def build_as_uvicorn_utils(self) -> UvicornUtils:
+    def build_as_uvicorn_utils(self, **kwargs: Any) -> UvicornUtils:
         """Build the application and provide UvicornUtils."""
-        self._uvicorn_utils = UvicornUtils(app=self.build())
+        self._uvicorn_utils = UvicornUtils(app=self.build(**kwargs))
         return self._uvicorn_utils
 
-    def build_as_hypercorn_utils(self) -> HypercornUtils:
+    def build_as_hypercorn_utils(self, **kwargs: Any) -> HypercornUtils:
         """Build the application and provide HypercornUtils."""
-        self._hypercorn_utils = HypercornUtils(app=self.build())
+        self._hypercorn_utils = HypercornUtils(app=self.build(**kwargs))
         return self._hypercorn_utils
 
-    def build_and_serve(self) -> None:
+    def build_and_serve(self, **kwargs: Any) -> None:
         """Build the application and serve it with configured ASGI server."""
         if self._server_implementation == ServerImplementationEnum.UVICORN:
-            server_utils: UvicornUtils | HypercornUtils = self._uvicorn_utils or self.build_as_uvicorn_utils()
+            server_utils: UvicornUtils | HypercornUtils = self._uvicorn_utils or self.build_as_uvicorn_utils(**kwargs)
         else:
-            server_utils = self._hypercorn_utils or self.build_as_hypercorn_utils()
+            server_utils = self._hypercorn_utils or self.build_as_hypercorn_utils(**kwargs)
 
         assert self._root_config is not None, "Root configuration is not set"
         self.configure_logging(mode=self._root_config.logging_mode, logging_config=self._root_config.logging)
