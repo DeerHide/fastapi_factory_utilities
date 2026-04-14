@@ -71,6 +71,7 @@ taskiq-fastapi = "^0.3.5"
 taskiq-redis = "^1.0.9"
 certifi = "^2025.11.12"
 fastapi-csrf-protect = "^1.0.7"
+hypercorn = "^0.18.0"
 
 [tool.poetry.group.test]
 optional = true
