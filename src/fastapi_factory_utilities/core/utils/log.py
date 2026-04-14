@@ -70,6 +70,13 @@ def clean_uvicorn_logger() -> None:
         logging.getLogger(logger_name).propagate = True
 
 
+def clean_hypercorn_logger() -> None:
+    """Cleans the Hypercorn loggers."""
+    for logger_name in ["hypercorn.error", "hypercorn.access"]:
+        logging.getLogger(logger_name).handlers.clear()
+        logging.getLogger(logger_name).propagate = True
+
+
 def _drop_color_message_key(_: Any, __: Any, event_dict: EventDict) -> EventDict:  # pylint: disable=invalid-name
     """Cleans the `color_message` key from the event dictionary.
 

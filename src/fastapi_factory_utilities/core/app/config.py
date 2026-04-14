@@ -47,7 +47,7 @@ class ServerConfig(BaseModel):
     # Pydantic configuration
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
 
-    # Server configuration mainly used by uvicorn
+    # Server configuration mainly used by ASGI servers (uvicorn, hypercorn)
     host: str = Field(default="0.0.0.0", description="Server host")
     port: int = Field(default=8000, description="Server port")
     workers: int = Field(default=1, description="Number of workers")

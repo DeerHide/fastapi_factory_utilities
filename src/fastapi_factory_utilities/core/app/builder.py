@@ -1,10 +1,12 @@
 """Provide the ApplicationGenericBuilder class."""
 
+from enum import StrEnum, auto
 from typing import Any, Generic, Self, TypeVar, get_args
 
 from fastapi_factory_utilities.core.app.config import GenericConfigBuilder, RootConfig
 from fastapi_factory_utilities.core.app.fastapi_builder import FastAPIBuilder
 from fastapi_factory_utilities.core.plugins import PluginAbstract
+from fastapi_factory_utilities.core.utils.hypercorn import HypercornUtils
 from fastapi_factory_utilities.core.utils.log import LoggingConfig, LogModeEnum, setup_log
 from fastapi_factory_utilities.core.utils.uvicorn import UvicornUtils
 
@@ -13,12 +15,21 @@ from .application import ApplicationAbstract
 T = TypeVar("T", bound=ApplicationAbstract)
 
 
+class ServerImplementationEnum(StrEnum):
+    """Available ASGI server implementations."""
+
+    UVICORN = auto()
+    HYPERCORN = auto()
+
+
 class ApplicationGenericBuilder(Generic[T]):
     """Application generic builder."""
 
     def __init__(self, plugins: list[PluginAbstract] | None = None) -> None:
         """Instanciate the ApplicationGenericBuilder."""
         self._uvicorn_utils: UvicornUtils | None = None
+        self._hypercorn_utils: HypercornUtils | None = None
+        self._server_implementation: ServerImplementationEnum = ServerImplementationEnum.UVICORN
         self._root_config: RootConfig | None = None
         self._plugins: list[PluginAbstract] = plugins or []
         self._fastapi_builder: FastAPIBuilder | None = None
@@ -59,6 +70,11 @@ class ApplicationGenericBuilder(Generic[T]):
             Self: The builder.
         """
         self._fastapi_builder = fastapi_builder
+        return self
+
+    def set_server_implementation(self, implementation: ServerImplementationEnum) -> Self:
+        """Set the ASGI server implementation used by build_and_serve."""
+        self._server_implementation = implementation
         return self
 
     def _build_from_package_root_config(self) -> RootConfig:
@@ -107,14 +123,22 @@ class ApplicationGenericBuilder(Generic[T]):
         self._uvicorn_utils = UvicornUtils(app=self.build())
         return self._uvicorn_utils
 
+    def build_as_hypercorn_utils(self) -> HypercornUtils:
+        """Build the application and provide HypercornUtils."""
+        self._hypercorn_utils = HypercornUtils(app=self.build())
+        return self._hypercorn_utils
+
     def build_and_serve(self) -> None:
-        """Build the application and serve it with Uvicorn."""
-        uvicorn_utils: UvicornUtils = self._uvicorn_utils or self.build_as_uvicorn_utils()
+        """Build the application and serve it with configured ASGI server."""
+        if self._server_implementation == ServerImplementationEnum.UVICORN:
+            server_utils: UvicornUtils | HypercornUtils = self._uvicorn_utils or self.build_as_uvicorn_utils()
+        else:
+            server_utils = self._hypercorn_utils or self.build_as_hypercorn_utils()
 
         assert self._root_config is not None, "Root configuration is not set"
         self.configure_logging(mode=self._root_config.logging_mode, logging_config=self._root_config.logging)
 
         try:
-            uvicorn_utils.serve()
+            server_utils.serve()
         except KeyboardInterrupt:
             pass
