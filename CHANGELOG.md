@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- CI release job: extract GitHub release notes when the `CHANGELOG.md` version line uses Keep a Changelog’s dated form (`## [x.y.z] - YYYY-MM-DD`), not only a bare `## [x.y.z]` line.
+
 ## [4.3.0] - 2026-04-14
 
 ### Added
