@@ -185,9 +185,30 @@ jobs:
         run: |
           poetry self add poetry-dynamic-versioning
           poetry build
+      - name: Extract changelog for release
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          EXPECTED_HEADER="## [$VERSION]"
+
+          awk -v expected="$EXPECTED_HEADER" '
+            $0 == expected { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md \
+            | sed '/^[[:space:]]*$/d' \
+            > release_notes.txt
+
+          if [ ! -s release_notes.txt ]; then
+            echo "No release notes found for ${EXPECTED_HEADER} in CHANGELOG.md"
+            exit 1
+          fi
+
+          echo "Extracted release notes for v$VERSION:"
+          cat release_notes.txt
       - name: Release
         uses: softprops/action-gh-release@v2.5.0
         with:
+          body_path: release_notes.txt
           files: |
             dist/fastapi_factory_utilities-*.tar.gz
             dist/fastapi_factory_utilities-*.whl

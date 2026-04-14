@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Release: GitHub release notes extraction now matches the `CHANGELOG.md` version header exactly and fails the workflow when notes for the tag are missing/empty, preventing silent blank release descriptions.
+
 ## [4.2.0] - 2026-04-14
 
 ### Added
