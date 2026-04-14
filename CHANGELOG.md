@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Audit: `AuditEventObject.pre_publish_hook(entity)` now provides a default hook for redacting or transforming audited entities before publish.
+
+### Fixed
+
+- Audit: `AbstractAuditPublisherService.publish` now delegates to `AbstractPublisher.publish` and wraps broker failures as `AuditServiceError` without recursive self-calls.
+- Audit: default routing-key prefix now uses a valid topic segment (`all`) so the publisher service can be imported and instantiated safely.
+
 ## [4.1.0] - 2026-04-12
 
 ### Changed
