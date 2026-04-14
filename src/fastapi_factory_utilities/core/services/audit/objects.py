@@ -92,3 +92,17 @@ class AuditEventObject(SearchableEntity, ApiResponseModelAbstract, BaseModel, Ge
         if len(value_dict) == 0:
             raise ValueError("Who must not be empty.")
         return value_dict
+
+    @classmethod
+    def pre_publish_hook(cls, entity: AuditEventActorGeneric) -> AuditEventActorGeneric:
+        """Provide a default implementation to filter the entity.
+
+        Can be use to expurgate sensitive data from the entity.
+
+        Args:
+            entity: The entity to filter.
+
+        Returns:
+            The filtered entity.
+        """
+        return entity

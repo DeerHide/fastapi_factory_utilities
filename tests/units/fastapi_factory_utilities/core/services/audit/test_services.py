@@ -2,16 +2,20 @@
 
 import datetime
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from collections.abc import Callable
+from typing import Any, cast
+from unittest.mock import AsyncMock
 
 import pytest
 
 from fastapi_factory_utilities.core.plugins.aiopika import (
     AbstractPublisher,
     AiopikaPluginBaseError,
+    ExchangeName,
     GenericMessage,
     RoutingKey,
 )
+from fastapi_factory_utilities.core.plugins.aiopika.types import PartStr
 from fastapi_factory_utilities.core.services.audit.exceptions import AuditServiceError
 from fastapi_factory_utilities.core.services.audit.objects import (
     AuditableEntity,
@@ -24,7 +28,7 @@ from fastapi_factory_utilities.core.services.audit.objects import (
 from fastapi_factory_utilities.core.services.audit.services import AbstractAuditPublisherService
 
 
-def _sample_auditable_entity() -> AuditableEntity:
+def _sample_auditable_entity() -> AuditableEntity[uuid.UUID]:
     """Minimal entity for audit service tests."""
     return AuditableEntity(
         id=uuid.uuid4(),
@@ -33,217 +37,116 @@ def _sample_auditable_entity() -> AuditableEntity:
     )
 
 
-# Test model class for generic service testing
-class MockAuditEventObject(AuditEventObject[AuditableEntity]):
+class MockAuditEventObject(AuditEventObject[AuditableEntity[uuid.UUID]]):
     """Mock audit event object for testing."""
-
-    pass
 
 
 class ConcreteAuditPublisherService(AbstractAuditPublisherService[MockAuditEventObject]):
     """Concrete implementation for testing."""
 
-    def build_routing_key_pattern(self, audit_event: MockAuditEventObject) -> RoutingKey:
-        """Build the routing key pattern for the audit event."""
-        return RoutingKey(f"audit.{audit_event.domain}.{audit_event.service}.{audit_event.what}.{audit_event.why}")
 
+class CustomizedAuditPublisherService(ConcreteAuditPublisherService):
+    """Publisher service overriding routing key parts."""
 
-@pytest.fixture(name="mock_publisher")
-def fixture_mock_publisher() -> AbstractPublisher[GenericMessage[MockAuditEventObject]]:
-    """Create a mock publisher for testing.
-
-    Returns:
-        AbstractPublisher[GenericMessage[MockAuditEventObject]]: A mock publisher.
-    """
-    return MagicMock(spec=AbstractPublisher)
+    EXCHANGE_NAME = ExchangeName("audit")
+    ROUTING_KEY_PREFIX = PartStr("events")
+    ROUTING_KEY_DOMAIN_NAME = DomainName(PartStr("identity"))
+    ROUTING_KEY_SERVICE_NAME = ServiceName(PartStr("iam"))
+    ROUTING_KEY_ENTITY_NAME = EntityName(PartStr("user"))
 
 
 @pytest.fixture(name="service_name")
-def fixutre_service_name() -> ServiceName:
-    """Create a service name for testing.
-
-    Returns:
-        ServiceName: A test service name.
-    """
-    return ServiceName("test_service")
+def fixture_service_name() -> ServiceName:
+    """Create a service name for testing."""
+    return ServiceName(PartStr("test_service"))
 
 
 @pytest.fixture(name="audit_event")
 def fixture_audit_event() -> MockAuditEventObject:
-    """Create an audit event for testing.
-
-    Returns:
-        MockAuditEventObject: A test audit event.
-    """
+    """Create an audit event for testing."""
     return MockAuditEventObject(
-        what=EntityName("test_entity"),
-        why=EntityFunctionalEventName("created"),
-        where=ServiceName("test_service"),
+        what=EntityName(PartStr("test_entity")),
+        why=EntityFunctionalEventName(PartStr("created")),
+        where=ServiceName(PartStr("test_service")),
         when=datetime.datetime.now(datetime.timezone.utc),
         who={"id": str(uuid.uuid4())},
         entity=_sample_auditable_entity(),
-        domain=DomainName("dom_testing"),
-        service=ServiceName("evt_service"),
+        domain=DomainName(PartStr("dom_testing")),
+        service=ServiceName(PartStr("evt_service")),
     )
 
 
 class TestAbstractAuditPublisherService:
-    """Various tests for the AbstractAuditPublisherService class."""
+    """Tests for the AbstractAuditPublisherService class."""
 
-    def test_init(
-        self,
-        service_name: ServiceName,
-        mock_publisher: AbstractPublisher[GenericMessage[MockAuditEventObject]],
-    ) -> None:
-        """Test that __init__ properly initializes the service.
+    def test_init_builds_exchange_and_sender(self, service_name: ServiceName) -> None:
+        """Service initializes sender and exchange."""
+        service = ConcreteAuditPublisherService(sender=service_name)
 
-        Args:
-            service_name (ServiceName): Service name fixture.
-            mock_publisher (AbstractPublisher[GenericMessage[MockAuditEventObject]]): Mock publisher fixture.
-        """
-        service = ConcreteAuditPublisherService(sender=service_name, publisher=mock_publisher)
+        assert getattr(service, "_sender") == service_name
+        assert getattr(service.build_exchange(), "_name") == ExchangeName("default")
 
-        assert service._sender == service_name  # type: ignore[attr-defined] # pylint: disable=protected-access
-        assert service._publisher == mock_publisher  # type: ignore[attr-defined] # pylint: disable=protected-access
+    def test_build_routing_key_pattern_uses_class_config(self, audit_event: MockAuditEventObject) -> None:
+        """Routing key pattern is based on configurable class values."""
+        service = CustomizedAuditPublisherService(sender=ServiceName(PartStr("publisher")))
 
-    @pytest.mark.asyncio
-    async def test_publish_success(
-        self,
-        service_name: ServiceName,
-        mock_publisher: AbstractPublisher[GenericMessage[MockAuditEventObject]],
-        audit_event: MockAuditEventObject,
-    ) -> None:
-        """Test successful publish call.
+        routing_key = service.build_routing_key_pattern(audit_event=audit_event)
 
-        Args:
-            service_name (ServiceName): Service name fixture.
-            mock_publisher (AbstractPublisher[GenericMessage[MockAuditEventObject]]): Mock publisher fixture.
-            audit_event (MockAuditEventObject): Audit event fixture.
-        """
-        service = ConcreteAuditPublisherService(sender=service_name, publisher=mock_publisher)
-        mock_publisher.publish = AsyncMock()
-
-        await service.publish(audit_event=audit_event)
-
-        # Verify publish was called
-        mock_publisher.publish.assert_called_once()
-        call_args = mock_publisher.publish.call_args
-
-        # Verify message
-        message: GenericMessage[MockAuditEventObject] = call_args.kwargs["message"]
-        assert isinstance(message, GenericMessage)
-        assert message.data == audit_event
-
-        # Verify routing key
-        routing_key: RoutingKey = call_args.kwargs["routing_key"]
-        expected_routing_key = f"audit.{audit_event.domain}.{audit_event.service}.{audit_event.what}.{audit_event.why}"
-        assert routing_key == expected_routing_key
+        assert routing_key == RoutingKey("events.identity.iam.user.created")
 
     @pytest.mark.asyncio
-    async def test_publish_raises_audit_service_error_on_publisher_error(
+    async def test_publish_applies_pre_publish_hook_and_calls_base_publisher(
         self,
+        monkeypatch: pytest.MonkeyPatch,
         service_name: ServiceName,
-        mock_publisher: AbstractPublisher[GenericMessage[MockAuditEventObject]],
         audit_event: MockAuditEventObject,
     ) -> None:
-        """Test that publish raises AuditServiceError when publisher raises AiopikaPluginBaseError.
+        """Publish filters entity then delegates to base publisher."""
+        service = ConcreteAuditPublisherService(sender=service_name)
+        publish_mock = AsyncMock()
+        monkeypatch.setattr(AbstractPublisher, "publish", publish_mock)
 
-        Args:
-            service_name (ServiceName): Service name fixture.
-            mock_publisher (AbstractPublisher[GenericMessage[MockAuditEventObject]]): Mock publisher fixture.
-            audit_event (MockAuditEventObject): Audit event fixture.
-        """
-        service = ConcreteAuditPublisherService(sender=service_name, publisher=mock_publisher)
+        def _mark_published(
+            cls_: type[MockAuditEventObject],
+            entity: AuditableEntity[uuid.UUID],
+        ) -> AuditableEntity[uuid.UUID]:
+            _ = cls_
+            return entity.model_copy(update={"published": True})
+
+        monkeypatch.setattr(
+            MockAuditEventObject,
+            "pre_publish_hook",
+            classmethod(cast(Callable[..., Any], _mark_published)),
+        )
+
+        message = GenericMessage(data=audit_event)
+        routing_key = service.build_routing_key_pattern(audit_event=message.data)
+
+        await service.publish(message=message, routing_key=routing_key)
+
+        publish_mock.assert_awaited_once_with(message=message, routing_key=routing_key)
+        assert message.data.entity.published is True
+
+    @pytest.mark.asyncio
+    async def test_publish_wraps_aiopika_errors(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        service_name: ServiceName,
+        audit_event: MockAuditEventObject,
+    ) -> None:
+        """Aiopika publish failure is translated into AuditServiceError."""
+        service = ConcreteAuditPublisherService(sender=service_name)
         publisher_error = AiopikaPluginBaseError(message="Failed to publish")
-        mock_publisher.publish = AsyncMock(side_effect=publisher_error)
+        monkeypatch.setattr(AbstractPublisher, "publish", AsyncMock(side_effect=publisher_error))
+
+        message = GenericMessage(data=audit_event)
+        routing_key = service.build_routing_key_pattern(audit_event=audit_event)
 
         with pytest.raises(AuditServiceError) as exc_info:
-            await service.publish(audit_event=audit_event)
+            await service.publish(message=message, routing_key=routing_key)
 
         err = exc_info.value
         assert "Failed to publish the audit event" in str(err)
         assert err.__cause__ == publisher_error
-        expected_key = service.build_routing_key_pattern(audit_event=audit_event)
-        # FastAPIFactoryUtilitiesError stringifies model attributes for safe logging.
         assert getattr(err, "audit_event", None) == str(audit_event)
-        assert getattr(err, "routing_key", None) == str(expected_key)
-
-    @pytest.mark.asyncio
-    async def test_build_routing_key_pattern_called_with_correct_event(
-        self,
-        service_name: ServiceName,
-        mock_publisher: AbstractPublisher[GenericMessage[MockAuditEventObject]],
-        audit_event: MockAuditEventObject,
-    ) -> None:
-        """Test that build_routing_key_pattern is called with the correct audit event.
-
-        Args:
-            service_name (ServiceName): Service name fixture.
-            mock_publisher (AbstractPublisher[GenericMessage[MockAuditEventObject]]): Mock publisher fixture.
-            audit_event (MockAuditEventObject): Audit event fixture.
-        """
-        service = ConcreteAuditPublisherService(sender=service_name, publisher=mock_publisher)
-        mock_publisher.publish = AsyncMock()
-
-        # Spy on build_routing_key_pattern
-        original_method = service.build_routing_key_pattern
-        service.build_routing_key_pattern = MagicMock(side_effect=original_method)
-
-        await service.publish(audit_event=audit_event)
-
-        # Verify build_routing_key_pattern was called with the audit event
-        service.build_routing_key_pattern.assert_called_once_with(audit_event=audit_event)
-
-    def test_build_routing_key_pattern_implementation(
-        self,
-        service_name: ServiceName,
-        mock_publisher: AbstractPublisher[GenericMessage[MockAuditEventObject]],
-        audit_event: MockAuditEventObject,
-    ) -> None:
-        """Test the build_routing_key_pattern implementation.
-
-        Args:
-            service_name (ServiceName): Service name fixture.
-            mock_publisher (AbstractPublisher[GenericMessage[MockAuditEventObject]]): Mock publisher fixture.
-            audit_event (MockAuditEventObject): Audit event fixture.
-        """
-        service = ConcreteAuditPublisherService(sender=service_name, publisher=mock_publisher)
-
-        routing_key = service.build_routing_key_pattern(audit_event=audit_event)
-
-        expected_routing_key = f"audit.{audit_event.domain}.{audit_event.service}.{audit_event.what}.{audit_event.why}"
-        assert routing_key == expected_routing_key
-        assert isinstance(routing_key, str)
-
-    @pytest.mark.asyncio
-    async def test_publish_creates_correct_generic_message(
-        self,
-        service_name: ServiceName,
-        mock_publisher: AbstractPublisher[GenericMessage[MockAuditEventObject]],
-        audit_event: MockAuditEventObject,
-    ) -> None:
-        """Test that publish creates a GenericMessage with the correct data.
-
-        Args:
-            service_name (ServiceName): Service name fixture.
-            mock_publisher (AbstractPublisher[GenericMessage[MockAuditEventObject]]): Mock publisher fixture.
-            audit_event (MockAuditEventObject): Audit event fixture.
-        """
-        service = ConcreteAuditPublisherService(sender=service_name, publisher=mock_publisher)
-        mock_publisher.publish = AsyncMock()
-
-        await service.publish(audit_event=audit_event)
-
-        call_args = mock_publisher.publish.call_args
-        message: GenericMessage[MockAuditEventObject] = call_args.kwargs["message"]
-
-        assert isinstance(message, GenericMessage)
-        assert message.data == audit_event
-        assert message.data.what == audit_event.what
-        assert message.data.why == audit_event.why
-        assert message.data.where == audit_event.where
-        assert message.data.when == audit_event.when
-        assert message.data.who == audit_event.who
-        assert message.data.entity == audit_event.entity
-        assert message.data.domain == audit_event.domain
-        assert message.data.service == audit_event.service
+        assert getattr(err, "routing_key", None) == str(routing_key)
