@@ -29,7 +29,7 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessageType]):
         self._name: str = name or self.__class__.__name__
         self._queue: Queue = queue
         self._consumer_tag: ConsumerTag | None = None
-        self._exclusive: bool = exclusive or queue.exclusive
+        self._exclusive: bool = queue.exclusive if exclusive is None else exclusive
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
         self._message_type: type[GenericMessageType] = generic_args[0]
 

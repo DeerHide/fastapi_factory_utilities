@@ -120,6 +120,20 @@ class TestAbstractListenerLifecycle:
         assert aiopika_queue.consume.await_args.kwargs["exclusive"] is True
 
     @pytest.mark.asyncio
+    async def test_listen_exclusive_false_overrides_exclusive_queue(self) -> None:
+        """Explicit exclusive=False overrides an exclusive queue."""
+        aiopika_queue = MagicMock()
+        aiopika_queue.consume = AsyncMock(return_value="ctag-4")
+        queue_resource = MagicMock()
+        queue_resource.exclusive = True
+        queue_resource.queue = aiopika_queue
+        listener = _RecordingListener(queue=queue_resource, exclusive=False)
+
+        await listener.listen()
+
+        assert aiopika_queue.consume.await_args.kwargs["exclusive"] is False
+
+    @pytest.mark.asyncio
     async def test_close_cancels_when_consumer_tag_set(self) -> None:
         """Close cancels the AMQP consumer when a tag was assigned."""
         aiopika_queue = MagicMock()

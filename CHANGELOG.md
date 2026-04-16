@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Aiopika: `AbstractListener` passes the bound queue’s exclusivity (and an optional `exclusive` constructor override) to `consume` instead of always using an exclusive consumer; `Queue` exposes an `exclusive` read-only property.
+- Aiopika: `AbstractListener` passes the bound queue’s exclusivity (and an optional `exclusive` constructor override, including explicit `False`) to `consume` instead of always using an exclusive consumer; `Queue` exposes an `exclusive` read-only property.
 
 ## [4.3.1] - 2026-04-14
 
