@@ -24,8 +24,13 @@ class Msg(GenericMessage[Body]):
 class _RecordingListener(AbstractListener[Msg]):
     """Minimal listener implementation for tests."""
 
-    def __init__(self, queue: MagicMock, name: str | None = None) -> None:
-        super().__init__(queue=queue, name=name)
+    def __init__(
+        self,
+        queue: MagicMock,
+        name: str | None = None,
+        exclusive: bool | None = None,
+    ) -> None:
+        super().__init__(queue=queue, name=name, exclusive=exclusive)
         self.on_calls: list[Msg] = []
 
     async def on_message(self, message: Msg) -> None:
@@ -72,10 +77,11 @@ class TestAbstractListenerLifecycle:
 
     @pytest.mark.asyncio
     async def test_listen_registers_exclusive_consumer(self) -> None:
-        """Listen subscribes with an exclusive consumer and records the tag."""
+        """Listen subscribes with an exclusive consumer when the queue is exclusive."""
         aiopika_queue = MagicMock()
         aiopika_queue.consume = AsyncMock(return_value="ctag-1")
         queue_resource = MagicMock()
+        queue_resource.exclusive = True
         queue_resource.queue = aiopika_queue
         listener = _RecordingListener(queue=queue_resource)
 
@@ -84,6 +90,34 @@ class TestAbstractListenerLifecycle:
         aiopika_queue.consume.assert_awaited_once()
         assert aiopika_queue.consume.await_args.kwargs["exclusive"] is True
         assert listener._consumer_tag == "ctag-1"  # type: ignore[attr-defined]
+
+    @pytest.mark.asyncio
+    async def test_listen_respects_queue_exclusive_false(self) -> None:
+        """Listen passes exclusive=False when the queue resource is not exclusive."""
+        aiopika_queue = MagicMock()
+        aiopika_queue.consume = AsyncMock(return_value="ctag-2")
+        queue_resource = MagicMock()
+        queue_resource.exclusive = False
+        queue_resource.queue = aiopika_queue
+        listener = _RecordingListener(queue=queue_resource)
+
+        await listener.listen()
+
+        assert aiopika_queue.consume.await_args.kwargs["exclusive"] is False
+
+    @pytest.mark.asyncio
+    async def test_listen_exclusive_constructor_overrides_queue(self) -> None:
+        """Optional listener exclusive flag overrides the queue default."""
+        aiopika_queue = MagicMock()
+        aiopika_queue.consume = AsyncMock(return_value="ctag-3")
+        queue_resource = MagicMock()
+        queue_resource.exclusive = False
+        queue_resource.queue = aiopika_queue
+        listener = _RecordingListener(queue=queue_resource, exclusive=True)
+
+        await listener.listen()
+
+        assert aiopika_queue.consume.await_args.kwargs["exclusive"] is True
 
     @pytest.mark.asyncio
     async def test_close_cancels_when_consumer_tag_set(self) -> None:

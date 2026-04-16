@@ -23,12 +23,13 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessageType]):
 
     DEFAULT_OPERATION_TIMEOUT: ClassVar[TimeoutType] = 10.0
 
-    def __init__(self, queue: Queue, name: str | None = None) -> None:
+    def __init__(self, queue: Queue, name: str | None = None, exclusive: bool | None = None) -> None:
         """Initialize the listener port."""
         super().__init__()
         self._name: str = name or self.__class__.__name__
         self._queue: Queue = queue
         self._consumer_tag: ConsumerTag | None = None
+        self._exclusive: bool = exclusive or queue.exclusive
         generic_args: tuple[Any, ...] = get_args(self.__orig_bases__[0])  # type: ignore
         self._message_type: type[GenericMessageType] = generic_args[0]
 
@@ -43,7 +44,7 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessageType]):
         assert self._queue.queue is not None
         self._consumer_tag = await self._queue.queue.consume(  # pyright: ignore
             callback=cast(Callable[[AbstractIncomingMessage], Awaitable[Any]], self._on_message),  # pyright: ignore
-            exclusive=True,
+            exclusive=self._exclusive,
         )
 
     async def _on_message(self, incoming_message: AbstractIncomingMessage) -> None:

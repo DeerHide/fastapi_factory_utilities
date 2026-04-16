@@ -39,6 +39,11 @@ class Queue(AbstractAiopikaResource):
         self._queue: AbstractQueue | None = None
 
     @property
+    def exclusive(self) -> bool:
+        """Get the exclusive property."""
+        return self._exclusive
+
+    @property
     def queue(self) -> AbstractQueue:
         """Get the Aiopika queue."""
         if self._queue is None:
