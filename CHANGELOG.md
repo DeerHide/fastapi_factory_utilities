@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- CI: merged SBOM generation and Grype vulnerability scan into a single `dependency-scan` job and updated release dependencies accordingly, simplifying the pipeline while preserving artifacts used by release.
+
 ## [4.4.1] - 2026-04-17
 
 ### Fixed

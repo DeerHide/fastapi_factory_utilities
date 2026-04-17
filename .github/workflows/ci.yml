@@ -53,11 +53,12 @@ jobs:
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
           poetry install --with test
-  create-sbom:
+  dependency-scan:
     needs: setup
     runs-on: public-actions-runner-scale-set
     permissions:
       contents: write
+      actions: read
       packages: write
       security-events: write
       id-token: write
@@ -77,19 +78,6 @@ jobs:
           upload-release-assets: true
           format: "spdx-json"
           artifact-name: "${{ github.event.repository.name }}-sbom.spdx.json"
-  dependency-scan-grype:
-    needs:
-      - setup
-      - create-sbom
-    runs-on: public-actions-runner-scale-set
-    permissions:
-      contents: write
-      actions: read
-      packages: write
-      security-events: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v6.0.2
       - name: Download SBOM
         uses: actions/download-artifact@v8.0.1
         with:
@@ -159,7 +147,7 @@ jobs:
     needs:
       - setup
       - pre-commit
-      - dependency-scan-grype
+      - dependency-scan
     runs-on: public-actions-runner-scale-set
     if: startsWith(github.ref, 'refs/tags/')
     environment: pypi
