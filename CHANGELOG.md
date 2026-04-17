@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- API response models: add `UpdateableField`, PUT request model generation, and update reconciliation helpers that merge payloads by policy, track changed/ignored paths, and support strict rejection of non-updateable fields.
+
 ## [4.3.2] - 2026-04-16
 
 ### Fixed

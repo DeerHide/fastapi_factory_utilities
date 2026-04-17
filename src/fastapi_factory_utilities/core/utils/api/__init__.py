@@ -5,6 +5,9 @@ from .abstracts import (
     ApiResponseFieldMarker,
     ApiResponseModelAbstract,
     ApiResponseSchemaBase,
+    FieldChange,
+    ReconcileResult,
+    UpdateableField,
 )
 
 __all__: list[str] = [
@@ -12,4 +15,7 @@ __all__: list[str] = [
     "ApiResponseFieldMarker",
     "ApiResponseModelAbstract",
     "ApiResponseSchemaBase",
+    "FieldChange",
+    "ReconcileResult",
+    "UpdateableField",
 ]

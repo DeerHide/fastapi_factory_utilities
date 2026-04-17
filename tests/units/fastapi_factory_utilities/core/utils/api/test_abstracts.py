@@ -13,6 +13,7 @@ from fastapi_factory_utilities.core.utils.api import (
     ApiResponseModelAbstract,
     ApiResponseSchemaBase,
 )
+from fastapi_factory_utilities.core.utils.api.abstracts import UpdateableField
 
 
 class TestBuildResponseModelEmpty:
@@ -187,3 +188,53 @@ class TestBuildResponseModelNestedMarkedTypes:
         assert len(non_none) == 1
         inner_model = non_none[0]
         assert set(inner_model.model_fields) == {"id"}
+
+
+class _UpdateablePlainNestedModel(BaseModel):
+    """Plain nested model with one marked updateable field."""
+
+    code: Annotated[str, UpdateableField]
+    hidden: str
+
+
+class _UpdateableApiNestedModel(ApiResponseModelAbstract):
+    """API nested model with one marked updateable field."""
+
+    name: Annotated[str, UpdateableField]
+    status: str
+
+
+class TestGetUpdateableFields:
+    """`get_updateable_fields` supports flat and nested updateable markers."""
+
+    class FlatEntity(ApiResponseModelAbstract):
+        """Flat entity with mixed updateable and non-updateable fields."""
+
+        id: int
+        label: Annotated[str, UpdateableField]
+        count: Annotated[int, UpdateableField]
+        internal: str
+
+    class NestedEntity(ApiResponseModelAbstract):
+        """Entity with nested API and plain BaseModel updateable fields."""
+
+        title: Annotated[str, UpdateableField]
+        api_nested: Annotated[_UpdateableApiNestedModel, UpdateableField]
+        plain_nested: Annotated[_UpdateablePlainNestedModel, UpdateableField]
+        optional_nested: Annotated[_UpdateableApiNestedModel | None, UpdateableField] = None
+        metadata: Annotated[dict[str, Any], UpdateableField] = Field(default_factory=dict)
+        hidden: str = ""
+
+    def test_returns_only_flat_marked_fields(self) -> None:
+        """Flat model returns only fields marked with `UpdateableField`."""
+        assert set(self.FlatEntity.get_updateable_fields()) == {"label", "count"}
+
+    def test_returns_nested_dotted_paths_for_supported_nested_models(self) -> None:
+        """Nested BaseModel-like containers return dotted updateable paths."""
+        assert set(self.NestedEntity.get_updateable_fields()) == {
+            "title",
+            "api_nested.name",
+            "plain_nested.code",
+            "optional_nested.name",
+            "metadata",
+        }
