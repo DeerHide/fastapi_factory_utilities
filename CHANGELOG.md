@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.4.2] - 2026-04-17
+
 ### Changed
 
 - CI: merged SBOM generation and Grype vulnerability scan into a single `dependency-scan` job and updated release dependencies accordingly, simplifying the pipeline while preserving artifacts used by release.
@@ -348,7 +350,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.2...HEAD
+[4.4.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.1...v4.4.2
 [4.4.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.0...v4.4.1
 [4.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.3.2...v4.4.0
 [4.3.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.3.1...v4.3.2
