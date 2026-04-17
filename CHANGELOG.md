@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- CI: workflow now uses runner-embedded Poetry/uv binaries from `/home/runner/.local/bin` instead of reinstalling toolchain dependencies in jobs, reducing setup overhead while keeping release publishing intact.
+
 ## [4.4.0] - 2026-04-17
 
 ### Added
