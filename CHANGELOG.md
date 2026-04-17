@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.4.0] - 2026-04-17
+
 ### Added
 
 - API response models: add `UpdateableField`, PUT request model generation, and update reconciliation helpers that merge payloads by policy, track changed/ignored paths, and support strict rejection of non-updateable fields.
@@ -336,7 +338,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.3.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.0...HEAD
+[4.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.3.2...v4.4.0
 [4.3.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.3.1...v4.3.2
 [4.3.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.3.0...v4.3.1
 [4.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.2.1...v4.3.0
