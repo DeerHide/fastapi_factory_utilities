@@ -131,11 +131,18 @@ def _collect_updateable_fields_for_model(
             continue
         args = get_args(hint)
         metadata = args[1:]
-        if not any(_is_updateable_marker(meta) for meta in metadata):
-            continue
+        has_updateable = any(_is_updateable_marker(meta) for meta in metadata)
+        has_api = any(_is_api_response_marker(meta) for meta in metadata)
 
         path = f"{prefix}.{field_name}" if prefix else field_name
         nested_cls = nested_basemodel_for_annotation(args[0])
+
+        if not has_updateable:
+            if has_api and nested_cls is not None and issubclass(nested_cls, ApiResponseModelAbstract):
+                nested_paths = _collect_updateable_fields_for_model(nested_cls, prefix=path, visited=seen)
+                paths.extend(nested_paths)
+            continue
+
         if nested_cls is None:
             paths.append(path)
             continue
@@ -341,8 +348,11 @@ class ApiResponseModelAbstract(BaseModel):
         """Return the updateable fields.
 
         This is useful to get the fields that can be updated when the entity is updated.
-        It will return the fields that are annotated with :data:`UpdateableField`.
-        It will also manage the nested fields.
+        It returns fields annotated with :data:`UpdateableField`, including nested dotted
+        paths. Nested :class:`ApiResponseModelAbstract` fields marked only with
+        :data:`ApiResponseField` are still walked so that updateable leaves inside them
+        are included (the container itself is not listed unless it also carries an
+        updateable marker).
 
         Args:
             cls: The class to get the updateable fields from.

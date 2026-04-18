@@ -10,10 +10,11 @@ from pydantic import BaseModel, Field, ValidationError
 
 from fastapi_factory_utilities.core.utils.api import (
     ApiResponseField,
+    ApiResponseFieldMarker,
     ApiResponseModelAbstract,
     ApiResponseSchemaBase,
+    UpdateableField,
 )
-from fastapi_factory_utilities.core.utils.api.abstracts import UpdateableField
 
 
 class TestBuildResponseModelEmpty:
@@ -238,3 +239,120 @@ class TestGetUpdateableFields:
             "optional_nested.name",
             "metadata",
         }
+
+
+class _UpdatePolicyChildEntity(ApiResponseModelAbstract):
+    """Nested entity: one updateable leaf, one API-only leaf (module-level for type hints)."""
+
+    slug: Annotated[str, UpdateableField]
+    title: Annotated[str, ApiResponseField] = "t"
+
+
+class _UpdatePolicyParentApiOnlyChildEntity(ApiResponseModelAbstract):
+    """Parent marks ``child`` with ``ApiResponseField`` only (not ``UpdateableField``)."""
+
+    child: Annotated[_UpdatePolicyChildEntity, ApiResponseField]
+    owner: Annotated[str, UpdateableField]
+
+
+class _UpdatePolicyParentOptionalChildEntity(ApiResponseModelAbstract):
+    """Optional API-exposed nested container."""
+
+    child: Annotated[_UpdatePolicyChildEntity | None, ApiResponseField] = None
+
+
+class _UpdatePolicyMiddleEntity(ApiResponseModelAbstract):
+    """Intermediate API-only nest."""
+
+    child: Annotated[_UpdatePolicyChildEntity, ApiResponseField]
+
+
+class _UpdatePolicyRootEntity(ApiResponseModelAbstract):
+    """Two-level API-only chain down to updateable leaf."""
+
+    middle: Annotated[_UpdatePolicyMiddleEntity, ApiResponseField]
+
+
+class _NullableNoteForReconcileEntity(ApiResponseModelAbstract):
+    """Nullable note exposed and updateable (required on PUT schema)."""
+
+    note: Annotated[str | None, ApiResponseField, UpdateableField] = None
+
+
+class TestGetUpdateableFieldsApiExposedNested:
+    """Nested updateable leaves must appear even when the parent field is only API-exposed."""
+
+    def test_nested_updateable_paths_under_api_only_parent(self) -> None:
+        """``get_updateable_fields`` walks ``ApiResponseField`` nests to find ``UpdateableField`` leaves."""
+        assert set(_UpdatePolicyParentApiOnlyChildEntity.get_updateable_fields()) == {"owner", "child.slug"}
+
+    def test_optional_api_nested_still_exposes_nested_updateable_paths(self) -> None:
+        """Optional ``Child | None`` preserves nested updateable path collection."""
+        assert set(_UpdatePolicyParentOptionalChildEntity.get_updateable_fields()) == {"child.slug"}
+
+    def test_deep_api_only_chain_collects_leaf_updateable(self) -> None:
+        """Multiple API-only levels before an ``UpdateableField`` leaf yield a dotted path."""
+        assert set(_UpdatePolicyRootEntity.get_updateable_fields()) == {"middle.child.slug"}
+
+    def test_scalar_may_combine_api_response_and_updateable_annotations(self) -> None:
+        """A field can be both exposed and updateable via multiple metadata entries."""
+
+        class Both(ApiResponseModelAbstract):
+            code: Annotated[str, ApiResponseField, UpdateableField]
+
+        assert Both.get_updateable_fields() == ["code"]
+
+    def test_api_response_field_marker_with_updateable_true(self) -> None:
+        """``ApiResponseFieldMarker(updateable=True)`` is treated like ``UpdateableField``."""
+
+        class Custom(ApiResponseModelAbstract):
+            ref: Annotated[str, ApiResponseFieldMarker(updateable=True)]
+
+        assert Custom.get_updateable_fields() == ["ref"]
+
+
+class TestReconcileUpdateRequest:
+    """``reconcile_update_request`` respects ``get_updateable_fields`` path policy."""
+
+    def test_reconcile_updates_nested_leaf_when_parent_is_api_only(self) -> None:
+        """PUT flattens nested keys; nested updateable leaves merge even without container marker."""
+        original = _UpdatePolicyParentApiOnlyChildEntity(
+            child=_UpdatePolicyChildEntity(slug="a", title="orig-title"),
+            owner="me",
+        )
+        put_cls = cast(Any, _UpdatePolicyParentApiOnlyChildEntity.build_update_request_model())
+        put_request = put_cls.model_validate(
+            {
+                "child": {"slug": "b", "title": "new-title"},
+                "owner": "me",
+            }
+        )
+        result = _UpdatePolicyParentApiOnlyChildEntity.reconcile_update_request(
+            entity_original=original,
+            put_request=put_request,
+        )
+
+        assert result.entity_updated.child.slug == "b"
+        assert result.entity_updated.child.title == "orig-title"
+        assert result.entity_updated.owner == "me"
+        assert {c.path for c in result.changed} == {"child.slug"}
+        assert set(result.ignored_paths) == {"child.title"}
+        assert set(result.unchanged_paths) == {"owner"}
+
+    def test_reconcile_classifies_added_and_removed_scalar(self) -> None:
+        """Scalar transitions to/from ``None`` yield ``added`` / ``removed`` change kinds."""
+        original = _NullableNoteForReconcileEntity(note=None)
+        put_cls = cast(Any, _NullableNoteForReconcileEntity.build_update_request_model())
+        put_set = put_cls.model_validate({"note": "hello"})
+        set_result = _NullableNoteForReconcileEntity.reconcile_update_request(
+            entity_original=original,
+            put_request=put_set,
+        )
+        assert set_result.changed[0].kind == "added"
+
+        put_clear = put_cls.model_validate({"note": None})
+        clear_result = _NullableNoteForReconcileEntity.reconcile_update_request(
+            entity_original=_NullableNoteForReconcileEntity(note="hello"),
+            put_request=put_clear,
+        )
+        assert clear_result.changed[0].kind == "removed"
