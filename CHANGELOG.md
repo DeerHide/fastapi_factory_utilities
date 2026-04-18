@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.4.3] - 2026-04-18
+
 ### Fixed
 
 - API: `get_updateable_fields` now descends into nested `ApiResponseModelAbstract` fields that are marked only with `ApiResponseField`, so dotted updateable paths match `reconcile_update_request` for PUT payloads under API-only containers.
@@ -358,7 +360,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.3...HEAD
+[4.4.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.2...v4.4.3
 [4.4.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.1...v4.4.2
 [4.4.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.0...v4.4.1
 [4.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.3.2...v4.4.0
