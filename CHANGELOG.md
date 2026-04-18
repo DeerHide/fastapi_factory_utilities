@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- API: `get_updateable_fields` now descends into nested `ApiResponseModelAbstract` fields that are marked only with `ApiResponseField`, so dotted updateable paths match `reconcile_update_request` for PUT payloads under API-only containers.
+
+### Added
+
+- Tests: coverage for updateable path collection and reconciliation (optional nested containers, deep API-only chains, combined `ApiResponseField` / `UpdateableField` markers, `added` / `removed` change kinds).
+
 ## [4.4.2] - 2026-04-17
 
 ### Changed
