@@ -6,12 +6,7 @@ from typing import Annotated, ClassVar, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
-from fastapi_factory_utilities.core.utils.api import (
-    ApiResponseField,
-    ApiResponseModelAbstract,
-    SearchableEntity,
-    SearchableField,
-)
+from fastapi_factory_utilities.core.utils.api import ApiField, ApiResponseModelAbstract, SearchableEntity
 
 from .enums import AuthenticationMethodEnum, AuthenticatorAssuranceLevelEnum, KratosIdentityStateEnum
 from .types import KratosExternalId, KratosIdentityId, KratosProvider, KratosSchemaId
@@ -40,11 +35,11 @@ class KratosRecoveryAddressObject(SearchableEntity, ApiResponseModelAbstract, Ba
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
 
-    id: Annotated[uuid.UUID, ApiResponseField, SearchableField]
-    value: Annotated[str, ApiResponseField, SearchableField]
-    created_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    updated_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    via: Annotated[str, ApiResponseField, SearchableField]
+    id: Annotated[uuid.UUID, ApiField(searchable=True)]
+    value: Annotated[str, ApiField(searchable=True)]
+    created_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    updated_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    via: Annotated[str, ApiField(searchable=True)]
 
 
 GenericTraitsObject = TypeVar("GenericTraitsObject", bound=KratosTraitsObject)
@@ -62,18 +57,18 @@ class KratosIdentityObject(
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
 
-    id: Annotated[KratosIdentityId, ApiResponseField, SearchableField]
-    state: Annotated[KratosIdentityStateEnum, ApiResponseField, SearchableField]
-    state_changed_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    traits: Annotated[GenericTraitsObject, ApiResponseField, SearchableField]
-    created_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    updated_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    external_id: Annotated[KratosExternalId | None, ApiResponseField, SearchableField] = None
-    metadata_admin: Annotated[GenericMetadataAdminObject | None, ApiResponseField, SearchableField] = None
-    metadata_public: Annotated[GenericMetadataPublicObject | None, ApiResponseField, SearchableField] = None
-    recovery_addresses: Annotated[list[KratosRecoveryAddressObject], ApiResponseField, SearchableField]
-    schema_id: Annotated[KratosSchemaId, ApiResponseField, SearchableField]
-    schema_url: Annotated[str, ApiResponseField, SearchableField]
+    id: Annotated[KratosIdentityId, ApiField(searchable=True)]
+    state: Annotated[KratosIdentityStateEnum, ApiField(searchable=True)]
+    state_changed_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    traits: Annotated[GenericTraitsObject, ApiField(searchable=True)]
+    created_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    updated_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    external_id: Annotated[KratosExternalId | None, ApiField(searchable=True)] = None
+    metadata_admin: Annotated[GenericMetadataAdminObject | None, ApiField(searchable=True)] = None
+    metadata_public: Annotated[GenericMetadataPublicObject | None, ApiField(searchable=True)] = None
+    recovery_addresses: Annotated[list[KratosRecoveryAddressObject], ApiField(searchable=True)]
+    schema_id: Annotated[KratosSchemaId, ApiField(searchable=True)]
+    schema_url: Annotated[str, ApiField(searchable=True)]
 
 
 GenericKratosIdentityObject = TypeVar("GenericKratosIdentityObject", bound=BaseModel)
@@ -84,10 +79,10 @@ class KratosAuthenticationMethod(SearchableEntity, ApiResponseModelAbstract, Bas
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
 
-    aal: Annotated[AuthenticatorAssuranceLevelEnum, ApiResponseField, SearchableField]
-    completed_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    method: Annotated[AuthenticationMethodEnum, ApiResponseField, SearchableField]
-    provider: Annotated[KratosProvider | None, ApiResponseField, SearchableField] = None
+    aal: Annotated[AuthenticatorAssuranceLevelEnum, ApiField(searchable=True)]
+    completed_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    method: Annotated[AuthenticationMethodEnum, ApiField(searchable=True)]
+    provider: Annotated[KratosProvider | None, ApiField(searchable=True)] = None
 
 
 class KratosSessionObject(SearchableEntity, ApiResponseModelAbstract, BaseModel, Generic[GenericKratosIdentityObject]):
@@ -95,12 +90,12 @@ class KratosSessionObject(SearchableEntity, ApiResponseModelAbstract, BaseModel,
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
 
-    id: Annotated[uuid.UUID, ApiResponseField, SearchableField]
-    active: Annotated[bool, ApiResponseField, SearchableField]
-    issued_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    expires_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    authenticated_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    authentication_methods: Annotated[list[KratosAuthenticationMethod], ApiResponseField, SearchableField]
-    authenticator_assurance_level: Annotated[AuthenticatorAssuranceLevelEnum, ApiResponseField, SearchableField]
-    identity: Annotated[GenericKratosIdentityObject, ApiResponseField, SearchableField]
-    tokenized: Annotated[str | None, ApiResponseField, SearchableField] = None
+    id: Annotated[uuid.UUID, ApiField(searchable=True)]
+    active: Annotated[bool, ApiField(searchable=True)]
+    issued_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    expires_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    authenticated_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    authentication_methods: Annotated[list[KratosAuthenticationMethod], ApiField(searchable=True)]
+    authenticator_assurance_level: Annotated[AuthenticatorAssuranceLevelEnum, ApiField(searchable=True)]
+    identity: Annotated[GenericKratosIdentityObject, ApiField(searchable=True)]
+    tokenized: Annotated[str | None, ApiField(searchable=True)] = None

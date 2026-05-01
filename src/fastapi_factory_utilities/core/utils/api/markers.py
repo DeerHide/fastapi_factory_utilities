@@ -14,28 +14,18 @@ introspection helpers compute behavior. This lets the convenience singletons
 compose exactly like the previous independent markers did.
 
 Examples:
-    Pre-built singletons (most ergonomic)::
+    Explicit :class:`ApiField` instances (preferred)::
 
         from typing import Annotated
-        from fastapi_factory_utilities.core.utils.api import (
-            ApiResponseField,
-            SearchableField,
-            UpdateableField,
-        )
-
-
-        class Product(...):
-            id: Annotated[int, ApiResponseField, SearchableField]
-            label: Annotated[str, UpdateableField, SearchableField]
-
-    Single explicit marker::
-
         from fastapi_factory_utilities.core.utils.api import ApiField
 
 
         class Product(...):
             id: Annotated[int, ApiField(searchable=True)]
             label: Annotated[str, ApiField(updateable=True, searchable=True)]
+
+    Legacy singleton aliases (:data:`ApiResponseField`, :data:`UpdateableField`,
+    :data:`SearchableField`) remain available and compose with the same OR semantics.
 """
 
 from __future__ import annotations
@@ -43,7 +33,7 @@ from __future__ import annotations
 from typing import Any
 
 # Public marker singletons intentionally use PascalCase names for ergonomic
-# Annotated metadata usage: Annotated[..., ApiResponseField, SearchableField].
+# Annotated metadata usage: Annotated[..., ApiField(...)] (see module docstring).
 # pylint: disable=invalid-name
 
 

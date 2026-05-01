@@ -9,6 +9,8 @@ from pydantic import BaseModel, ValidationError
 from starlette.requests import Request
 
 from fastapi_factory_utilities.core.utils.api import (
+    ApiEntityAbstract,
+    ApiField,
     QueryAbstract,
     QueryField,
     QueryFieldName,
@@ -17,7 +19,6 @@ from fastapi_factory_utilities.core.utils.api import (
     QueryFilterNestedAbstract,
     QueryResolver,
     SearchableEntity,
-    SearchableField,
 )
 
 
@@ -28,12 +29,12 @@ class _PlainNestedForSearchableTests(BaseModel):
 
 
 class _CycleEntityB(SearchableEntity):
-    leaf: Annotated[str, SearchableField]
-    parent: Annotated[_CycleEntityA, SearchableField]
+    leaf: Annotated[str, ApiField(response=False, searchable=True)]
+    parent: Annotated[_CycleEntityA, ApiField(response=False, searchable=True)]
 
 
 class _CycleEntityA(SearchableEntity):
-    child: Annotated[_CycleEntityB, SearchableField]
+    child: Annotated[_CycleEntityB, ApiField(response=False, searchable=True)]
 
 
 _CycleEntityA.model_rebuild()
@@ -61,6 +62,27 @@ class TestQueryAbstractEmpty:
         assert instance.model_fields_set == set()
 
 
+class TestApiEntityAbstractBuildQueryFilterModel:
+    """Tests for the convenience aggregator base class."""
+
+    class ProductEntity(ApiEntityAbstract):
+        """Entity using the aggregated API abstraction."""
+
+        id: Annotated[str, ApiField(response=False, searchable=True)]
+        sku: Annotated[str, ApiField(response=False, searchable=True)]
+
+    def test_inherits_all_parent_abstractions(self) -> None:
+        """The convenience class preserves parent abstraction inheritance."""
+        assert issubclass(ApiEntityAbstract, SearchableEntity)
+        assert issubclass(ApiEntityAbstract, QueryAbstract)
+
+    def test_build_query_filter_model_matches_searchable_behavior(self) -> None:
+        """Searchable behavior remains available through ApiEntityAbstract."""
+        filter_model = self.ProductEntity.build_query_filter_model()
+        assert issubclass(filter_model, QueryAbstract)
+        assert set(filter_model.model_fields) == {"id", "sku", "page", "page_size", "sorts"}
+
+
 class TestSearcheableEntityBuildQueryFilterModel:
     """Tests for SearchableEntity.build_query_filter_model."""
 
@@ -70,8 +92,8 @@ class TestSearcheableEntityBuildQueryFilterModel:
     class ProductEntity(SearchableEntity):
         """Entity with id and count."""
 
-        id: Annotated[str, SearchableField]
-        count: Annotated[int, SearchableField]
+        id: Annotated[str, ApiField(response=False, searchable=True)]
+        count: Annotated[int, ApiField(response=False, searchable=True)]
 
     def test_empty_searchable_fields_model_name_doc_and_instance(self) -> None:
         """No Annotated searchable markers yields a filter type with no extra fields."""
@@ -123,10 +145,10 @@ class TestSearcheableEntityBuildQueryFilterModel:
         """Derived entity accumulates Annotated searchable fields from the MRO via get_type_hints."""
 
         class BaseResource(SearchableEntity):
-            id: Annotated[str, SearchableField]
+            id: Annotated[str, ApiField(response=False, searchable=True)]
 
         class DerivedResource(BaseResource):
-            label: Annotated[str, SearchableField]
+            label: Annotated[str, ApiField(response=False, searchable=True)]
 
         base_filter = BaseResource.build_query_filter_model()
         assert set(base_filter.model_fields) == {"id", "page", "page_size", "sorts"}
@@ -144,10 +166,10 @@ class TestSearcheableEntityBuildQueryFilterModel:
         """Child adds searchable fields; parent Annotated searchables remain in the filter model."""
 
         class BaseResource(SearchableEntity):
-            id: Annotated[str, SearchableField]
+            id: Annotated[str, ApiField(response=False, searchable=True)]
 
         class SkuVariant(BaseResource):
-            sku: Annotated[str, SearchableField]
+            sku: Annotated[str, ApiField(response=False, searchable=True)]
 
         filter_model = cast(Any, SkuVariant.build_query_filter_model())
         assert set(filter_model.model_fields) == {"id", "sku", "page", "page_size", "sorts"}
@@ -155,14 +177,14 @@ class TestSearcheableEntityBuildQueryFilterModel:
         assert filter_model().sku is None
 
     def test_child_shadowing_id_removes_parent_searchable(self) -> None:
-        """Child may shadow a parent field with a plain annotation to drop SearchableField on that name."""
+        """Child may shadow a parent field with a plain annotation to drop the searchable marker on that name."""
 
         class BaseResource(SearchableEntity):
-            id: Annotated[str, SearchableField]
+            id: Annotated[str, ApiField(response=False, searchable=True)]
 
         class SkuOnly(BaseResource):
             id: str
-            sku: Annotated[str, SearchableField]
+            sku: Annotated[str, ApiField(response=False, searchable=True)]
 
         filter_model = cast(Any, SkuOnly.build_query_filter_model())
         assert set(filter_model.model_fields) == {"sku", "page", "page_size", "sorts"}
@@ -175,20 +197,26 @@ class TestSearchableEntityNestedQueryFilterModel:
     class AddressEntity(SearchableEntity):
         """Nested searchable segment."""
 
-        city: Annotated[str, SearchableField]
-        street: Annotated[str, SearchableField] = ""
+        city: Annotated[str, ApiField(response=False, searchable=True)]
+        street: Annotated[str, ApiField(response=False, searchable=True)] = ""
 
     class UserEntity(SearchableEntity):
         """Root entity with required nested address."""
 
-        name: Annotated[str, SearchableField]
-        address: Annotated[TestSearchableEntityNestedQueryFilterModel.AddressEntity, SearchableField]
+        name: Annotated[str, ApiField(response=False, searchable=True)]
+        address: Annotated[
+            TestSearchableEntityNestedQueryFilterModel.AddressEntity,
+            ApiField(response=False, searchable=True),
+        ]
 
     class UserEntityOptionalAddress(SearchableEntity):
         """Root entity with optional nested address."""
 
-        name: Annotated[str, SearchableField]
-        address: Annotated[TestSearchableEntityNestedQueryFilterModel.AddressEntity | None, SearchableField] = None
+        name: Annotated[str, ApiField(response=False, searchable=True)]
+        address: Annotated[
+            TestSearchableEntityNestedQueryFilterModel.AddressEntity | None,
+            ApiField(response=False, searchable=True),
+        ] = None
 
     def test_nested_field_uses_segment_base_and_inner_query_fields(self) -> None:
         """Marked nested SearchableEntity becomes an inner model with QueryField leaves."""
@@ -246,8 +274,8 @@ class TestSearchableEntityNestedQueryFilterModel:
         class BadEntity(SearchableEntity):
             """Entity nesting a plain BaseModel."""
 
-            sub: Annotated[_PlainNestedForSearchableTests, SearchableField]
-            label: Annotated[str, SearchableField]
+            sub: Annotated[_PlainNestedForSearchableTests, ApiField(response=False, searchable=True)]
+            label: Annotated[str, ApiField(response=False, searchable=True)]
 
         with pytest.raises(ValueError, match="must use a type that subclasses SearchableEntity"):
             BadEntity.build_query_filter_model()

@@ -8,12 +8,7 @@ from typing import Annotated, Any, ClassVar, Generic, NewType, TypeVar, cast
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from fastapi_factory_utilities.core.plugins.aiopika.types import PartStr
-from fastapi_factory_utilities.core.utils.api import (
-    ApiResponseField,
-    ApiResponseModelAbstract,
-    SearchableEntity,
-    SearchableField,
-)
+from fastapi_factory_utilities.core.utils.api import ApiField, ApiResponseModelAbstract, SearchableEntity
 
 EntityName = NewType("EntityName", PartStr)
 UseCaseName = NewType("UseCaseName", PartStr)
@@ -38,18 +33,18 @@ class AuditableEntity(
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow", arbitrary_types_allowed=True)
 
-    id: Annotated[GenericPersistedEntityId, ApiResponseField, SearchableField]
-    created_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    updated_at: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    deleted_at: Annotated[datetime.datetime | None, ApiResponseField, SearchableField] = None
-    published: Annotated[bool, ApiResponseField, SearchableField] = False
-    published_at: Annotated[datetime.datetime | None, ApiResponseField, SearchableField] = None
+    id: Annotated[GenericPersistedEntityId, ApiField(searchable=True)]
+    created_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    updated_at: Annotated[datetime.datetime, ApiField(searchable=True)]
+    deleted_at: Annotated[datetime.datetime | None, ApiField(searchable=True)] = None
+    published: Annotated[bool, ApiField(searchable=True)] = False
+    published_at: Annotated[datetime.datetime | None, ApiField(searchable=True)] = None
 
 
 class PersistedAuditableEntity(AuditableEntity[GenericPersistedEntityId], Generic[GenericPersistedEntityId]):
     """Auditable entity with persistence fields aligned to ``PersistedEntity``."""
 
-    id: Annotated[GenericPersistedEntityId, ApiResponseField, SearchableField] = Field(
+    id: Annotated[GenericPersistedEntityId, ApiField(searchable=True)] = Field(
         default_factory=cast(Callable[[], GenericPersistedEntityId], uuid.uuid4)
     )
     revision_id: uuid.UUID | None = Field(default=None)
@@ -72,17 +67,17 @@ class AuditEventObject(SearchableEntity, ApiResponseModelAbstract, BaseModel, Ge
         segmentation ids (realms, groups, etc.))
     """
 
-    id: Annotated[uuid.UUID | None, ApiResponseField, SearchableField] = None
-    what: Annotated[EntityName, ApiResponseField, SearchableField]
-    why: Annotated[EntityFunctionalEventName, ApiResponseField, SearchableField]
-    where: Annotated[ServiceName, ApiResponseField, SearchableField]
-    when: Annotated[datetime.datetime, ApiResponseField, SearchableField]
-    who: Annotated[dict[str, Any], ApiResponseField, SearchableField]
-    entity: Annotated[AuditEventActorGeneric, ApiResponseField, SearchableField]
-    domain: Annotated[DomainName, ApiResponseField, SearchableField]
-    service: Annotated[ServiceName, ApiResponseField, SearchableField]
-    use_case: Annotated[UseCaseName, ApiResponseField, SearchableField] = Field(default=UseCaseName(PartStr("unknown")))
-    metadata: Annotated[dict[str, Any], ApiResponseField, SearchableField] = Field(default_factory=dict)
+    id: Annotated[uuid.UUID | None, ApiField(searchable=True)] = None
+    what: Annotated[EntityName, ApiField(searchable=True)]
+    why: Annotated[EntityFunctionalEventName, ApiField(searchable=True)]
+    where: Annotated[ServiceName, ApiField(searchable=True)]
+    when: Annotated[datetime.datetime, ApiField(searchable=True)]
+    who: Annotated[dict[str, Any], ApiField(searchable=True)]
+    entity: Annotated[AuditEventActorGeneric, ApiField(searchable=True)]
+    domain: Annotated[DomainName, ApiField(searchable=True)]
+    service: Annotated[ServiceName, ApiField(searchable=True)]
+    use_case: Annotated[UseCaseName, ApiField(searchable=True)] = Field(default=UseCaseName(PartStr("unknown")))
+    metadata: Annotated[dict[str, Any], ApiField(searchable=True)] = Field(default_factory=dict)
 
     @field_validator("who")
     @classmethod

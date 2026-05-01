@@ -9,16 +9,17 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from fastapi_factory_utilities.core.utils.api import (
+    ApiEntityAbstract,
     ApiField,
-    ApiResponseField,
     ApiResponseModelAbstract,
     ApiResponseSchemaBase,
-    UpdateableField,
+    QueryAbstract,
+    SearchableEntity,
 )
 
 
 class TestBuildResponseModelEmpty:
-    """Models with no ``Annotated[..., ApiResponseField]`` fields yield an empty schema."""
+    """Models with no ``Annotated[..., ApiField()]`` fields yield an empty schema."""
 
     class EmptyEntity(ApiResponseModelAbstract):
         """Entity exposing no fields in API responses."""
@@ -34,16 +35,37 @@ class TestBuildResponseModelEmpty:
         assert instance.model_fields_set == set()
 
 
+class TestApiEntityAbstractBuildResponseModel:
+    """`ApiEntityAbstract` keeps dynamic response builder behavior."""
+
+    class ItemEntity(ApiEntityAbstract):
+        """Entity using the convenience base class."""
+
+        id: Annotated[str, ApiField()]
+        searchable_sku: Annotated[str, ApiField(response=False, searchable=True)]
+
+    def test_inherits_all_parent_abstractions(self) -> None:
+        """The convenience base remains compatible with all split abstractions."""
+        assert issubclass(ApiEntityAbstract, ApiResponseModelAbstract)
+        assert issubclass(ApiEntityAbstract, SearchableEntity)
+        assert issubclass(ApiEntityAbstract, QueryAbstract)
+
+    def test_build_response_model_keeps_response_marked_fields_only(self) -> None:
+        """Response builder still follows ApiField(response=...) semantics."""
+        response_model = self.ItemEntity.build_response_model()
+        assert set(response_model.model_fields) == {"id"}
+
+
 class TestBuildResponseModelHappyPath:
     """``build_response_model`` copies types, defaults, and default_factory."""
 
     class ProductEntity(ApiResponseModelAbstract):
         """Sample entity with mixed field kinds."""
 
-        id: Annotated[int, ApiResponseField]
-        label: Annotated[str, ApiResponseField] = "default-label"
-        tags: Annotated[list[str], ApiResponseField] = Field(default_factory=list)
-        count_or_none: Annotated[int | None, ApiResponseField] = None
+        id: Annotated[int, ApiField()]
+        label: Annotated[str, ApiField()] = "default-label"
+        tags: Annotated[list[str], ApiField()] = Field(default_factory=list)
+        count_or_none: Annotated[int | None, ApiField()] = None
         internal_note: str = "secret"
 
     def test_subclass_name_doc_and_base(self) -> None:
@@ -99,7 +121,7 @@ class TestBuildResponseModelNestedMustSubclassAbstract:
     class BadEntity(ApiResponseModelAbstract):
         """Entity whose nested field is a plain ``BaseModel``."""
 
-        subfield: Annotated[_PlainNestedBaseModel, ApiResponseField]
+        subfield: Annotated[_PlainNestedBaseModel, ApiField()]
 
     def test_plain_nested_raises_value_error(self) -> None:
         """Nested API fields must subclass ``ApiResponseModelAbstract``."""
@@ -113,7 +135,7 @@ class TestBuildResponseModelExtension:
     class ItemEntity(ApiResponseModelAbstract):
         """Minimal entity."""
 
-        sku: Annotated[str, ApiResponseField]
+        sku: Annotated[str, ApiField()]
 
     def test_subclass_adds_fields(self) -> None:
         """Extending the generated class keeps base fields and adds new ones."""
@@ -133,15 +155,15 @@ class TestBuildResponseModelExtension:
 class ApiNestedSubEntity(ApiResponseModelAbstract):
     """Module-level nested model: id and name exposed; hidden is internal."""
 
-    id: Annotated[int, ApiResponseField]
-    name: Annotated[str, ApiResponseField] = "anon"
+    id: Annotated[int, ApiField()]
+    name: Annotated[str, ApiField()] = "anon"
     hidden: str = "x"
 
 
 class ApiNestedSubEntityIdOnly(ApiResponseModelAbstract):
     """Nested model exposing only ``id`` (for optional-container test)."""
 
-    id: Annotated[int, ApiResponseField]
+    id: Annotated[int, ApiField()]
     name: str = "anon"
     hidden: str = "x"
 
@@ -152,15 +174,15 @@ class TestBuildResponseModelNestedMarkedTypes:
     class ParentEntity(ApiResponseModelAbstract):
         """Entity with nested subfield and top-level attribute."""
 
-        subfield: Annotated[ApiNestedSubEntity, ApiResponseField]
-        top: Annotated[str, ApiResponseField]
+        subfield: Annotated[ApiNestedSubEntity, ApiField()]
+        top: Annotated[str, ApiField()]
         internal: int = 0
 
     class ParentEntityOptionalSub(ApiResponseModelAbstract):
         """Optional nested subfield preserves optionality on the API model."""
 
-        subfield: Annotated[ApiNestedSubEntityIdOnly | None, ApiResponseField] = None
-        top: Annotated[str, ApiResponseField]
+        subfield: Annotated[ApiNestedSubEntityIdOnly | None, ApiField()] = None
+        top: Annotated[str, ApiField()]
 
     def test_nested_fields_grouped_under_subfield(self) -> None:
         """Marked nested type becomes one nested model with only its marked leaves."""
@@ -194,14 +216,14 @@ class TestBuildResponseModelNestedMarkedTypes:
 class _UpdateablePlainNestedModel(BaseModel):
     """Plain nested model with one marked updateable field."""
 
-    code: Annotated[str, UpdateableField]
+    code: Annotated[str, ApiField(updateable=True)]
     hidden: str
 
 
 class _UpdateableApiNestedModel(ApiResponseModelAbstract):
     """API nested model with one marked updateable field."""
 
-    name: Annotated[str, UpdateableField]
+    name: Annotated[str, ApiField(updateable=True)]
     status: str
 
 
@@ -212,22 +234,22 @@ class TestGetUpdateableFields:
         """Flat entity with mixed updateable and non-updateable fields."""
 
         id: int
-        label: Annotated[str, UpdateableField]
-        count: Annotated[int, UpdateableField]
+        label: Annotated[str, ApiField(updateable=True)]
+        count: Annotated[int, ApiField(updateable=True)]
         internal: str
 
     class NestedEntity(ApiResponseModelAbstract):
         """Entity with nested API and plain BaseModel updateable fields."""
 
-        title: Annotated[str, UpdateableField]
-        api_nested: Annotated[_UpdateableApiNestedModel, UpdateableField]
-        plain_nested: Annotated[_UpdateablePlainNestedModel, UpdateableField]
-        optional_nested: Annotated[_UpdateableApiNestedModel | None, UpdateableField] = None
-        metadata: Annotated[dict[str, Any], UpdateableField] = Field(default_factory=dict)
+        title: Annotated[str, ApiField(updateable=True)]
+        api_nested: Annotated[_UpdateableApiNestedModel, ApiField(updateable=True)]
+        plain_nested: Annotated[_UpdateablePlainNestedModel, ApiField(updateable=True)]
+        optional_nested: Annotated[_UpdateableApiNestedModel | None, ApiField(updateable=True)] = None
+        metadata: Annotated[dict[str, Any], ApiField(updateable=True)] = Field(default_factory=dict)
         hidden: str = ""
 
     def test_returns_only_flat_marked_fields(self) -> None:
-        """Flat model returns only fields marked with `UpdateableField`."""
+        """Flat model returns only fields marked with `ApiField(updateable=True)`."""
         assert set(self.FlatEntity.get_updateable_fields()) == {"label", "count"}
 
     def test_returns_nested_dotted_paths_for_supported_nested_models(self) -> None:
@@ -244,46 +266,46 @@ class TestGetUpdateableFields:
 class _UpdatePolicyChildEntity(ApiResponseModelAbstract):
     """Nested entity: one updateable leaf, one API-only leaf (module-level for type hints)."""
 
-    slug: Annotated[str, UpdateableField]
-    title: Annotated[str, ApiResponseField] = "t"
+    slug: Annotated[str, ApiField(updateable=True)]
+    title: Annotated[str, ApiField()] = "t"
 
 
 class _UpdatePolicyParentApiOnlyChildEntity(ApiResponseModelAbstract):
-    """Parent marks ``child`` with ``ApiResponseField`` only (not ``UpdateableField``)."""
+    """Parent marks ``child`` with ``ApiField()`` only (not ``ApiField(updateable=True)``)."""
 
-    child: Annotated[_UpdatePolicyChildEntity, ApiResponseField]
-    owner: Annotated[str, UpdateableField]
+    child: Annotated[_UpdatePolicyChildEntity, ApiField()]
+    owner: Annotated[str, ApiField(updateable=True)]
 
 
 class _UpdatePolicyParentOptionalChildEntity(ApiResponseModelAbstract):
     """Optional API-exposed nested container."""
 
-    child: Annotated[_UpdatePolicyChildEntity | None, ApiResponseField] = None
+    child: Annotated[_UpdatePolicyChildEntity | None, ApiField()] = None
 
 
 class _UpdatePolicyMiddleEntity(ApiResponseModelAbstract):
     """Intermediate API-only nest."""
 
-    child: Annotated[_UpdatePolicyChildEntity, ApiResponseField]
+    child: Annotated[_UpdatePolicyChildEntity, ApiField()]
 
 
 class _UpdatePolicyRootEntity(ApiResponseModelAbstract):
     """Two-level API-only chain down to updateable leaf."""
 
-    middle: Annotated[_UpdatePolicyMiddleEntity, ApiResponseField]
+    middle: Annotated[_UpdatePolicyMiddleEntity, ApiField()]
 
 
 class _NullableNoteForReconcileEntity(ApiResponseModelAbstract):
     """Nullable note exposed and updateable (required on PUT schema)."""
 
-    note: Annotated[str | None, ApiResponseField, UpdateableField] = None
+    note: Annotated[str | None, ApiField(updateable=True)] = None
 
 
 class TestGetUpdateableFieldsApiExposedNested:
     """Nested updateable leaves must appear even when the parent field is only API-exposed."""
 
     def test_nested_updateable_paths_under_api_only_parent(self) -> None:
-        """``get_updateable_fields`` walks ``ApiResponseField`` nests to find ``UpdateableField`` leaves."""
+        """``get_updateable_fields`` walks ``ApiField()`` nests to find ``ApiField(updateable=True)`` leaves."""
         assert set(_UpdatePolicyParentApiOnlyChildEntity.get_updateable_fields()) == {"owner", "child.slug"}
 
     def test_optional_api_nested_still_exposes_nested_updateable_paths(self) -> None:
@@ -291,19 +313,19 @@ class TestGetUpdateableFieldsApiExposedNested:
         assert set(_UpdatePolicyParentOptionalChildEntity.get_updateable_fields()) == {"child.slug"}
 
     def test_deep_api_only_chain_collects_leaf_updateable(self) -> None:
-        """Multiple API-only levels before an ``UpdateableField`` leaf yield a dotted path."""
+        """Multiple API-only levels before an ``ApiField(updateable=True)`` leaf yield a dotted path."""
         assert set(_UpdatePolicyRootEntity.get_updateable_fields()) == {"middle.child.slug"}
 
     def test_scalar_may_combine_api_response_and_updateable_annotations(self) -> None:
         """A field can be both exposed and updateable via multiple metadata entries."""
 
         class Both(ApiResponseModelAbstract):
-            code: Annotated[str, ApiResponseField, UpdateableField]
+            code: Annotated[str, ApiField(updateable=True)]
 
         assert Both.get_updateable_fields() == ["code"]
 
     def test_custom_apifield_with_updateable_true(self) -> None:
-        """``ApiField(updateable=True)`` is treated like :data:`UpdateableField`."""
+        """``ApiField(updateable=True)`` matches the legacy :data:`UpdateableField` alias."""
 
         class Custom(ApiResponseModelAbstract):
             ref: Annotated[str, ApiField(updateable=True)]
@@ -314,7 +336,7 @@ class TestGetUpdateableFieldsApiExposedNested:
         """A field carrying only an :class:`ApiField` with ``response=False`` is not exposed."""
 
         class SearchOnlyEntity(ApiResponseModelAbstract):
-            id: Annotated[str, ApiResponseField]
+            id: Annotated[str, ApiField()]
             internal_searchable: Annotated[str, ApiField(response=False, searchable=True)] = ""
 
         response_model = SearchOnlyEntity.build_response_model()

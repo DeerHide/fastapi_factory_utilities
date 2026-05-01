@@ -12,6 +12,7 @@ from fastapi_factory_utilities.core.utils.pydantic_path_fields import nested_bas
 from .markers import ApiField, has_searchable_flag
 from .query_abstract import QueryAbstract, QueryFilterNestedAbstract
 from .query_types import QueryField
+from .response_model import ApiResponseModelAbstract
 
 
 def _strip_apifield_to_value_type(hint: Any) -> Any:
@@ -51,8 +52,8 @@ class SearchableEntity(BaseModel):
         Flat fields::
 
             class ProductEntity(SearchableEntity):
-                id: Annotated[int, SearchableField]
-                name: Annotated[str, SearchableField]
+                id: Annotated[int, ApiField(response=False, searchable=True)]
+                name: Annotated[str, ApiField(response=False, searchable=True)]
 
 
             class ProductQueryFilter(ProductEntity.build_query_filter_model()):
@@ -61,12 +62,12 @@ class SearchableEntity(BaseModel):
         Nested entity::
 
             class AddressEntity(SearchableEntity):
-                city: Annotated[str, SearchableField]
+                city: Annotated[str, ApiField(response=False, searchable=True)]
 
 
             class UserEntity(SearchableEntity):
-                name: Annotated[str, SearchableField]
-                address: Annotated[AddressEntity, SearchableField]
+                name: Annotated[str, ApiField(response=False, searchable=True)]
+                address: Annotated[AddressEntity, ApiField(response=False, searchable=True)]
 
 
             UserQueryFilter = UserEntity.build_query_filter_model()
@@ -74,8 +75,8 @@ class SearchableEntity(BaseModel):
         Optional nested container::
 
             class UserEntityOptional(SearchableEntity):
-                name: Annotated[str, SearchableField]
-                address: Annotated[AddressEntity | None, SearchableField] = None
+                name: Annotated[str, ApiField(response=False, searchable=True)]
+                address: Annotated[AddressEntity | None, ApiField(response=False, searchable=True)] = None
     """
 
     @classmethod
@@ -166,3 +167,11 @@ class SearchableEntity(BaseModel):
             f"Query filter for {cls.__name__}" if as_root else f"Nested query filter segment for {cls.__name__}"
         )
         return model
+
+
+class ApiEntityAbstract(SearchableEntity, ApiResponseModelAbstract, QueryAbstract):
+    """Convenience abstract base combining response, query, and searchable behaviors.
+
+    This class is intentionally additive. Existing split abstractions remain the
+    source of truth and continue to be supported independently.
+    """

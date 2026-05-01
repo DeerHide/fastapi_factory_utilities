@@ -8,10 +8,9 @@ from typing import Annotated, Generic, TypeVar, cast
 from pydantic import BaseModel, Field
 
 from fastapi_factory_utilities.core.utils.api import (
-    ApiResponseField,
+    ApiField,
     ApiResponseModelAbstract,
     SearchableEntity,
-    SearchableField,
 )
 
 GenericPersistedEntityId = TypeVar("GenericPersistedEntityId", bound=uuid.UUID)
@@ -39,14 +38,10 @@ class PersistedEntity(SearchableEntity, ApiResponseModelAbstract, BaseModel, Gen
     ```
     """
 
-    id: Annotated[GenericPersistedEntityId, ApiResponseField, SearchableField] = Field(
+    id: Annotated[GenericPersistedEntityId, ApiField(searchable=True)] = Field(
         default_factory=cast(Callable[[], GenericPersistedEntityId], uuid.uuid4)
     )
 
     revision_id: uuid.UUID | None = Field(default=None)
-    created_at: Annotated[datetime.datetime, ApiResponseField, SearchableField] = Field(
-        default_factory=datetime.datetime.now
-    )
-    updated_at: Annotated[datetime.datetime, ApiResponseField, SearchableField] = Field(
-        default_factory=datetime.datetime.now
-    )
+    created_at: Annotated[datetime.datetime, ApiField(searchable=True)] = Field(default_factory=datetime.datetime.now)
+    updated_at: Annotated[datetime.datetime, ApiField(searchable=True)] = Field(default_factory=datetime.datetime.now)

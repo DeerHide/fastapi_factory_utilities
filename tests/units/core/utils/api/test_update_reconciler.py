@@ -9,22 +9,18 @@ from typing import Annotated
 import pytest
 from pydantic import ValidationError
 
-from fastapi_factory_utilities.core.utils.api import (
-    ApiResponseField,
-    ApiResponseModelAbstract,
-    UpdateableField,
-)
+from fastapi_factory_utilities.core.utils.api import ApiField, ApiResponseModelAbstract
 
 
 class ProfileEntity(ApiResponseModelAbstract):
-    display_name: Annotated[str, UpdateableField]
-    nickname: Annotated[str, ApiResponseField]
+    display_name: Annotated[str, ApiField(updateable=True)]
+    nickname: Annotated[str, ApiField()]
 
 
 class AccountEntity(ApiResponseModelAbstract):
-    name: Annotated[str, UpdateableField]
-    profile: Annotated[ProfileEntity, UpdateableField]
-    role: Annotated[str, ApiResponseField]
+    name: Annotated[str, ApiField(updateable=True)]
+    profile: Annotated[ProfileEntity, ApiField(updateable=True)]
+    role: Annotated[str, ApiField()]
     internal_token: str
 
 

@@ -61,12 +61,13 @@ from .response_model import (
     FieldChange,
     ReconcileResult,
 )
-from .searchable_entity import SearchableEntity
+from .searchable_entity import ApiEntityAbstract, SearchableEntity
 
 QueryFilterAbstract = QueryAbstract
 """Backward-compatible alias for :class:`QueryAbstract`."""
 
 __all__: list[str] = [
+    "ApiEntityAbstract",
     "ApiField",
     "ApiResponseField",
     "ApiResponseModelAbstract",

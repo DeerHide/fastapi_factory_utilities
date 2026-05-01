@@ -115,8 +115,8 @@ class TestUnifiedAnnotationDrivesBothBuilders:
     class ProductEntity(ApiResponseModelAbstract, SearchableEntity):
         """Product carrying paired response + searchable annotations."""
 
-        id: Annotated[str, ApiResponseField, SearchableField]
-        label: Annotated[str, UpdateableField, SearchableField]
+        id: Annotated[str, ApiField(searchable=True)]
+        label: Annotated[str, ApiField(updateable=True, searchable=True)]
         internal: str = "secret"
 
     def test_response_model_includes_marked_fields(self) -> None:
@@ -125,7 +125,7 @@ class TestUnifiedAnnotationDrivesBothBuilders:
         assert set(response_model.model_fields) == {"id", "label"}
 
     def test_updateable_paths_only_for_updateable_marker(self) -> None:
-        """Only fields carrying :data:`UpdateableField` show up in updateable paths."""
+        """Only fields carrying ``ApiField(updateable=True)`` show up in updateable paths."""
         assert self.ProductEntity.get_updateable_fields() == ["label"]
 
     def test_query_filter_includes_searchable_fields(self) -> None:

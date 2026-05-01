@@ -1,7 +1,7 @@
 """Dynamic API response and PUT request schema builders driven by :class:`ApiField`.
 
-Mark fields with the :data:`ApiResponseField` (or any other :class:`ApiField`
-marker enabling ``response``) inside :class:`typing.Annotated` on an
+Mark fields with :class:`ApiField` (e.g. ``ApiField()`` for response-only fields,
+or any marker enabling ``response``) inside :class:`typing.Annotated` on an
 :class:`ApiResponseModelAbstract` subclass, then subclass the model returned by
 :meth:`ApiResponseModelAbstract.build_response_model` or use it as a response schema.
 """
@@ -227,8 +227,9 @@ class ApiResponseModelAbstract(BaseModel):
     """Abstract base for domain models that declare an API response projection.
 
     Exposed fields are those annotated with an :class:`ApiField` marker that has
-    ``response=True`` (the most ergonomic helpers being :data:`ApiResponseField`
-    and :data:`UpdateableField`). Nested models must subclass
+    ``response=True`` (for example ``ApiField()`` or ``ApiField(updateable=True)``).
+    Legacy aliases :data:`ApiResponseField` and :data:`UpdateableField` remain available.
+    Nested models must subclass
     :class:`ApiResponseModelAbstract` so their own marked fields define the nested
     response shape.
 
@@ -236,8 +237,8 @@ class ApiResponseModelAbstract(BaseModel):
         Flat fields::
 
             class ProductEntity(ApiResponseModelAbstract):
-                id: Annotated[int, ApiResponseField]
-                label: Annotated[str, ApiResponseField] = "default"
+                id: Annotated[int, ApiField()]
+                label: Annotated[str, ApiField()] = "default"
                 internal_note: str = "secret"
 
 
@@ -246,13 +247,13 @@ class ApiResponseModelAbstract(BaseModel):
         Nested entity::
 
             class AddressEntity(ApiResponseModelAbstract):
-                city: Annotated[str, ApiResponseField]
-                street: Annotated[str, ApiResponseField] = ""
+                city: Annotated[str, ApiField()]
+                street: Annotated[str, ApiField()] = ""
 
 
             class UserEntity(ApiResponseModelAbstract):
-                name: Annotated[str, ApiResponseField]
-                address: Annotated[AddressEntity, ApiResponseField]
+                name: Annotated[str, ApiField()]
+                address: Annotated[AddressEntity, ApiField()]
 
 
             UserApi = UserEntity.build_response_model()
@@ -260,8 +261,8 @@ class ApiResponseModelAbstract(BaseModel):
         Optional nested container::
 
             class UserEntityOptional(ApiResponseModelAbstract):
-                name: Annotated[str, ApiResponseField]
-                address: Annotated[AddressEntity | None, ApiResponseField] = None
+                name: Annotated[str, ApiField()]
+                address: Annotated[AddressEntity | None, ApiField()] = None
     """
 
     @classmethod
