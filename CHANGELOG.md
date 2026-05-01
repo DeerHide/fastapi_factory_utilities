@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.4.4] - 2026-05-01
+
 ### Changed
 
 - API/query utilities: consolidated pagination, query abstractions/resolvers/types, and API response/searchable model helpers under `core.utils.api`; updated ODM plugin imports and coverage to match the new module layout.
@@ -364,7 +366,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.3...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.4...HEAD
+[4.4.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.3...v4.4.4
 [4.4.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.2...v4.4.3
 [4.4.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.1...v4.4.2
 [4.4.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.0...v4.4.1
