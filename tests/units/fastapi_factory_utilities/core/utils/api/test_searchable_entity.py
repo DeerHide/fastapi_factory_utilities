@@ -1,4 +1,4 @@
-"""Unit tests for query entity utilities (dynamic filter models)."""
+"""Unit tests for :class:`SearchableEntity` (dynamic filter model builder)."""
 
 from __future__ import annotations
 
@@ -8,15 +8,17 @@ import pytest
 from pydantic import BaseModel, ValidationError
 from starlette.requests import Request
 
-from fastapi_factory_utilities.core.utils.queries import (
+from fastapi_factory_utilities.core.utils.api import (
     QueryAbstract,
+    QueryField,
+    QueryFieldName,
+    QueryFieldOperation,
+    QueryFieldOperatorEnum,
     QueryFilterNestedAbstract,
+    QueryResolver,
     SearchableEntity,
     SearchableField,
 )
-from fastapi_factory_utilities.core.utils.queries.enums import QueryFieldOperatorEnum
-from fastapi_factory_utilities.core.utils.queries.resolvers import QueryResolver
-from fastapi_factory_utilities.core.utils.queries.types import QueryField, QueryFieldName, QueryFieldOperation
 
 
 class _PlainNestedForSearchableTests(BaseModel):
@@ -50,8 +52,8 @@ def _request(query_string: str) -> Request:
     )
 
 
-class TestQueryAbstract:
-    """Tests for QueryAbstract (base of dynamic filter models from SearchableEntity)."""
+class TestQueryAbstractEmpty:
+    """Sanity check on the abstract base used by dynamic filters."""
 
     def test_empty_instance_validates(self) -> None:
         """Base filter model with no fields constructs successfully."""

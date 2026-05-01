@@ -9,7 +9,11 @@ from typing import Annotated
 import pytest
 from pydantic import ValidationError
 
-from fastapi_factory_utilities.core.utils.api import ApiResponseField, ApiResponseModelAbstract, UpdateableField
+from fastapi_factory_utilities.core.utils.api import (
+    ApiResponseField,
+    ApiResponseModelAbstract,
+    UpdateableField,
+)
 
 
 class ProfileEntity(ApiResponseModelAbstract):

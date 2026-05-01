@@ -1,4 +1,6 @@
-"""Entities for the query utilities."""
+"""Dynamic query filter model builder driven by :class:`ApiField` searchable markers."""
+
+from __future__ import annotations
 
 from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
 
@@ -7,26 +9,20 @@ from pydantic.fields import FieldInfo
 
 from fastapi_factory_utilities.core.utils.pydantic_path_fields import nested_basemodel_for_annotation
 
-from .abstracts import QueryAbstract, QueryFilterNestedAbstract
-from .types import QueryField
+from .markers import ApiField, has_searchable_flag
+from .query_abstract import QueryAbstract, QueryFilterNestedAbstract
+from .query_types import QueryField
 
 
-class SearchableMarker:
-    """Marker class for searchable entities."""
-
-
-SearchableField = SearchableMarker()  # pylint: disable=invalid-name
-
-
-def _strip_searchable_to_value_type(hint: Any) -> Any:
-    """Return ``T`` from ``Annotated[T, ..., SearchableField, ...]`` (unwrap nested ``Annotated``)."""
+def _strip_apifield_to_value_type(hint: Any) -> Any:
+    """Return ``T`` from ``Annotated[T, ..., ApiField(searchable=True), ...]``."""
     ann: Any = hint
     while get_origin(ann) is Annotated:
         args = get_args(ann)
         if not args:
             break
         metadata = args[1:]
-        if any(m is SearchableField or isinstance(m, SearchableMarker) for m in metadata):
+        if any(isinstance(m, ApiField) for m in metadata):
             return args[0]
         ann = args[0]
     return ann
@@ -49,7 +45,7 @@ def _container_nested_annotation(field_info: FieldInfo, inner_model: type[QueryF
 
 
 class SearchableEntity(BaseModel):
-    """Searcheable entity.
+    """Searchable entity that dynamically builds query filter models.
 
     Examples:
         Flat fields::
@@ -80,7 +76,6 @@ class SearchableEntity(BaseModel):
             class UserEntityOptional(SearchableEntity):
                 name: Annotated[str, SearchableField]
                 address: Annotated[AddressEntity | None, SearchableField] = None
-
     """
 
     @classmethod
@@ -90,7 +85,7 @@ class SearchableEntity(BaseModel):
 
     @classmethod
     def build_nested_query_filter_model(
-        cls, *, building: frozenset[type["SearchableEntity"]]
+        cls, *, building: frozenset[type[SearchableEntity]]
     ) -> type[QueryFilterNestedAbstract]:
         """Build the nested filter segment model (no pagination or sort fields)."""
         return cast(
@@ -103,7 +98,7 @@ class SearchableEntity(BaseModel):
         cls,
         *,
         as_root: bool,
-        building: frozenset[type["SearchableEntity"]],
+        building: frozenset[type[SearchableEntity]],
     ) -> type[QueryAbstract] | type[QueryFilterNestedAbstract]:
         """Build a query filter model or a nested segment model."""
         if cls in building:
@@ -119,7 +114,7 @@ class SearchableEntity(BaseModel):
         for field_name, hint in hints.items():
             if get_origin(hint) is Annotated:
                 metadata = get_args(hint)[1:]
-                if any(m is SearchableField or isinstance(m, SearchableMarker) for m in metadata):
+                if has_searchable_flag(metadata):
                     annotated_searchable.append(field_name)
 
         searchable = list(dict.fromkeys(annotated_searchable))
@@ -133,7 +128,7 @@ class SearchableEntity(BaseModel):
                 msg = f"Field {field_name!r} is not defined on {cls.__name__}."
                 raise ValueError(msg) from exc
 
-            stripped = _strip_searchable_to_value_type(hints[field_name])
+            stripped = _strip_apifield_to_value_type(hints[field_name])
             nested_cls = nested_basemodel_for_annotation(
                 stripped,
                 exclude=(QueryAbstract, QueryFilterNestedAbstract),

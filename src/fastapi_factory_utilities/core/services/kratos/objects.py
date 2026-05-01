@@ -6,8 +6,12 @@ from typing import Annotated, ClassVar, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
-from fastapi_factory_utilities.core.utils.api import ApiResponseField, ApiResponseModelAbstract
-from fastapi_factory_utilities.core.utils.queries import SearchableEntity, SearchableField
+from fastapi_factory_utilities.core.utils.api import (
+    ApiResponseField,
+    ApiResponseModelAbstract,
+    SearchableEntity,
+    SearchableField,
+)
 
 from .enums import AuthenticationMethodEnum, AuthenticatorAssuranceLevelEnum, KratosIdentityStateEnum
 from .types import KratosExternalId, KratosIdentityId, KratosProvider, KratosSchemaId

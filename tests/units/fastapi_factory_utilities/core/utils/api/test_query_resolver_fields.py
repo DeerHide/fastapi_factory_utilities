@@ -1,4 +1,4 @@
-"""Provides tests for the query fields."""
+"""End-to-end tests for :class:`QueryResolver` over a FastAPI app."""
 
 from http import HTTPStatus
 from typing import Annotated, Any, TypedDict, cast
@@ -7,8 +7,14 @@ from fastapi import FastAPI, Query, Request
 from fastapi.testclient import TestClient
 from pytest import fixture
 
-from fastapi_factory_utilities.core.utils.paginations import PaginationPageOffset, PaginationSize
-from fastapi_factory_utilities.core.utils.queries import QueryField, QueryFieldName, QueryResolver, RawQuerySort
+from fastapi_factory_utilities.core.utils.api import (
+    PaginationPageOffset,
+    PaginationSize,
+    QueryField,
+    QueryFieldName,
+    QueryResolver,
+    RawQuerySort,
+)
 
 
 class _QueryFieldsEndpointResult(TypedDict):

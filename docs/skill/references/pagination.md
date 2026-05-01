@@ -24,7 +24,7 @@ Validated integer type for pagination size with constraints.
 ### Usage
 
 ```python
-from fastapi_factory_utilities.core.utils.paginations.types import PaginationSize
+from fastapi_factory_utilities.core.utils.api import PaginationSize
 from fastapi import Query
 
 @router.get("/items")
@@ -78,7 +78,7 @@ Validated integer type for pagination page offset.
 ### Usage
 
 ```python
-from fastapi_factory_utilities.core.utils.paginations.types import (
+from fastapi_factory_utilities.core.utils.api import (
     PaginationPageOffset,
 )
 
@@ -108,7 +108,7 @@ async def get_items(
 ## Combined Usage
 
 ```python
-from fastapi_factory_utilities.core.utils.paginations.types import (
+from fastapi_factory_utilities.core.utils.api import (
     PaginationSize,
     PaginationPageOffset,
 )
@@ -188,7 +188,7 @@ Pagination types raise validation errors for invalid values.
 ### Validation Errors
 
 ```python
-from fastapi_factory_utilities.core.utils.paginations.types import (
+from fastapi_factory_utilities.core.utils.api import (
     PaginationSize,
     PaginationPageOffset,
 )
@@ -223,7 +223,7 @@ FastAPI automatically validates pagination parameters:
 
 ```python
 from fastapi import HTTPException, Query
-from fastapi_factory_utilities.core.utils.paginations.types import (
+from fastapi_factory_utilities.core.utils.api import (
     PaginationSize,
     PaginationPageOffset,
 )
@@ -254,7 +254,7 @@ When using pagination types in Pydantic models:
 
 ```python
 from pydantic import BaseModel, ValidationError
-from fastapi_factory_utilities.core.utils.paginations.types import PaginationSize
+from fastapi_factory_utilities.core.utils.api import PaginationSize
 
 class PaginationParams(BaseModel):
     page_size: PaginationSize = PaginationSize.default()

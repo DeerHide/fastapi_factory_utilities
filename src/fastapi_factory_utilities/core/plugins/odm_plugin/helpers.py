@@ -7,8 +7,12 @@ from typing import Annotated, Generic, TypeVar, cast
 
 from pydantic import BaseModel, Field
 
-from fastapi_factory_utilities.core.utils.api import ApiResponseField, ApiResponseModelAbstract
-from fastapi_factory_utilities.core.utils.queries import SearchableEntity, SearchableField
+from fastapi_factory_utilities.core.utils.api import (
+    ApiResponseField,
+    ApiResponseModelAbstract,
+    SearchableEntity,
+    SearchableField,
+)
 
 GenericPersistedEntityId = TypeVar("GenericPersistedEntityId", bound=uuid.UUID)
 

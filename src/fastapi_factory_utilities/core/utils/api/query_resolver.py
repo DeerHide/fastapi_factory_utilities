@@ -1,4 +1,6 @@
-"""Provides resolvers for the query utilities."""
+"""Resolver translating raw HTTP query strings into typed :class:`QueryField` objects."""
+
+from __future__ import annotations
 
 import uuid
 from enum import Enum, Flag, IntEnum
@@ -8,9 +10,16 @@ from typing import Annotated, Any, ClassVar, Self, Union, get_args, get_origin
 from fastapi import Request
 from pydantic import AliasChoices, BaseModel, TypeAdapter, ValidationError
 
-from .abstracts import QueryAbstract
-from .enums import QueryFieldOperatorEnum
-from .types import QueryField, QueryFieldName, QueryFieldOperation, QuerySort, RawQueryFieldName, RawQuerySort
+from .query_abstract import QueryAbstract
+from .query_types import (
+    QueryField,
+    QueryFieldName,
+    QueryFieldOperation,
+    QueryFieldOperatorEnum,
+    QuerySort,
+    RawQueryFieldName,
+    RawQuerySort,
+)
 
 
 def _annotation_to_field_type(annotation: Any) -> Any:  # noqa: PLR0911
@@ -35,7 +44,6 @@ def _annotation_to_field_type(annotation: Any) -> Any:  # noqa: PLR0911
         if len(non_none) == 1:
             return _annotation_to_field_type(non_none[0])
         return str
-    # typing.NewType is a callable, not a ``type``; _coerce_scalar uses ``__supertype__``.
     if getattr(annotation, "__supertype__", None) is not None:
         return annotation
     if isinstance(annotation, type):
@@ -112,7 +120,6 @@ def _coerce_scalar(item: str, field_type: Any) -> Any:  # noqa: PLR0911, PLR0912
             raise ValueError(f"Invalid UUID query value: {item!r}.") from exc
     supertype = getattr(field_type, "__supertype__", None)
     if supertype is not None:
-        # ``typing.NewType`` (any supertype we already support: str, int, UUID, …).
         coerced = _coerce_scalar(item, supertype)
         return field_type(coerced)
     if isinstance(field_type, type):
@@ -219,12 +226,12 @@ def _nested_filter_model_type(annotation: Any) -> type[BaseModel] | None:
 
 
 class QueryResolver:
-    """Resolver for the query."""
+    """Resolver translating HTTP query parameters into typed :class:`QueryField` instances."""
 
     EXCLUDED_FIELDS: ClassVar[list[str]] = ["page", "page_size", "sort", "sorts"]
 
     def __init__(self, raise_on_unauthorized_field: bool = True) -> None:
-        """Initialize the QueryFilterResolver.
+        """Initialize the QueryResolver.
 
         Args:
             raise_on_unauthorized_field (bool): Whether to raise an exception if an unauthorized field is provided.
@@ -236,7 +243,7 @@ class QueryResolver:
         self._sorts: list[QuerySort] = []
 
     def add_authorized_field(self, field_name: QueryFieldName, field_type: Any = str) -> Self:
-        """Add an authorized field.
+        """Authorize a single query field by name.
 
         Args:
             field_name (QueryFieldName): The name of the field.
@@ -389,10 +396,10 @@ class QueryResolver:
 
     @property
     def fields(self) -> dict[QueryFieldName, QueryField[Any]]:
-        """Get the fields."""
+        """Get the resolved query fields."""
         return self._fields
 
     @property
     def sorts(self) -> list[QuerySort]:
-        """Get the sorts."""
+        """Get the resolved query sorts."""
         return self._sorts

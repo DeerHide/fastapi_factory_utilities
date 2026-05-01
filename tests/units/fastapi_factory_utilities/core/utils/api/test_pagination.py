@@ -1,8 +1,8 @@
-"""Unit tests for pagination utilities."""
+"""Unit tests for pagination utilities (consolidated under ``core.utils.api``)."""
 
 import pytest
 
-from fastapi_factory_utilities.core.utils.paginations import (
+from fastapi_factory_utilities.core.utils.api import (
     PaginationPageOffset,
     PaginationSize,
     resolve_offset,
@@ -15,10 +15,10 @@ class TestPaginationSize:
     @pytest.mark.parametrize(
         "value",
         [
-            1,  # min
-            50,  # default
-            100,  # middle value
-            200,  # max
+            1,
+            50,
+            100,
+            200,
         ],
     )
     def test_valid_creation(self, value: int) -> None:
@@ -36,9 +36,9 @@ class TestPaginationSize:
     @pytest.mark.parametrize(
         "value",
         [
-            0,  # below min
-            201,  # above max
-            -1,  # negative
+            0,
+            201,
+            -1,
         ],
     )
     def test_validation_error(self, value: int) -> None:
@@ -64,9 +64,9 @@ class TestPaginationPageOffset:
     @pytest.mark.parametrize(
         "value",
         [
-            0,  # min/default
-            1,  # positive
-            10,  # positive
+            0,
+            1,
+            10,
         ],
     )
     def test_valid_creation(self, value: int) -> None:
@@ -84,8 +84,8 @@ class TestPaginationPageOffset:
     @pytest.mark.parametrize(
         "value",
         [
-            -1,  # below min
-            -10,  # negative
+            -1,
+            -10,
         ],
     )
     def test_validation_error(self, value: int) -> None:

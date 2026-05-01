@@ -1,4 +1,4 @@
-"""Unit tests for query types and resolver (strict parsing, coercion, aggregation)."""
+"""Unit tests for query types, enums, and resolver coercion."""
 
 from __future__ import annotations
 
@@ -11,13 +11,14 @@ import pytest
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from starlette.requests import Request
 
-from fastapi_factory_utilities.core.utils.queries.abstracts import QueryAbstract
-from fastapi_factory_utilities.core.utils.queries.enums import QueryFieldOperatorEnum, QuerySortDirectionEnum
-from fastapi_factory_utilities.core.utils.queries.resolvers import QueryResolver
-from fastapi_factory_utilities.core.utils.queries.types import (
+from fastapi_factory_utilities.core.utils.api import (
+    QueryAbstract,
     QueryField,
     QueryFieldName,
+    QueryFieldOperatorEnum,
+    QueryResolver,
     QuerySort,
+    QuerySortDirectionEnum,
     RawQueryFieldName,
     RawQuerySort,
 )

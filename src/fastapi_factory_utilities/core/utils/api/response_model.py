@@ -1,9 +1,12 @@
-"""Provides utilities for the API.
+"""Dynamic API response and PUT request schema builders driven by :class:`ApiField`.
 
-Mark fields with :data:`ApiResponseField` inside :class:`typing.Annotated` on an
+Mark fields with the :data:`ApiResponseField` (or any other :class:`ApiField`
+marker enabling ``response``) inside :class:`typing.Annotated` on an
 :class:`ApiResponseModelAbstract` subclass, then subclass the model returned by
 :meth:`ApiResponseModelAbstract.build_response_model` or use it as a response schema.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Annotated, Any, Generic, Literal, TypeVar, get_args, get_origin, get_type_hints
@@ -12,6 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field, create_model
 from pydantic.fields import FieldInfo
 
 from fastapi_factory_utilities.core.utils.pydantic_path_fields import nested_basemodel_for_annotation
+
+from .markers import ApiField, has_response_flag, has_updateable_flag
 
 
 class ApiResponseSchemaBase(BaseModel):
@@ -24,22 +29,6 @@ class ApiResponseSchemaBase(BaseModel):
     model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
 
-class ApiResponseFieldMarker:
-    """Marker class for API response fields."""
-
-    def __init__(self, updateable: bool = False) -> None:
-        """Initialize the marker class."""
-        self._updateable = updateable
-
-    @property
-    def updateable(self) -> bool:
-        """Return the updateable flag."""
-        return self._updateable
-
-
-ApiResponseField = ApiResponseFieldMarker()  # pylint: disable=invalid-name
-ApiField = ApiResponseFieldMarker()  # pylint: disable=invalid-name
-UpdateableField = ApiResponseFieldMarker(updateable=True)  # pylint: disable=invalid-name
 GenericModel = TypeVar("GenericModel", bound=BaseModel)
 
 
@@ -63,16 +52,6 @@ class ReconcileResult(Generic[GenericModel]):
     unchanged_paths: list[str]
 
 
-def _is_updateable_marker(metadata: Any) -> bool:
-    """Return ``True`` when metadata marks a field as updateable."""
-    return metadata is UpdateableField or (isinstance(metadata, ApiResponseFieldMarker) and metadata.updateable)
-
-
-def _is_api_response_marker(metadata: Any) -> bool:
-    """Return ``True`` when metadata marks a field as API-exposed."""
-    return metadata is ApiResponseField or isinstance(metadata, ApiResponseFieldMarker)
-
-
 def _collect_exposed_fields_for_model(
     model_cls: type[BaseModel],
     *,
@@ -93,7 +72,7 @@ def _collect_exposed_fields_for_model(
             continue
         args = get_args(hint)
         metadata = args[1:]
-        if not any(_is_api_response_marker(meta) for meta in metadata):
+        if not has_response_flag(metadata):
             continue
 
         path = f"{prefix}.{field_name}" if prefix else field_name
@@ -131,8 +110,8 @@ def _collect_updateable_fields_for_model(
             continue
         args = get_args(hint)
         metadata = args[1:]
-        has_updateable = any(_is_updateable_marker(meta) for meta in metadata)
-        has_api = any(_is_api_response_marker(meta) for meta in metadata)
+        has_updateable = has_updateable_flag(metadata)
+        has_api = has_response_flag(metadata)
 
         path = f"{prefix}.{field_name}" if prefix else field_name
         nested_cls = nested_basemodel_for_annotation(args[0])
@@ -156,15 +135,15 @@ def _collect_updateable_fields_for_model(
     return paths
 
 
-def _strip_api_response_to_value_type(hint: Any) -> Any:
-    """Return ``T`` from ``Annotated[T, ..., ApiResponseField, ...]`` (unwrap nested ``Annotated``)."""
+def _strip_apifield_to_value_type(hint: Any) -> Any:
+    """Return ``T`` from ``Annotated[T, ..., ApiField(...), ...]`` (unwrap nested ``Annotated``)."""
     ann: Any = hint
     while get_origin(ann) is Annotated:
         args = get_args(ann)
         if not args:
             break
         metadata = args[1:]
-        if any(m is ApiResponseField or isinstance(m, ApiResponseFieldMarker) for m in metadata):
+        if any(isinstance(m, ApiField) for m in metadata):
             return args[0]
         ann = args[0]
     return ann
@@ -247,8 +226,10 @@ def _get_by_path(data: dict[str, Any], path: str) -> Any:
 class ApiResponseModelAbstract(BaseModel):
     """Abstract base for domain models that declare an API response projection.
 
-    Exposed fields are those annotated with :data:`ApiResponseField`. Nested models must
-    subclass :class:`ApiResponseModelAbstract` so their own marked fields define the nested
+    Exposed fields are those annotated with an :class:`ApiField` marker that has
+    ``response=True`` (the most ergonomic helpers being :data:`ApiResponseField`
+    and :data:`UpdateableField`). Nested models must subclass
+    :class:`ApiResponseModelAbstract` so their own marked fields define the nested
     response shape.
 
     Examples:
@@ -285,7 +266,7 @@ class ApiResponseModelAbstract(BaseModel):
 
     @classmethod
     def build_response_model(cls) -> type[ApiResponseSchemaBase]:
-        """Build a new Pydantic model containing only fields marked with :data:`ApiResponseField`.
+        """Build a new Pydantic model containing only fields exposed via :class:`ApiField`.
 
         The result subclasses :class:`ApiResponseSchemaBase` so you can extend it::
 
@@ -302,7 +283,7 @@ class ApiResponseModelAbstract(BaseModel):
         for field_name, hint in hints.items():
             if get_origin(hint) is Annotated:
                 metadata = get_args(hint)[1:]
-                if any(m is ApiResponseField or isinstance(m, ApiResponseFieldMarker) for m in metadata):
+                if has_response_flag(metadata):
                     annotated_response.append(field_name)
 
         allowed = list(dict.fromkeys(annotated_response))
@@ -316,7 +297,7 @@ class ApiResponseModelAbstract(BaseModel):
                 msg = f"Field {field_name!r} is not defined on {cls.__name__}."
                 raise ValueError(msg) from exc
 
-            stripped = _strip_api_response_to_value_type(hints[field_name])
+            stripped = _strip_apifield_to_value_type(hints[field_name])
             nested_cls = nested_basemodel_for_annotation(stripped)
 
             if nested_cls is not None:
@@ -348,9 +329,10 @@ class ApiResponseModelAbstract(BaseModel):
         """Return the updateable fields.
 
         This is useful to get the fields that can be updated when the entity is updated.
-        It returns fields annotated with :data:`UpdateableField`, including nested dotted
-        paths. Nested :class:`ApiResponseModelAbstract` fields marked only with
-        :data:`ApiResponseField` are still walked so that updateable leaves inside them
+        It returns fields annotated with an :class:`ApiField` marker that has
+        ``updateable=True`` (e.g. :data:`UpdateableField`), including nested dotted
+        paths. Nested :class:`ApiResponseModelAbstract` fields marked only with a
+        response-only marker are still walked so that updateable leaves inside them
         are included (the container itself is not listed unless it also carries an
         updateable marker).
 
@@ -364,7 +346,7 @@ class ApiResponseModelAbstract(BaseModel):
 
     @classmethod
     def get_exposed_fields(cls) -> list[str]:
-        """Return the exposed fields declared via :data:`ApiResponseField` markers."""
+        """Return the exposed fields declared via response-enabling :class:`ApiField` markers."""
         return _collect_exposed_fields_for_model(cls)
 
     @classmethod
@@ -378,7 +360,7 @@ class ApiResponseModelAbstract(BaseModel):
             if get_origin(hint) is not Annotated:
                 continue
             metadata = get_args(hint)[1:]
-            if any(_is_api_response_marker(meta) for meta in metadata):
+            if has_response_flag(metadata):
                 exposed_fields.append(field_name)
 
         allowed = list(dict.fromkeys(exposed_fields))
@@ -392,7 +374,7 @@ class ApiResponseModelAbstract(BaseModel):
                 msg = f"Field {field_name!r} is not defined on {cls.__name__}."
                 raise ValueError(msg) from exc
 
-            stripped = _strip_api_response_to_value_type(hints[field_name])
+            stripped = _strip_apifield_to_value_type(hints[field_name])
             nested_cls = nested_basemodel_for_annotation(stripped)
 
             if nested_cls is not None:

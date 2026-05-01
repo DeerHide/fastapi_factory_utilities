@@ -1,28 +1,26 @@
-"""Provides the abstract classes for the query utilities.
+"""Abstract base classes for query filter models.
 
-Examples of Usage:
+Examples of usage:
 
-class ResourceQueryModel(QueryAbstract):
-
-    name: QueryField[str] | None = Field(default=None, min_length=2, max_length=128)
-    age: QueryField[int] | None = Field(default=None, gt=0, lt=100)
-    email: QueryField[str] | None = Field(default=None, format="email")
-
+    class ResourceQueryModel(QueryAbstract):
+        name: QueryField[str] | None = Field(default=None, min_length=2, max_length=128)
+        age: QueryField[int] | None = Field(default=None, gt=0, lt=100)
+        email: QueryField[str] | None = Field(default=None, format="email")
 """
+
+from __future__ import annotations
 
 from abc import ABC
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from fastapi_factory_utilities.core.utils.paginations import PaginationPageOffset, PaginationSize, resolve_offset
-
-from .enums import QueryFieldOperatorEnum
-from .types import QueryField, QueryFieldName, QueryFieldOperation, QuerySort
+from .pagination import PaginationPageOffset, PaginationSize, resolve_offset
+from .query_types import QueryField, QueryFieldName, QueryFieldOperation, QueryFieldOperatorEnum, QuerySort
 
 
 class QueryAbstract(BaseModel, ABC):
-    """Abstract base class for the query utilities."""
+    """Abstract base class for query filter models with pagination and sort fields."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
@@ -34,15 +32,15 @@ class QueryAbstract(BaseModel, ABC):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def offset(self) -> int:
-        """Get the offset."""
+        """Return the absolute MongoDB-style ``skip`` offset."""
         return resolve_offset(page_offset=self.page, page_size=self.page_size)
 
     def get_fields(self) -> dict[QueryFieldName, QueryField[Any]]:
-        """Get the fields.
+        """Get the resolved query fields keyed by :attr:`QueryField.name`.
 
-        Keys match each :class:`QueryField` :attr:`~QueryField.name` (e.g. dotted paths from the
-        resolver). Nested filter models (:class:`pydantic.BaseModel` subclasses other than
-        :class:`QueryAbstract`) are walked recursively.
+        Nested filter models (:class:`pydantic.BaseModel` subclasses other than
+        :class:`QueryAbstract`) are walked recursively so dotted query keys are
+        flattened into the returned mapping.
 
         Returns:
             dict[QueryFieldName, QueryField[Any]]: The fields as a dictionary of query fields.

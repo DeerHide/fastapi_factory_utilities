@@ -9,8 +9,8 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from fastapi_factory_utilities.core.utils.api import (
+    ApiField,
     ApiResponseField,
-    ApiResponseFieldMarker,
     ApiResponseModelAbstract,
     ApiResponseSchemaBase,
     UpdateableField,
@@ -302,13 +302,23 @@ class TestGetUpdateableFieldsApiExposedNested:
 
         assert Both.get_updateable_fields() == ["code"]
 
-    def test_api_response_field_marker_with_updateable_true(self) -> None:
-        """``ApiResponseFieldMarker(updateable=True)`` is treated like ``UpdateableField``."""
+    def test_custom_apifield_with_updateable_true(self) -> None:
+        """``ApiField(updateable=True)`` is treated like :data:`UpdateableField`."""
 
         class Custom(ApiResponseModelAbstract):
-            ref: Annotated[str, ApiResponseFieldMarker(updateable=True)]
+            ref: Annotated[str, ApiField(updateable=True)]
 
         assert Custom.get_updateable_fields() == ["ref"]
+
+    def test_searchable_only_field_not_exposed(self) -> None:
+        """A field carrying only an :class:`ApiField` with ``response=False`` is not exposed."""
+
+        class SearchOnlyEntity(ApiResponseModelAbstract):
+            id: Annotated[str, ApiResponseField]
+            internal_searchable: Annotated[str, ApiField(response=False, searchable=True)] = ""
+
+        response_model = SearchOnlyEntity.build_response_model()
+        assert set(response_model.model_fields) == {"id"}
 
 
 class TestReconcileUpdateRequest:

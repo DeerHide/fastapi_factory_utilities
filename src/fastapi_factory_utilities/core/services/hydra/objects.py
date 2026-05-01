@@ -4,8 +4,12 @@ from typing import Annotated, ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
-from fastapi_factory_utilities.core.utils.api import ApiResponseField, ApiResponseModelAbstract
-from fastapi_factory_utilities.core.utils.queries import SearchableEntity, SearchableField
+from fastapi_factory_utilities.core.utils.api import (
+    ApiResponseField,
+    ApiResponseModelAbstract,
+    SearchableEntity,
+    SearchableField,
+)
 
 
 class HydraTokenIntrospectObject(SearchableEntity, ApiResponseModelAbstract, BaseModel):

@@ -1,4 +1,4 @@
-"""Provides tests for the query abstract."""
+"""Unit tests for :class:`QueryAbstract` (resolver wiring with FastAPI)."""
 
 from http import HTTPStatus
 from typing import Annotated
@@ -8,8 +8,9 @@ from fastapi.testclient import TestClient
 from pydantic import Field
 from pytest import fixture
 
-from fastapi_factory_utilities.core.utils.paginations import PaginationPageOffset, PaginationSize
-from fastapi_factory_utilities.core.utils.queries import (
+from fastapi_factory_utilities.core.utils.api import (
+    PaginationPageOffset,
+    PaginationSize,
     QueryAbstract,
     QueryField,
     QueryFieldName,
@@ -22,7 +23,7 @@ from fastapi_factory_utilities.core.utils.queries import (
 
 
 class TestQueryAbstract:
-    """Tests for the query fields."""
+    """Tests wiring :class:`QueryAbstract` with :class:`QueryResolver` in FastAPI."""
 
     class SampleQuery(QueryAbstract):
         """Sample query."""

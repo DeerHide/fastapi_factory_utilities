@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- API/query utilities: consolidated pagination, query abstractions/resolvers/types, and API response/searchable model helpers under `core.utils.api`; updated ODM plugin imports and coverage to match the new module layout.
+
 ## [4.4.3] - 2026-04-18
 
 ### Fixed

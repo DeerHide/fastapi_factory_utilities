@@ -1,9 +1,9 @@
 """Queries for the ODM plugin.
 
-Translates :class:`~fastapi_factory_utilities.core.utils.queries.QueryAbstract`
+Translates :class:`~fastapi_factory_utilities.core.utils.api.QueryAbstract`
 instances into MongoDB match documents and Beanie ``find`` keyword arguments.
 
-Merge rules for multiple :class:`~fastapi_factory_utilities.core.utils.queries.types.QueryFieldOperation`
+Merge rules for multiple :class:`~fastapi_factory_utilities.core.utils.api.QueryFieldOperation`
 on the same path:
 
 - Comparison operators (``$gt``, ``$lt``, ``$gte``, ``$lte``, ``$ne``) merge into one
@@ -23,7 +23,7 @@ from typing import Any, Generic, Self, TypeVar
 
 from beanie import SortDirection
 
-from fastapi_factory_utilities.core.utils.queries import (
+from fastapi_factory_utilities.core.utils.api import (
     QueryAbstract,
     QueryFieldOperatorEnum,
     QuerySort,

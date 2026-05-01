@@ -18,8 +18,9 @@ from starlette.requests import Request as StarletteRequest
 from fastapi_factory_utilities.core.plugins.odm_plugin.documents import BaseDocument
 from fastapi_factory_utilities.core.plugins.odm_plugin.queries import ODMQueryBuilder
 from fastapi_factory_utilities.core.plugins.odm_plugin.repositories import AbstractRepository
-from fastapi_factory_utilities.core.utils.paginations import PaginationPageOffset, PaginationSize
-from fastapi_factory_utilities.core.utils.queries import (
+from fastapi_factory_utilities.core.utils.api import (
+    PaginationPageOffset,
+    PaginationSize,
     QueryAbstract,
     QueryField,
     QueryFieldName,
@@ -276,7 +277,7 @@ def test_queries_init_docstring_examples_fastapi_to_mongo(
     expected_mongo_filter: dict[str, Any],
     expected_sort: list[list[str]] | None,
 ) -> None:
-    """Cover filtering and sorting patterns from ``core.utils.queries`` module docstring (lines 5-21)."""
+    """Cover filtering and sorting patterns from ``core.utils.api`` module docstring (lines 5-21)."""
     app = FastAPI()
 
     def get_items(

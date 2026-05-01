@@ -10,8 +10,9 @@ from beanie import SortDirection
 from pydantic import Field, ValidationError
 
 from fastapi_factory_utilities.core.plugins.odm_plugin.queries import ODMFindQuery, ODMQueryBuilder
-from fastapi_factory_utilities.core.utils.paginations import PaginationPageOffset, PaginationSize
-from fastapi_factory_utilities.core.utils.queries import (
+from fastapi_factory_utilities.core.utils.api import (
+    PaginationPageOffset,
+    PaginationSize,
     QueryAbstract,
     QueryField,
     QueryFieldName,

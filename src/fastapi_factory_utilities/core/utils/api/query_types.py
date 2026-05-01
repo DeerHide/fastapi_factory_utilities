@@ -1,17 +1,42 @@
-"""Provides the types for the query utilities."""
+"""Types and enums shared by query filter and resolver utilities."""
+
+from __future__ import annotations
 
 import re
+from enum import StrEnum
 from typing import Any, ClassVar, Generic, Self, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, GetCoreSchemaHandler, GetJsonSchemaHandler, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
-from .enums import QueryFieldOperatorEnum, QuerySortDirectionEnum
+
+class QuerySortDirectionEnum(StrEnum):
+    """Query sort direction enum."""
+
+    ASCENDING = "+"
+    DESCENDING = "-"
+
+
+class QueryFieldOperatorEnum(StrEnum):
+    """Query field operator enum."""
+
+    GT = "gt"
+    LT = "lt"
+    GTE = "gte"
+    LTE = "lte"
+    EQ = "eq"
+    NEQ = "neq"
+    IN = "in"
+    NIN = "nin"
+    CONTAINS = "contains"
+    NOT_CONTAINS = "not_contains"
+    STARTS_WITH = "starts_with"
+    ENDS_WITH = "ends_with"
 
 
 class QueryFieldName(str):
-    """Query field name type."""
+    """Validated query field name (alphanumeric with ``_``, ``-`` and ``.``)."""
 
     MIN_LENGTH: int = 2
     MAX_LENGTH: int = 128
@@ -20,7 +45,7 @@ class QueryFieldName(str):
 
     @classmethod
     def validate(cls, value: str) -> str:
-        """Validate the query field name."""
+        """Validate length and character set of a query field name."""
         if not cls.MIN_LENGTH <= len(value) <= cls.MAX_LENGTH:
             raise ValueError(f"Query field name must be between {cls.MIN_LENGTH} and {cls.MAX_LENGTH} characters long.")
         if not cls.REGEX.match(value):
@@ -29,13 +54,13 @@ class QueryFieldName(str):
             )
         return value
 
-    def __new__(cls, value: str) -> "QueryFieldName":
-        """Create a new instance of QueryFieldName."""
+    def __new__(cls, value: str) -> QueryFieldName:
+        """Create a validated ``QueryFieldName``."""
         return super().__new__(cls, cls.validate(value))
 
     @classmethod
     def __get_pydantic_core_schema__(cls, _source: Any, _handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:  # pylint: disable=invalid-name
-        """Get the core schema for the QueryFieldName type."""
+        """Return the pydantic-core schema for ``QueryFieldName``."""
         return core_schema.no_info_after_validator_function(
             cls, core_schema.str_schema(min_length=cls.MIN_LENGTH, max_length=cls.MAX_LENGTH, pattern=cls.REGEX.pattern)
         )
@@ -46,14 +71,14 @@ class QueryFieldName(str):
         core_schema: core_schema.CoreSchema,  # pylint: disable=redefined-outer-name
         handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
-        """Get the JSON schema for the QueryFieldName type."""
+        """Return the JSON schema for ``QueryFieldName``."""
         field_schema = handler(core_schema)
         field_schema.update(type="string", description="Query field name")
         return field_schema
 
 
 class RawQueryFieldName(str):
-    """Raw query field type."""
+    """Raw query field name including bracket operator (``field[op]``)."""
 
     MIN_LENGTH: int = 2
     MAX_LENGTH: int = 128
@@ -62,7 +87,7 @@ class RawQueryFieldName(str):
 
     @classmethod
     def validate(cls, value: str) -> str:
-        """Validate the raw query field."""
+        """Validate length and character set of a raw query field name."""
         if not cls.MIN_LENGTH <= len(value) <= cls.MAX_LENGTH:
             raise ValueError(f"Raw query field must be between {cls.MIN_LENGTH} and {cls.MAX_LENGTH} characters long.")
         if not cls.REGEX.match(value):
@@ -72,8 +97,8 @@ class RawQueryFieldName(str):
             )
         return value
 
-    def __new__(cls, value: str) -> "RawQueryFieldName":
-        """Create a new instance of RawQueryFieldName."""
+    def __new__(cls, value: str) -> RawQueryFieldName:
+        """Create a validated ``RawQueryFieldName``."""
         return super().__new__(cls, cls.validate(value))
 
     @classmethod
@@ -82,7 +107,7 @@ class RawQueryFieldName(str):
         _source: Any,  # pylint: disable=invalid-name
         _handler: GetCoreSchemaHandler,  # pylint: disable=invalid-name
     ) -> core_schema.CoreSchema:
-        """Get the core schema for the RawQueryFieldName type."""
+        """Return the pydantic-core schema for ``RawQueryFieldName``."""
         return core_schema.no_info_after_validator_function(cls, core_schema.str_schema())
 
     @classmethod
@@ -91,7 +116,7 @@ class RawQueryFieldName(str):
         _core_schema: core_schema.CoreSchema,  # pylint: disable=invalid-name
         _handler: GetJsonSchemaHandler,  # pylint: disable=invalid-name
     ) -> JsonSchemaValue:
-        """Get the JSON schema for the RawQueryFieldName type."""
+        """Return the JSON schema for ``RawQueryFieldName``."""
         return {"type": "string", "description": "Raw query field"}
 
 
@@ -99,7 +124,7 @@ T = TypeVar("T")
 
 
 class QueryFieldOperation(BaseModel, Generic[T]):
-    """Query field operation type."""
+    """A single (operator, value) tuple applied to a query field."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
@@ -115,7 +140,7 @@ class QueryFieldOperation(BaseModel, Generic[T]):
 
 
 class QueryField(BaseModel, Generic[T]):
-    """Query field type."""
+    """Filter specification for one query field with one or more operations."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
@@ -144,7 +169,7 @@ class QueryField(BaseModel, Generic[T]):
 
 
 class RawQuerySort(str):
-    """Raw query sort type."""
+    """Raw query sort token (``+name`` / ``-name`` / ``name``)."""
 
     MIN_LENGTH: int = 2
     MAX_LENGTH: int = 128
@@ -153,7 +178,7 @@ class RawQuerySort(str):
 
     @classmethod
     def validate(cls, value: str) -> str:
-        """Validate the raw query sort."""
+        """Validate length and character set of a raw query sort token."""
         if not cls.MIN_LENGTH <= len(value) <= cls.MAX_LENGTH:
             raise ValueError(f"Raw query sort must be between {cls.MIN_LENGTH} and {cls.MAX_LENGTH} characters long.")
         if not cls.REGEX.match(value):
@@ -162,8 +187,8 @@ class RawQuerySort(str):
             )
         return value
 
-    def __new__(cls, value: str) -> "RawQuerySort":
-        """Create a new instance of RawQuerySort."""
+    def __new__(cls, value: str) -> RawQuerySort:
+        """Create a validated ``RawQuerySort``."""
         return super().__new__(cls, cls.validate(value))
 
     @classmethod
@@ -172,7 +197,7 @@ class RawQuerySort(str):
         _source: Any,  # pylint: disable=invalid-name
         _handler: GetCoreSchemaHandler,  # pylint: disable=invalid-name
     ) -> core_schema.CoreSchema:
-        """Get the core schema for the RawQuerySort type."""
+        """Return the pydantic-core schema for ``RawQuerySort``."""
         return core_schema.no_info_after_validator_function(cls, core_schema.str_schema())
 
     @classmethod
@@ -181,12 +206,12 @@ class RawQuerySort(str):
         _core_schema: core_schema.CoreSchema,  # pylint: disable=invalid-name
         _handler: GetJsonSchemaHandler,  # pylint: disable=invalid-name
     ) -> JsonSchemaValue:
-        """Get the JSON schema for the RawQuerySort type."""
+        """Return the JSON schema for ``RawQuerySort``."""
         return {"type": "string", "description": "Raw query sort"}
 
 
 class QuerySort(BaseModel):
-    """Query sort type."""
+    """Parsed query sort token with field name and direction."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
