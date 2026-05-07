@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-05-07
+
 ### Changed
 
 - **Breaking:** API entities no longer inherit `QueryAbstract` through `ApiEntityAbstract`; query pagination/sort fields (`page`, `page_size`, `sorts`, computed `offset`) are no longer part of entity instances, while `SearchableEntity.build_query_filter_model()` still returns `QueryAbstract` filter models.
@@ -380,7 +382,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.5.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.0...HEAD
+[5.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.5.0...v5.0.0
 [4.5.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.4...v4.5.0
 [4.4.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.3...v4.4.4
 [4.4.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.2...v4.4.3
