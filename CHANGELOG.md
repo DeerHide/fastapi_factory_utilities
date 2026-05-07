@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.1] - 2026-05-07
+
+### Fixed
+
+- JWT authentication: verifier-raised invalid token errors are now translated into expected `403` authentication outcomes instead of bubbling as generic server failures.
+- HTTP validation handling: request validation errors now return HTTP `422` with FastAPI-compatible structured `detail` payloads.
+
+### Changed
+
+- Logging: request validation logs now emit concise method/path/error-count metadata instead of full request objects.
+- Logging: JWT authentication error classes now default to debug-level logging to reduce noise from expected invalid-credential flows.
+
 ## [5.0.0] - 2026-05-07
 
 ### Changed
@@ -382,7 +394,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.1...HEAD
+[5.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.0...v5.0.1
 [5.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.5.0...v5.0.0
 [4.5.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.4...v4.5.0
 [4.4.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.3...v4.4.4
