@@ -169,8 +169,8 @@ class SearchableEntity(BaseModel):
         return model
 
 
-class ApiEntityAbstract(SearchableEntity, ApiResponseModelAbstract, QueryAbstract):
-    """Convenience abstract base combining response, query, and searchable behaviors.
+class ApiEntityAbstract(SearchableEntity, ApiResponseModelAbstract):
+    """Convenience abstract base combining response and searchable behaviors.
 
     This class is intentionally additive. Existing split abstractions remain the
     source of truth and continue to be supported independently.

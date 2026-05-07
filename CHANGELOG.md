@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** API entities no longer inherit `QueryAbstract` through `ApiEntityAbstract`; query pagination/sort fields (`page`, `page_size`, `sorts`, computed `offset`) are no longer part of entity instances, while `SearchableEntity.build_query_filter_model()` still returns `QueryAbstract` filter models.
+
 ## [4.5.0] - 2026-05-01
 
 ### Added

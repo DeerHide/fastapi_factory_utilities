@@ -44,11 +44,20 @@ class TestApiEntityAbstractBuildResponseModel:
         id: Annotated[str, ApiField()]
         searchable_sku: Annotated[str, ApiField(response=False, searchable=True)]
 
-    def test_inherits_all_parent_abstractions(self) -> None:
-        """The convenience base remains compatible with all split abstractions."""
+    def test_inherits_response_and_searchable_not_query(self) -> None:
+        """The convenience base keeps entity concerns without query concerns."""
         assert issubclass(ApiEntityAbstract, ApiResponseModelAbstract)
         assert issubclass(ApiEntityAbstract, SearchableEntity)
-        assert issubclass(ApiEntityAbstract, QueryAbstract)
+        assert not issubclass(ApiEntityAbstract, QueryAbstract)
+
+    def test_entity_instance_has_no_query_pagination_or_sort_fields(self) -> None:
+        """Entity instances no longer include ``QueryAbstract`` pagination/sort fields."""
+        instance = self.ItemEntity(id="id-1", searchable_sku="SKU-001")
+        dumped = instance.model_dump()
+        assert "page" not in dumped
+        assert "page_size" not in dumped
+        assert "sorts" not in dumped
+        assert "offset" not in dumped
 
     def test_build_response_model_keeps_response_marked_fields_only(self) -> None:
         """Response builder still follows ApiField(response=...) semantics."""

@@ -71,10 +71,19 @@ class TestApiEntityAbstractBuildQueryFilterModel:
         id: Annotated[str, ApiField(response=False, searchable=True)]
         sku: Annotated[str, ApiField(response=False, searchable=True)]
 
-    def test_inherits_all_parent_abstractions(self) -> None:
-        """The convenience class preserves parent abstraction inheritance."""
+    def test_inherits_searchable_not_query(self) -> None:
+        """The convenience class keeps searchable inheritance but not query inheritance."""
         assert issubclass(ApiEntityAbstract, SearchableEntity)
-        assert issubclass(ApiEntityAbstract, QueryAbstract)
+        assert not issubclass(ApiEntityAbstract, QueryAbstract)
+
+    def test_entity_instance_has_no_query_fields(self) -> None:
+        """Api entities do not expose pagination/sort fields as instance data."""
+        entity = self.ProductEntity(id="id-1", sku="sku-1")
+        dumped = entity.model_dump()
+        assert "page" not in dumped
+        assert "page_size" not in dumped
+        assert "sorts" not in dumped
+        assert "offset" not in dumped
 
     def test_build_query_filter_model_matches_searchable_behavior(self) -> None:
         """Searchable behavior remains available through ApiEntityAbstract."""
