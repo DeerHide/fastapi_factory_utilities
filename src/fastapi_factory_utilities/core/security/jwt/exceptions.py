@@ -1,10 +1,14 @@
 """Provides the exceptions for the JWT authentication."""
 
+import logging
+
 from fastapi_factory_utilities.core.exceptions import FastAPIFactoryUtilitiesError
 
 
 class JWTAuthenticationError(FastAPIFactoryUtilitiesError):
     """JWT authentication error."""
+
+    DEFAULT_LOGGING_LEVEL: int = logging.DEBUG
 
 
 class MissingJWTCredentialsError(JWTAuthenticationError):

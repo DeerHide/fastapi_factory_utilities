@@ -13,11 +13,14 @@ _logger: BoundLogger = get_logger(__package__)
 
 async def validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Validation exception handler."""
-    exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
-    content = {"status_code": 422, "message": exc_str, "data": None}
     errors = cast(RequestValidationError, exc).errors()
-    _logger.error("Validation error", request=request, exc_str=exc_str, content=content)
-    return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": errors})
+    _logger.warning(
+        "Validation error",
+        method=request.method,
+        path=request.url.path,
+        errors_count=len(errors),
+    )
+    return JSONResponse(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, content={"detail": errors})
 
 
 def register_exception_handlers(app: FastAPI) -> None:

@@ -109,7 +109,7 @@ class JWTAuthenticationServiceAbstract(AuthenticationAbstract, Generic[JWTBearer
 
         try:
             await self._jwt_verifier.verify(jwt_token=self._jwt, jwt_payload=self._jwt_payload)
-        except NotVerifiedJWTError as e:
+        except (NotVerifiedJWTError, InvalidJWTError) as e:
             return self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(e)))
 
         return

@@ -457,6 +457,27 @@ class TestJWTAuthenticationServiceAbstract:  # pylint: disable=protected-access
         assert "Not verified" in str(service._errors[0].detail)  # type: ignore[attr-defined] # pylint: disable=protected-access
 
     @pytest.mark.asyncio
+    async def test_authenticate_invalid_jwt_from_verifier_is_mapped_to_forbidden(
+        self,
+        concrete_service: JWTAuthenticationServiceAbstract[JWTPayload],
+        jwt_payload: JWTPayload,
+    ) -> None:
+        """Verifier InvalidJWTError should be translated to HTTP 403."""
+        request = MagicMock(spec=Request)
+        request.headers = {"Authorization": "Bearer test.token.here"}
+
+        concrete_service._jwt_decoder.decode_payload = AsyncMock(return_value=jwt_payload)  # type: ignore[assignment]
+        concrete_service._jwt_verifier.verify = AsyncMock(  # type: ignore[assignment]
+            side_effect=InvalidJWTError("Token revoked")
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await concrete_service.authenticate(request=request)
+
+        assert exc_info.value.status_code == HTTPStatus.FORBIDDEN
+        assert "Token revoked" in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
     async def test_authenticate_invalid_jwt_from_decoder_raises(
         self,
         concrete_service: JWTAuthenticationServiceAbstract[JWTPayload],
