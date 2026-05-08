@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.2] - 2026-05-08
+
+### Fixed
+
+- Hydra introspection DTOs now accept nested/non-string `ext` claim values, preventing validation errors on richer token metadata.
+- Hydra introspection service now reuses a single parsed JSON payload before model validation to keep response handling deterministic.
+
 ## [5.0.1] - 2026-05-07
 
 ### Fixed
@@ -394,7 +401,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.2...HEAD
+[5.0.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.1...v5.0.2
 [5.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.0...v5.0.1
 [5.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.5.0...v5.0.0
 [4.5.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.4.4...v4.5.0
