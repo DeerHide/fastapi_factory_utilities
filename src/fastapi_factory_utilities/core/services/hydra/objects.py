@@ -1,6 +1,6 @@
 """Provides the objects for the Hydra service."""
 
-from typing import Annotated, ClassVar
+from typing import Annotated, Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
@@ -16,7 +16,7 @@ class HydraTokenIntrospectObject(SearchableEntity, ApiResponseModelAbstract, Bas
     aud: Annotated[list[str], ApiField(searchable=True)]
     client_id: Annotated[str, ApiField(searchable=True)]
     exp: Annotated[int, ApiField(searchable=True)]
-    ext: Annotated[dict[str, str] | None, ApiField(searchable=True)] = None
+    ext: Annotated[dict[str, Any] | None, ApiField(searchable=True)] = None
     iat: Annotated[int, ApiField(searchable=True)]
     iss: Annotated[str, ApiField(searchable=True)]
     nbf: Annotated[int, ApiField(searchable=True)]

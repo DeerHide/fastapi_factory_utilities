@@ -63,8 +63,9 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
                     data={"token": token},
                 ) as response:
                     response.raise_for_status()
+                    response_data: dict[str, Any] = await response.json()
                     instrospect: HydraIntrospectObjectGeneric = self._concreate_introspect_object_class.model_validate(
-                        await response.json()
+                        response_data
                     )
         except aiohttp.ClientResponseError as error:
             raise HydraOperationError(
