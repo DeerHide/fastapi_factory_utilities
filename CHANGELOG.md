@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.1.0] - 2026-05-08
+
 ### Added
 
 - Kratos admin service: added `delete_session(session_id)` helper to revoke a single session via the admin API with structured error mapping and logging.
@@ -405,7 +407,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.1.0...HEAD
+[5.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.2...v5.1.0
 [5.0.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.1...v5.0.2
 [5.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.0...v5.0.1
 [5.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v4.5.0...v5.0.0
