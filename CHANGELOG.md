@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Kratos admin service: added `delete_session(session_id)` helper to revoke a single session via the admin API with structured error mapping and logging.
+
 ## [5.0.2] - 2026-05-08
 
 ### Fixed

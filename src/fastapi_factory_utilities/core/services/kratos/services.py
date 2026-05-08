@@ -2,6 +2,7 @@
 
 import datetime
 import json
+import uuid
 from http import HTTPStatus
 from typing import Any, ClassVar, Generic, TypeVar, get_args
 
@@ -250,6 +251,29 @@ class KratosIdentityGenericService(Generic[GenericKratosIdentityObject, GenericK
             "Sessions deleted successfully",
             identity_id=identity_id,
         )
+
+    async def delete_session(self, session_id: uuid.UUID) -> None:
+        """Delete a single Kratos session.
+
+        Args:
+            session_id (uuid.UUID): The ID of the session to delete.
+
+        Returns:
+            None: If the session is deleted successfully.
+        """
+        try:
+            async with self._kratos_admin_http_resource.acquire_client_session() as session:
+                async with session.delete(url=f"{self.ADMIN_ENDPOINT}/sessions/{session_id}") as response:
+                    response.raise_for_status()
+        except (aiohttp.ClientResponseError, json.JSONDecodeError, ValidationError) as e:
+            status_code: str | None = getattr(e, "status", None)
+            raise KratosOperationError(
+                message="Failed to delete the Kratos session",
+                session_id=session_id,
+                status_code=status_code,
+            ) from e
+
+        _logger.info("Session deleted successfully", session_id=session_id)
 
     async def delete_identity(self, identity_id: KratosIdentityId) -> None:
         """Delete a Kratos identity.
