@@ -1,0 +1,38 @@
+# Virtual environments & dependency caches
+.venv/
+.poetry/
+node_modules/
+
+# Python caches & test artifacts
+**/__pycache__/
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+.hypothesis/
+.cache/
+test-results/
+
+# Build outputs
+build/
+dist/
+
+# Secrets & local env
+.env
+.env-example
+*.pem
+*.key
+.vault_pass.txt
+.vault-pass
+
+# Tooling / misc noise
+.mirrord/
+tmp/
+plan.toml
+
+# Large lock files
+poetry.lock
+package-lock.json
+bun.lock
