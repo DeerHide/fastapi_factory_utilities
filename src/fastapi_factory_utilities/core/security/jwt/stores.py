@@ -2,10 +2,12 @@
 
 from abc import ABC, abstractmethod
 from asyncio import Lock
+from time import perf_counter
 
 from fastapi import Request
 from fastapi.datastructures import State
 from jwt import PyJWK, PyJWKSet
+from opentelemetry.trace import SpanKind, Status, StatusCode
 
 from fastapi_factory_utilities.core.security.types import OAuth2Issuer
 from fastapi_factory_utilities.core.services.hydra import (
@@ -15,6 +17,17 @@ from fastapi_factory_utilities.core.services.hydra import (
 )
 
 from .exceptions import HydraJWKSStoreError
+from .telemetry import (
+    ATTR_KID,
+    ATTR_OUTCOME,
+    JWT_JWKS_BOOTSTRAP_DURATION,
+    JWT_JWKS_GET_DURATION,
+    OUTCOME_INTERNAL_ERROR,
+    OUTCOME_INVALID_JWT,
+    OUTCOME_SUCCESS,
+    TRACER,
+    get_identifier_attributes,
+)
 
 
 class JWKStoreAbstract(ABC):
@@ -55,9 +68,36 @@ class JWKStoreMemory(JWKStoreAbstract):
         self._lock: Lock = Lock()
 
     async def get_jwk(self, kid: str) -> PyJWK:
-        """Get the JWK from the store."""
-        async with self._lock:
-            return self._jwk_by_kid[kid]
+        """Get the JWK from the store.
+
+        Emits the ``jwt.jwks.get_jwk`` span and records ``jwt.jwks.get.duration``.
+        """
+        identifier_attributes: dict[str, str] = get_identifier_attributes()
+        start_ts: float = perf_counter()
+        with TRACER.start_as_current_span(
+            name="jwt.jwks.get_jwk",
+            kind=SpanKind.INTERNAL,
+            attributes={ATTR_KID: kid, **identifier_attributes},
+        ) as span:
+            try:
+                async with self._lock:
+                    jwk: PyJWK = self._jwk_by_kid[kid]
+            except KeyError as error:
+                span.set_attribute(ATTR_OUTCOME, OUTCOME_INVALID_JWT)
+                span.record_exception(error)
+                span.set_status(Status(StatusCode.ERROR, f"Unknown kid: {kid}"))
+                JWT_JWKS_GET_DURATION.record(
+                    amount=perf_counter() - start_ts,
+                    attributes={ATTR_OUTCOME: OUTCOME_INVALID_JWT, **identifier_attributes},
+                )
+                raise
+            span.set_attribute(ATTR_OUTCOME, OUTCOME_SUCCESS)
+            span.set_status(Status(StatusCode.OK))
+            JWT_JWKS_GET_DURATION.record(
+                amount=perf_counter() - start_ts,
+                attributes={ATTR_OUTCOME: OUTCOME_SUCCESS, **identifier_attributes},
+            )
+            return jwk
 
     async def get_issuer_by_kid(self, kid: str) -> OAuth2Issuer:
         """Get the issuer by kid from the store."""
@@ -89,17 +129,38 @@ class JWKStoreMemory(JWKStoreAbstract):
 async def configure_jwks_in_memory_store_from_hydra_introspect_services(
     introspect_service_list: list[HydraIntrospectGenericService[HydraTokenIntrospectObject]],
 ) -> JWKStoreMemory:
-    """Configure the JWKS in memory store from the Hydra introspect services."""
-    jwk_store = JWKStoreMemory()
-    try:
-        for introspect_service in introspect_service_list:
-            jwks: list[PyJWK] = await introspect_service.get_wellknown_jwks()
-            for key in jwks:
-                assert key.key_id is not None
-                await jwk_store.add_jwk(introspect_service.get_issuer(), key)
-    except (HydraOperationError, RuntimeError) as e:
-        raise HydraJWKSStoreError("Failed to get the JWKS from the introspect services") from e
-    return jwk_store
+    """Configure the JWKS in memory store from the Hydra introspect services.
+
+    Emits the ``jwt.jwks.bootstrap`` span and records
+    ``jwt.jwks.bootstrap.duration``. Useful for diagnosing slow startup
+    when the issuer's well-known JWKS endpoint is degraded.
+    """
+    start_ts: float = perf_counter()
+    with TRACER.start_as_current_span(name="jwt.jwks.bootstrap", kind=SpanKind.INTERNAL) as span:
+        span.set_attribute("jwt.jwks.bootstrap.services", len(introspect_service_list))
+        jwk_store = JWKStoreMemory()
+        try:
+            for introspect_service in introspect_service_list:
+                jwks: list[PyJWK] = await introspect_service.get_wellknown_jwks()
+                for key in jwks:
+                    assert key.key_id is not None
+                    await jwk_store.add_jwk(introspect_service.get_issuer(), key)
+        except (HydraOperationError, RuntimeError) as e:
+            span.set_attribute(ATTR_OUTCOME, OUTCOME_INTERNAL_ERROR)
+            span.record_exception(e)
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            JWT_JWKS_BOOTSTRAP_DURATION.record(
+                amount=perf_counter() - start_ts,
+                attributes={ATTR_OUTCOME: OUTCOME_INTERNAL_ERROR},
+            )
+            raise HydraJWKSStoreError("Failed to get the JWKS from the introspect services") from e
+        span.set_attribute(ATTR_OUTCOME, OUTCOME_SUCCESS)
+        span.set_status(Status(StatusCode.OK))
+        JWT_JWKS_BOOTSTRAP_DURATION.record(
+            amount=perf_counter() - start_ts,
+            attributes={ATTR_OUTCOME: OUTCOME_SUCCESS},
+        )
+        return jwk_store
 
 
 class DependsHydraJWKStoreMemory:

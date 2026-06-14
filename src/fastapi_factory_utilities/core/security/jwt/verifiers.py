@@ -1,7 +1,10 @@
 """Provides the JWT bearer token validator."""
 
 from abc import ABC, abstractmethod
+from time import perf_counter
 from typing import Generic, TypeVar, cast
+
+from opentelemetry.trace import SpanKind, Status, StatusCode
 
 from fastapi_factory_utilities.core.security.types import JWTToken
 from fastapi_factory_utilities.core.services.hydra import (
@@ -13,6 +16,15 @@ from fastapi_factory_utilities.core.services.hydra import (
 
 from .exceptions import InvalidJWTError
 from .objects import JWTPayload
+from .telemetry import (
+    ATTR_OUTCOME,
+    JWT_VERIFY_DURATION,
+    OUTCOME_INVALID_JWT,
+    OUTCOME_NOT_VERIFIED,
+    OUTCOME_SUCCESS,
+    TRACER,
+    get_identifier_attributes,
+)
 
 JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)
 HydraIntrospectObjectGeneric = TypeVar("HydraIntrospectObjectGeneric", bound=HydraTokenIntrospectObject)
@@ -64,19 +76,48 @@ class GenericHydraJWTVerifier(
     async def verify(self, jwt_token: JWTToken, jwt_payload: JWTBearerPayloadGeneric) -> None:
         """Verify the JWT token.
 
+        Emits the ``jwt.verify`` span and records ``jwt.verify.duration``.
+
         Args:
             jwt_token: The JWT token.
             jwt_payload: The JWT payload.
         """
-        try:
-            self._introspect_object = await self._hydra_introspect_service.introspect(
-                token=cast(HydraAccessToken, jwt_token)
-            )
-        except HydraOperationError as e:
-            raise InvalidJWTError("Failed to introspect the JWT token") from e
+        identifier_attributes: dict[str, str] = get_identifier_attributes()
+        start_ts: float = perf_counter()
+        with TRACER.start_as_current_span(
+            name="jwt.verify", kind=SpanKind.INTERNAL, attributes=identifier_attributes
+        ) as span:
+            try:
+                self._introspect_object = await self._hydra_introspect_service.introspect(
+                    token=cast(HydraAccessToken, jwt_token)
+                )
+            except HydraOperationError as e:
+                outcome: str = OUTCOME_INVALID_JWT
+                span.set_attribute(ATTR_OUTCOME, outcome)
+                span.record_exception(e)
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                JWT_VERIFY_DURATION.record(
+                    amount=perf_counter() - start_ts,
+                    attributes={ATTR_OUTCOME: outcome, **identifier_attributes},
+                )
+                raise InvalidJWTError("Failed to introspect the JWT token") from e
 
-        if self._introspect_object.active is False:
-            raise InvalidJWTError("JWT token is not active")
+            if self._introspect_object.active is False:
+                outcome = OUTCOME_NOT_VERIFIED
+                span.set_attribute(ATTR_OUTCOME, outcome)
+                span.set_status(Status(StatusCode.ERROR, "JWT token is not active"))
+                JWT_VERIFY_DURATION.record(
+                    amount=perf_counter() - start_ts,
+                    attributes={ATTR_OUTCOME: outcome, **identifier_attributes},
+                )
+                raise InvalidJWTError("JWT token is not active")
+
+            span.set_attribute(ATTR_OUTCOME, OUTCOME_SUCCESS)
+            span.set_status(Status(StatusCode.OK))
+            JWT_VERIFY_DURATION.record(
+                amount=perf_counter() - start_ts,
+                attributes={ATTR_OUTCOME: OUTCOME_SUCCESS, **identifier_attributes},
+            )
 
 
 class JWTNoneVerifier(JWTVerifierAbstract[JWTPayload]):

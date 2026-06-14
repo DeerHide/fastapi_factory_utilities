@@ -5,10 +5,12 @@ https://www.iana.org/assignments/jwt/jwt.xhtml#claims
 """
 
 from abc import ABC, abstractmethod
+from time import perf_counter
 from typing import Any, Generic, TypeVar, get_args
 
 from jwt import ExpiredSignatureError, InvalidTokenError, decode, get_unverified_header
 from jwt.api_jwk import PyJWK
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from pydantic import ValidationError
 
 from fastapi_factory_utilities.core.security.types import JWTToken, OAuth2Issuer, OAuth2Subject
@@ -17,6 +19,18 @@ from .configs import JWTBearerAuthenticationConfig
 from .exceptions import ExpiredJWTError, InvalidJWTError, InvalidJWTPayploadError
 from .objects import JWTPayload
 from .stores import JWKStoreAbstract
+from .telemetry import (
+    ATTR_ISSUER,
+    ATTR_KID,
+    ATTR_OUTCOME,
+    JWT_DECODE_DURATION,
+    OUTCOME_EXPIRED,
+    OUTCOME_INVALID_JWT,
+    OUTCOME_INVALID_PAYLOAD,
+    OUTCOME_SUCCESS,
+    TRACER,
+    get_identifier_attributes,
+)
 
 JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)
 
@@ -122,20 +136,72 @@ class GenericJWTBearerTokenDecoder(JWTBearerTokenDecoderAbstract[GenericJWTPaylo
         self._payload_model: type[GenericJWTPayload] = get_args(self.__orig_bases__[0])[0]  # type: ignore[attr-defined]
 
     async def decode_payload(self, jwt_token: JWTToken) -> GenericJWTPayload:
-        """Decode the JWT bearer token."""
-        # Get the kid from the JWT header
-        kid: str = self.get_kid_from_jwt_unsafe_header(jwt_token=jwt_token)
-        # Get the JWK from the JWKS store
-        jwk: PyJWK = await self._jwks_store.get_jwk(kid=kid)
-        issuer: OAuth2Issuer = await self._jwks_store.get_issuer_by_kid(kid=kid)
-        # Decode the JWT bearer token payload
-        jwt_decoded: dict[str, Any] = await decode_jwt_token_payload(
-            jwt_token=jwt_token,
-            public_key=jwk,
-            jwt_bearer_authentication_config=self._jwt_bearer_authentication_config,
-            issuer=issuer,
+        """Decode the JWT bearer token.
+
+        Emits the ``jwt.decode`` span (with ``jwt.kid`` / ``jwt.iss`` attributes
+        once available) and records ``jwt.decode.duration``.
+        """
+        identifier_attributes: dict[str, str] = get_identifier_attributes()
+        start_ts: float = perf_counter()
+        with TRACER.start_as_current_span(
+            name="jwt.decode", kind=SpanKind.INTERNAL, attributes=identifier_attributes
+        ) as span:
+            try:
+                kid: str = self.get_kid_from_jwt_unsafe_header(jwt_token=jwt_token)
+                span.set_attribute(ATTR_KID, kid)
+                jwk: PyJWK = await self._jwks_store.get_jwk(kid=kid)
+                issuer: OAuth2Issuer = await self._jwks_store.get_issuer_by_kid(kid=kid)
+                span.set_attribute(ATTR_ISSUER, str(issuer))
+                jwt_decoded: dict[str, Any] = await decode_jwt_token_payload(
+                    jwt_token=jwt_token,
+                    public_key=jwk,
+                    jwt_bearer_authentication_config=self._jwt_bearer_authentication_config,
+                    issuer=issuer,
+                )
+                try:
+                    payload: GenericJWTPayload = self._payload_model.model_validate(jwt_decoded)
+                except ValidationError as e:
+                    raise InvalidJWTPayploadError("Failed to validate the JWT bearer token payload") from e
+            except ExpiredJWTError as error:
+                self._record_failure(
+                    span=span, start_ts=start_ts, identifier_attributes=identifier_attributes,
+                    outcome=OUTCOME_EXPIRED, error=error,
+                )
+                raise
+            except InvalidJWTPayploadError as error:
+                self._record_failure(
+                    span=span, start_ts=start_ts, identifier_attributes=identifier_attributes,
+                    outcome=OUTCOME_INVALID_PAYLOAD, error=error,
+                )
+                raise
+            except InvalidJWTError as error:
+                self._record_failure(
+                    span=span, start_ts=start_ts, identifier_attributes=identifier_attributes,
+                    outcome=OUTCOME_INVALID_JWT, error=error,
+                )
+                raise
+
+            span.set_attribute(ATTR_OUTCOME, OUTCOME_SUCCESS)
+            span.set_status(Status(StatusCode.OK))
+            JWT_DECODE_DURATION.record(
+                amount=perf_counter() - start_ts,
+                attributes={ATTR_OUTCOME: OUTCOME_SUCCESS, **identifier_attributes},
+            )
+            return payload
+
+    @staticmethod
+    def _record_failure(
+        span: Any,
+        start_ts: float,
+        identifier_attributes: dict[str, str],
+        outcome: str,
+        error: Exception,
+    ) -> None:
+        """Tag span and emit the duration histogram for a failed decode attempt."""
+        span.set_attribute(ATTR_OUTCOME, outcome)
+        span.record_exception(error)
+        span.set_status(Status(StatusCode.ERROR, str(error)))
+        JWT_DECODE_DURATION.record(
+            amount=perf_counter() - start_ts,
+            attributes={ATTR_OUTCOME: outcome, **identifier_attributes},
         )
-        try:
-            return self._payload_model.model_validate(jwt_decoded)
-        except ValidationError as e:
-            raise InvalidJWTPayploadError("Failed to validate the JWT bearer token payload") from e

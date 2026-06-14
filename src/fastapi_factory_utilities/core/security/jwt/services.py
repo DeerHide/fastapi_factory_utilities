@@ -1,18 +1,40 @@
 """Provides the JWT bearer authentication service."""
 
 from http import HTTPStatus
+from time import perf_counter
 from typing import Generic, TypeVar
 
 from fastapi import HTTPException, Request
+from opentelemetry.trace import SpanKind, Status, StatusCode
 
 from fastapi_factory_utilities.core.security.abstracts import AuthenticationAbstract
 from fastapi_factory_utilities.core.security.types import JWTToken, OAuth2Issuer
 
 from .configs import JWTBearerAuthenticationConfig
 from .decoders import JWTBearerTokenDecoderAbstract
-from .exceptions import InvalidJWTError, InvalidJWTPayploadError, MissingJWTCredentialsError, NotVerifiedJWTError
+from .exceptions import (
+    ExpiredJWTError,
+    InvalidJWTError,
+    InvalidJWTPayploadError,
+    MissingJWTCredentialsError,
+    NotVerifiedJWTError,
+)
 from .extraction_strategies import extract_token_from_request
 from .objects import JWTPayload
+from .telemetry import (
+    ATTR_OUTCOME,
+    ATTR_PAYLOAD_IDENTIFIER,
+    JWT_AUTHENTICATE_DURATION,
+    JWT_IDENTIFIER_CTX,
+    OUTCOME_EXPIRED,
+    OUTCOME_INTERNAL_ERROR,
+    OUTCOME_INVALID_JWT,
+    OUTCOME_INVALID_PAYLOAD,
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_NOT_VERIFIED,
+    OUTCOME_SUCCESS,
+    TRACER,
+)
 from .verifiers import JWTVerifierAbstract
 
 JWTBearerPayloadGeneric = TypeVar("JWTBearerPayloadGeneric", bound=JWTPayload)
@@ -83,6 +105,11 @@ class JWTAuthenticationServiceAbstract(AuthenticationAbstract, Generic[JWTBearer
     async def authenticate(self, request: Request) -> None:
         """Authenticate the JWT bearer token.
 
+        Emits the parent ``jwt.authenticate`` span (with child ``jwt.extract``,
+        ``jwt.decode``, ``jwt.verify`` spans), records
+        ``jwt.authentication.duration``, and propagates the auth-service
+        identifier to child layers via :data:`JWT_IDENTIFIER_CTX`.
+
         Args:
             request (Request): The request object.
 
@@ -95,21 +122,80 @@ class JWTAuthenticationServiceAbstract(AuthenticationAbstract, Generic[JWTBearer
             InvalidJWTPayploadError: If the JWT bearer token payload is invalid.
             NotVerifiedJWTError: If the JWT bearer token is not verified.
         """
+        identifier_attributes: dict[str, str] = {ATTR_PAYLOAD_IDENTIFIER: self._identifier}
+        identifier_token = JWT_IDENTIFIER_CTX.set(self._identifier)
+        start_ts: float = perf_counter()
+        outcome: str = OUTCOME_INTERNAL_ERROR
         try:
-            self._jwt = extract_token_from_request(
-                request=request, jwt_bearer_authentication_config=self._jwt_bearer_authentication_config
+            with TRACER.start_as_current_span(
+                name="jwt.authenticate", kind=SpanKind.INTERNAL, attributes=identifier_attributes
+            ) as span:
+                try:
+                    try:
+                        self._jwt = extract_token_from_request(
+                            request=request,
+                            jwt_bearer_authentication_config=self._jwt_bearer_authentication_config,
+                        )
+                    except MissingJWTCredentialsError as error:
+                        outcome = OUTCOME_MISSING_CREDENTIALS
+                        self.raise_exception(
+                            HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=str(error))
+                        )
+                        return
+                    except InvalidJWTError as error:
+                        outcome = OUTCOME_INVALID_JWT
+                        self.raise_exception(
+                            HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=str(error))
+                        )
+                        return
+
+                    try:
+                        self._jwt_payload = await self._jwt_decoder.decode_payload(jwt_token=self._jwt)
+                    except ExpiredJWTError as error:
+                        outcome = OUTCOME_EXPIRED
+                        self.raise_exception(
+                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
+                        )
+                        return
+                    except InvalidJWTPayploadError as error:
+                        outcome = OUTCOME_INVALID_PAYLOAD
+                        self.raise_exception(
+                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
+                        )
+                        return
+                    except InvalidJWTError as error:
+                        outcome = OUTCOME_INVALID_JWT
+                        self.raise_exception(
+                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
+                        )
+                        return
+
+                    try:
+                        await self._jwt_verifier.verify(jwt_token=self._jwt, jwt_payload=self._jwt_payload)
+                    except NotVerifiedJWTError as error:
+                        outcome = OUTCOME_NOT_VERIFIED
+                        self.raise_exception(
+                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
+                        )
+                        return
+                    except InvalidJWTError as error:
+                        outcome = OUTCOME_INVALID_JWT
+                        self.raise_exception(
+                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
+                        )
+                        return
+
+                    outcome = OUTCOME_SUCCESS
+                    return
+                finally:
+                    span.set_attribute(ATTR_OUTCOME, outcome)
+                    if outcome == OUTCOME_SUCCESS:
+                        span.set_status(Status(StatusCode.OK))
+                    else:
+                        span.set_status(Status(StatusCode.ERROR, outcome))
+        finally:
+            JWT_IDENTIFIER_CTX.reset(identifier_token)
+            JWT_AUTHENTICATE_DURATION.record(
+                amount=perf_counter() - start_ts,
+                attributes={ATTR_OUTCOME: outcome, **identifier_attributes},
             )
-        except (MissingJWTCredentialsError, InvalidJWTError) as e:
-            return self.raise_exception(HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=str(e)))
-
-        try:
-            self._jwt_payload = await self._jwt_decoder.decode_payload(jwt_token=self._jwt)
-        except (InvalidJWTError, InvalidJWTPayploadError) as e:
-            return self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(e)))
-
-        try:
-            await self._jwt_verifier.verify(jwt_token=self._jwt, jwt_payload=self._jwt_payload)
-        except (NotVerifiedJWTError, InvalidJWTError) as e:
-            return self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(e)))
-
-        return
