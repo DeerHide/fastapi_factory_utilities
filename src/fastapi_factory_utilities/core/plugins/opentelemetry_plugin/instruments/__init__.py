@@ -80,6 +80,161 @@ def instrument_aio_pika(
         )
 
 
-INSTRUMENTS: list[Callable[..., Any]] = [instrument_fastapi, instrument_aiohttp, instrument_aio_pika]
+def instrument_pymongo(
+    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
+    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    meter_provider: MeterProvider,  # pylint: disable=unused-argument
+    tracer_provider: TracerProvider,
+) -> None:
+    """Instrument the PyMongo client (covers Beanie via the async pymongo driver).
+
+    PyMongo's ``monitoring`` listener is global, so registering the instrumentor
+    once will produce CLIENT spans for both synchronous and asynchronous
+    (Beanie 2.x ``AsyncMongoClient``) operations. ``capture_statement`` is kept
+    disabled to avoid persisting raw query payloads in span attributes.
+
+    Args:
+        application (ApplicationAbstractProtocol): The application.
+        config (OpenTelemetryConfig): The configuration.
+        meter_provider (MeterProvider): The meter provider (unused; the
+            PyMongo instrumentor only emits spans).
+        tracer_provider (TracerProvider): The tracer provider.
+
+    Returns:
+        None
+    """
+    if find_spec(name="pymongo") and find_spec(name="opentelemetry.instrumentation.pymongo"):
+        from opentelemetry.instrumentation.pymongo import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+            PymongoInstrumentor,
+        )
+
+        PymongoInstrumentor().instrument(  # pyright: ignore[reportUnknownMemberType]
+            tracer_provider=tracer_provider,
+            capture_statement=False,
+        )
+
+
+def instrument_requests(
+    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
+    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    meter_provider: MeterProvider,
+    tracer_provider: TracerProvider,
+) -> None:
+    """Instrument the ``requests`` library (used by ``google.auth.transport.requests``).
+
+    Args:
+        application (ApplicationAbstractProtocol): The application.
+        config (OpenTelemetryConfig): The configuration.
+        meter_provider (MeterProvider): The meter provider.
+        tracer_provider (TracerProvider): The tracer provider.
+
+    Returns:
+        None
+    """
+    if find_spec(name="requests") and find_spec(name="opentelemetry.instrumentation.requests"):
+        from opentelemetry.instrumentation.requests import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+            RequestsInstrumentor,
+        )
+
+        RequestsInstrumentor().instrument(  # pyright: ignore[reportUnknownMemberType]
+            tracer_provider=tracer_provider,
+            meter_provider=meter_provider,
+        )
+
+
+def instrument_urllib3(
+    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
+    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    meter_provider: MeterProvider,
+    tracer_provider: TracerProvider,
+) -> None:
+    """Instrument urllib3 (transport for ``requests`` and many SDK clients).
+
+    Args:
+        application (ApplicationAbstractProtocol): The application.
+        config (OpenTelemetryConfig): The configuration.
+        meter_provider (MeterProvider): The meter provider.
+        tracer_provider (TracerProvider): The tracer provider.
+
+    Returns:
+        None
+    """
+    if find_spec(name="urllib3") and find_spec(name="opentelemetry.instrumentation.urllib3"):
+        from opentelemetry.instrumentation.urllib3 import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+            URLLib3Instrumentor,
+        )
+
+        URLLib3Instrumentor().instrument(  # pyright: ignore[reportUnknownMemberType]
+            tracer_provider=tracer_provider,
+            meter_provider=meter_provider,
+        )
+
+
+def instrument_asyncio(
+    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
+    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    meter_provider: MeterProvider,  # pylint: disable=unused-argument
+    tracer_provider: TracerProvider,
+) -> None:
+    """Instrument asyncio task scheduling.
+
+    Args:
+        application (ApplicationAbstractProtocol): The application.
+        config (OpenTelemetryConfig): The configuration.
+        meter_provider (MeterProvider): The meter provider (unused; the
+            asyncio instrumentor only emits spans).
+        tracer_provider (TracerProvider): The tracer provider.
+
+    Returns:
+        None
+    """
+    if find_spec(name="opentelemetry.instrumentation.asyncio"):
+        from opentelemetry.instrumentation.asyncio import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+            AsyncioInstrumentor,
+        )
+
+        AsyncioInstrumentor().instrument(  # pyright: ignore[reportUnknownMemberType]
+            tracer_provider=tracer_provider,
+        )
+
+
+def instrument_system_metrics(
+    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
+    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    meter_provider: MeterProvider,
+    tracer_provider: TracerProvider,  # pylint: disable=unused-argument
+) -> None:
+    """Instrument process and runtime system metrics (CPU, memory, GC, ...).
+
+    Args:
+        application (ApplicationAbstractProtocol): The application.
+        config (OpenTelemetryConfig): The configuration.
+        meter_provider (MeterProvider): The meter provider.
+        tracer_provider (TracerProvider): The tracer provider (unused; the
+            system metrics instrumentor only emits metrics).
+
+    Returns:
+        None
+    """
+    if find_spec(name="psutil") and find_spec(name="opentelemetry.instrumentation.system_metrics"):
+        from opentelemetry.instrumentation.system_metrics import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+            SystemMetricsInstrumentor,
+        )
+
+        SystemMetricsInstrumentor().instrument(  # pyright: ignore[reportUnknownMemberType]
+            meter_provider=meter_provider,
+        )
+
+
+INSTRUMENTS: list[Callable[..., Any]] = [
+    instrument_fastapi,
+    instrument_aiohttp,
+    instrument_aio_pika,
+    instrument_pymongo,
+    instrument_requests,
+    instrument_urllib3,
+    instrument_asyncio,
+    instrument_system_metrics,
+]
 
 __all__: list[str] = ["INSTRUMENTS"]
