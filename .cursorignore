@@ -1,5 +1,4 @@
 # Virtual environments & dependency caches
-.venv/
 .poetry/
 node_modules/
 
