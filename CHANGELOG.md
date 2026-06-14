@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-06-15
+
+### Added
+
+- JWT OpenTelemetry instrumentation: new `core.security.jwt.telemetry` module exposing a shared tracer, meter and histogram instruments (`jwt.authentication.duration`, `jwt.extract.duration`, `jwt.decode.duration`, `jwt.verify.duration`, `jwt.jwks.get.duration`, `jwt.jwks.bootstrap.duration`), attribute keys (`jwt.identifier`, `jwt.outcome`, `jwt.location`, `jwt.kid`, `jwt.iss`), outcome constants and a `ContextVar`-based identifier propagator so the active auth-service identifier flows to all child JWT layers without constructor changes.
+- JWT layers wired to telemetry: services, decoders, verifiers, stores and extraction strategies now emit spans (`jwt.authenticate`, `jwt.extract`, `jwt.decode`, `jwt.verify`, `jwt.jwks.get_jwk`, `jwt.jwks.bootstrap`), record durations, and tag operations with the resolved outcome (success / missing_credentials / invalid_jwt / expired / invalid_payload / not_verified / internal_error).
+- Tests: unit tests covering JWT span emission, parent/child relationships, outcome attribution, histogram data points and `JWT_IDENTIFIER_CTX` propagation and reset.
+
+### Changed
+
+- `.cursorignore`: removed the redundant `.venv/` entry (already covered by the workspace defaults).
+
 ## [5.2.0] - 2026-06-14
 
 ### Added
@@ -418,7 +430,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.2.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.0...HEAD
+[5.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.2.0...v5.3.0
 [5.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.1.0...v5.2.0
 [5.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.2...v5.1.0
 [5.0.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.1...v5.0.2
