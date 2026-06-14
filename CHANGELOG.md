@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.0] - 2026-06-14
+
+### Added
+
+- OpenTelemetry plugin: PyMongo / Beanie auto-instrumentation via `PymongoInstrumentor` (with `capture_statement=False` to keep raw query payloads out of span attributes), exposing CLIENT spans for both synchronous and asynchronous Mongo operations.
+- OpenTelemetry plugin: HTTP client auto-instrumentation for `requests` and `urllib3` covering Google OAuth token refresh and other non-aiohttp outbound traffic.
+- OpenTelemetry plugin: `asyncio` task instrumentation so scheduled coroutines and tasks produce spans on the configured tracer provider.
+- OpenTelemetry plugin: process / runtime system metrics via `SystemMetricsInstrumentor` (CPU, memory, GC, ...) on the configured meter provider.
+- Dependencies: `opentelemetry-instrumentation-requests`, `opentelemetry-instrumentation-urllib3`, `opentelemetry-instrumentation-asyncio`, `opentelemetry-instrumentation-system-metrics`, and `psutil` (runtime requirement of the system-metrics instrumentor).
+- Tests: new unit tests covering the `INSTRUMENTS` registry order and each new instrumentor's `find_spec` guard and provider wiring.
+
 ## [5.1.0] - 2026-05-08
 
 ### Added
@@ -407,7 +418,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.1.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.2.0...HEAD
+[5.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.1.0...v5.2.0
 [5.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.2...v5.1.0
 [5.0.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.1...v5.0.2
 [5.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.0...v5.0.1
