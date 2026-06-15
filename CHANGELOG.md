@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.1] - 2026-06-15
+
+### Fixed
+
+- JWT telemetry tests: replaced an incorrect `@pytest.skip(...)` decorator with `@pytest.mark.skip(reason=...)` so the `tests/units/fastapi_factory_utilities/core/security/jwt/test_telemetry.py` module is collected by pytest again. The previous form invoked `pytest.skip()` at import time and aborted the whole module.
+- JWT module lint/format compliance: rewrapped an over-long explanation comment in `extract_token_from_request` (E501), waived `PLR0911` on `JWTAuthenticationServiceAbstract.authenticate` where one return per error outcome is intentional, applied ruff-format reflow to multi-arg `_record_failure` and `raise_exception` call sites in `decoders.py`/`services.py`, and added file-level `# ruff: noqa: E402` plus pylint disables for the deliberate post-OTel-provider-install imports in the telemetry test module.
+
 ## [5.3.0] - 2026-06-15
 
 ### Added
@@ -430,7 +437,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.1...HEAD
+[5.3.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.0...v5.3.1
 [5.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.2.0...v5.3.0
 [5.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.1.0...v5.2.0
 [5.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.0.2...v5.1.0
