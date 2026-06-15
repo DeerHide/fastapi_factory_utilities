@@ -93,7 +93,7 @@ pytest-xdist = "^3.6.1"
 pytest-cov = "^7.0.0"
 ruff = "^0"
 pytest-asyncio = ">=0.25,<1.4"
-pytest-mongo = "^3.1.0"
+pytest-mongo = "^4.0.0"
 locust = "^2.32.4"
 testcontainers = { version="^4.9.0", extras=["mongodb","rabbitmq", "redis"] }
 types-deprecated = "^1.2.15.20241117"
