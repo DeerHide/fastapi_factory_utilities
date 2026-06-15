@@ -164,20 +164,29 @@ class GenericJWTBearerTokenDecoder(JWTBearerTokenDecoderAbstract[GenericJWTPaylo
                     raise InvalidJWTPayploadError("Failed to validate the JWT bearer token payload") from e
             except ExpiredJWTError as error:
                 self._record_failure(
-                    span=span, start_ts=start_ts, identifier_attributes=identifier_attributes,
-                    outcome=OUTCOME_EXPIRED, error=error,
+                    span=span,
+                    start_ts=start_ts,
+                    identifier_attributes=identifier_attributes,
+                    outcome=OUTCOME_EXPIRED,
+                    error=error,
                 )
                 raise
             except InvalidJWTPayploadError as error:
                 self._record_failure(
-                    span=span, start_ts=start_ts, identifier_attributes=identifier_attributes,
-                    outcome=OUTCOME_INVALID_PAYLOAD, error=error,
+                    span=span,
+                    start_ts=start_ts,
+                    identifier_attributes=identifier_attributes,
+                    outcome=OUTCOME_INVALID_PAYLOAD,
+                    error=error,
                 )
                 raise
             except InvalidJWTError as error:
                 self._record_failure(
-                    span=span, start_ts=start_ts, identifier_attributes=identifier_attributes,
-                    outcome=OUTCOME_INVALID_JWT, error=error,
+                    span=span,
+                    start_ts=start_ts,
+                    identifier_attributes=identifier_attributes,
+                    outcome=OUTCOME_INVALID_JWT,
+                    error=error,
                 )
                 raise
 

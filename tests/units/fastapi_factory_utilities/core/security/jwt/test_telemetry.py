@@ -1,6 +1,9 @@
 """Unit tests for the JWT OpenTelemetry instrumentation."""
 
+# ruff: noqa: E402
+
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
+# pylint: disable=wrong-import-position,import-outside-toplevel
 
 from __future__ import annotations
 
@@ -47,8 +50,8 @@ def _install_otel_providers_once() -> None:
 
 _install_otel_providers_once()
 
-import pytest  # noqa: E402  pylint: disable=wrong-import-position
-from fastapi import HTTPException, Request  # noqa: E402  pylint: disable=wrong-import-position
+import pytest
+from fastapi import HTTPException, Request
 
 from fastapi_factory_utilities.core.security.jwt.configs import JWTBearerAuthenticationConfig, JWTLocation
 from fastapi_factory_utilities.core.security.jwt.exceptions import (
@@ -243,7 +246,7 @@ def _request_with_bearer_token(token: str = "test.token.here") -> MagicMock:
 class TestJWTAuthenticateTelemetry:
     """Spans and histograms emitted by ``JWTAuthenticationServiceAbstract.authenticate``."""
 
-    @pytest.skip("Skipping this test for now")
+    @pytest.mark.skip(reason="Skipping this test for now")
     @pytest.mark.asyncio
     async def test_success_emits_parent_and_child_spans(
         self,

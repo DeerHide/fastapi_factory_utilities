@@ -102,7 +102,7 @@ class JWTAuthenticationServiceAbstract(AuthenticationAbstract, Generic[JWTBearer
         """
         return self._jwt_payload
 
-    async def authenticate(self, request: Request) -> None:
+    async def authenticate(self, request: Request) -> None:  # noqa: PLR0911
         """Authenticate the JWT bearer token.
 
         Emits the parent ``jwt.authenticate`` span (with child ``jwt.extract``,
@@ -138,51 +138,37 @@ class JWTAuthenticationServiceAbstract(AuthenticationAbstract, Generic[JWTBearer
                         )
                     except MissingJWTCredentialsError as error:
                         outcome = OUTCOME_MISSING_CREDENTIALS
-                        self.raise_exception(
-                            HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=str(error))
-                        )
+                        self.raise_exception(HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=str(error)))
                         return
                     except InvalidJWTError as error:
                         outcome = OUTCOME_INVALID_JWT
-                        self.raise_exception(
-                            HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=str(error))
-                        )
+                        self.raise_exception(HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail=str(error)))
                         return
 
                     try:
                         self._jwt_payload = await self._jwt_decoder.decode_payload(jwt_token=self._jwt)
                     except ExpiredJWTError as error:
                         outcome = OUTCOME_EXPIRED
-                        self.raise_exception(
-                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
-                        )
+                        self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error)))
                         return
                     except InvalidJWTPayploadError as error:
                         outcome = OUTCOME_INVALID_PAYLOAD
-                        self.raise_exception(
-                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
-                        )
+                        self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error)))
                         return
                     except InvalidJWTError as error:
                         outcome = OUTCOME_INVALID_JWT
-                        self.raise_exception(
-                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
-                        )
+                        self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error)))
                         return
 
                     try:
                         await self._jwt_verifier.verify(jwt_token=self._jwt, jwt_payload=self._jwt_payload)
                     except NotVerifiedJWTError as error:
                         outcome = OUTCOME_NOT_VERIFIED
-                        self.raise_exception(
-                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
-                        )
+                        self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error)))
                         return
                     except InvalidJWTError as error:
                         outcome = OUTCOME_INVALID_JWT
-                        self.raise_exception(
-                            HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error))
-                        )
+                        self.raise_exception(HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(error)))
                         return
 
                     outcome = OUTCOME_SUCCESS

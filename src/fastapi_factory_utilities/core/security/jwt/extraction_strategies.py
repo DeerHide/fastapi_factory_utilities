@@ -173,10 +173,10 @@ def extract_token_from_request(
                 for location in jwt_bearer_authentication_config.authorized_locations
             ]
         except ValueError as error:
-            # A ValueError here indicates a misconfigured JWTBearerAuthenticationConfig (e.g., missing header or cookie
-            # name for a configured location, or an invalid location value). Surface this as a MissingJWTCredentialsError
-            # so that callers like the authentication service can consistently translate it into an HTTP 401 response
-            # instead of propagating an unhandled exception.
+            # A ValueError here indicates a misconfigured JWTBearerAuthenticationConfig (e.g., missing header
+            # or cookie name for a configured location, or an invalid location value). Surface this as a
+            # MissingJWTCredentialsError so that callers like the authentication service can consistently
+            # translate it into an HTTP 401 response instead of propagating an unhandled exception.
             outcome: str = OUTCOME_MISSING_CREDENTIALS
             span.set_attribute(ATTR_OUTCOME, outcome)
             span.record_exception(error)
