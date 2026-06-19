@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.3] - 2026-06-19
+
+### Fixed
+
+- Dependencies: removed the explicit Starlette version pin; FastAPI remains capped at `<0.137.0` for OpenTelemetry compatibility.
+
 ## [5.3.2] - 2026-06-19
 
 ### Fixed
@@ -443,7 +449,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.3...HEAD
+[5.3.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.2...v5.3.3
 [5.3.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.1...v5.3.2
 [5.3.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.0...v5.3.1
 [5.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.2.0...v5.3.0
