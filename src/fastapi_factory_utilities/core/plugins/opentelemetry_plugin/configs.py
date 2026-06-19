@@ -114,3 +114,11 @@ class OpenTelemetryConfig(BaseModel):
         default_factory=list,
         description="The excluded URLs for both the metrics and traces.",
     )
+
+    pymongo_capture_statement: bool = Field(
+        default=False,
+        description=(
+            "When enabled, attach a sanitized MongoDB command summary to PyMongo CLIENT spans "
+            "via a request hook. Large ``$in`` arrays are truncated to keep span payloads bounded."
+        ),
+    )

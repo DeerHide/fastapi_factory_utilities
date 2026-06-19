@@ -90,6 +90,39 @@ class TestInstrumentPymongo(_BaseInstrumentTest):
                 capture_statement=False,
             )
 
+    def test_registers_request_hook_when_capture_statement_enabled(
+        self,
+        application: MagicMock,
+        tracer_provider: MagicMock,
+        meter_provider: MagicMock,
+    ) -> None:
+        """Sanitized MongoDB command summaries must be opt-in via config."""
+        config: OpenTelemetryConfig = OpenTelemetryConfig(pymongo_capture_statement=True)
+        request_hook = MagicMock(name="request_hook")
+
+        with (
+            patch(
+                "fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments.find_spec",
+                return_value=MagicMock(),
+            ),
+            patch("opentelemetry.instrumentation.pymongo.PymongoInstrumentor") as instrumentor_cls,
+            patch(
+                "fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments.build_pymongo_request_hook",
+                return_value=request_hook,
+            ),
+        ):
+            instrument_pymongo(
+                application=application,
+                config=config,
+                meter_provider=meter_provider,
+                tracer_provider=tracer_provider,
+            )
+            instrumentor_cls.return_value.instrument.assert_called_once_with(
+                tracer_provider=tracer_provider,
+                capture_statement=False,
+                request_hook=request_hook,
+            )
+
     def test_noop_when_packages_missing(
         self,
         application: MagicMock,

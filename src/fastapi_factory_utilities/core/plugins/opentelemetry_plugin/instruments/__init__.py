@@ -10,6 +10,7 @@ from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.trace import TracerProvider
 
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import OpenTelemetryConfig
+from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.pymongo_hooks import build_pymongo_request_hook
 from fastapi_factory_utilities.core.protocols import ApplicationAbstractProtocol
 
 
@@ -108,9 +109,15 @@ def instrument_pymongo(
             PymongoInstrumentor,
         )
 
+        instrument_kwargs: dict[str, Any] = {
+            "tracer_provider": tracer_provider,
+            "capture_statement": False,
+        }
+        if config.pymongo_capture_statement:
+            instrument_kwargs["request_hook"] = build_pymongo_request_hook()
+
         PymongoInstrumentor().instrument(  # pyright: ignore[reportUnknownMemberType]
-            tracer_provider=tracer_provider,
-            capture_statement=False,
+            **instrument_kwargs,
         )
 
 
