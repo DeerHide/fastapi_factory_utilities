@@ -175,14 +175,22 @@ class ODMBuilder:
                 "build_odm_config method or through parameter."
             )
 
-        self._odm_client = AsyncMongoClient(
-            host=self._config.uri,
-            connect=True,
-            connectTimeoutMS=self._config.connection_timeout_ms,
-            serverSelectionTimeoutMS=self._config.connection_timeout_ms,
-            server_api=ServerApi(version=ServerApiVersion.V1),
-            tz_aware=True,
-        )
+        client_kwargs: dict[str, Any] = {
+            "host": self._config.uri,
+            "connect": True,
+            "connectTimeoutMS": self._config.connection_timeout_ms,
+            "serverSelectionTimeoutMS": self._config.connection_timeout_ms,
+            "minPoolSize": self._config.min_pool_size,
+            "maxPoolSize": self._config.max_pool_size,
+            "server_api": ServerApi(version=ServerApiVersion.V1),
+            "tz_aware": True,
+        }
+        if self._config.max_idle_time_ms is not None:
+            client_kwargs["maxIdleTimeMS"] = self._config.max_idle_time_ms
+        if self._config.heartbeat_frequency_ms is not None:
+            client_kwargs["heartbeatFrequencyMS"] = self._config.heartbeat_frequency_ms
+
+        self._odm_client = AsyncMongoClient(**client_kwargs)
 
         # KEEP IT, Waiting for additional tests
         # self._wait_client_to_be_ready(client=self._odm_client, timeout_s=self._config.connection_timeout_s)
