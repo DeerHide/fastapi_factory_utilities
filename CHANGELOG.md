@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.7.0] - 2026-06-20
+
+### Added
+
+- Server: optional Granian ASGI support alongside Uvicorn and Hypercorn (`core.utils.granian`, app builder wiring), using Granian's embed server for in-process apps, with integration coverage for ASGI servers.
+
 ## [5.6.0] - 2026-06-20
 
 ### Added
@@ -472,7 +478,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.6.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.7.0...HEAD
+[5.7.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.6.0...v5.7.0
 [5.6.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.5.0...v5.6.0
 [5.5.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.4.0...v5.5.0
 [5.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.3...v5.4.0
