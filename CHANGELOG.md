@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.1] - 2026-06-20
+
+### Fixed
+
+- Config loading: surface Pydantic field-level validation errors in `ValueErrorConfigError` and propagate the underlying cause through `ConfigBuilderError`, so startup failures name the offending field and reason instead of a generic message.
+
 ## [5.8.0] - 2026-06-20
 
 ### Added
@@ -484,7 +490,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.1...HEAD
+[5.8.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.0...v5.8.1
 [5.8.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.7.0...v5.8.0
 [5.7.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.6.0...v5.7.0
 [5.6.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.5.0...v5.6.0
