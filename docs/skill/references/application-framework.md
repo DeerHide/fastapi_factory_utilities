@@ -78,8 +78,30 @@ class MyAppBuilder(ApplicationGenericBuilder[MyApp]):
 - `add_config(config: RootConfig) -> Self` - Set custom configuration
 - `add_fastapi_builder(fastapi_builder: FastAPIBuilder) -> Self` - Set custom FastAPI builder
 - `build(**kwargs) -> T` - Build the application instance
-- `build_and_serve() -> None` - Build and start Uvicorn server
+- `build_and_serve() -> None` - Build and start the configured ASGI server (Uvicorn by default)
+- `build_as_uvicorn_utils() -> UvicornUtils` - Build and wrap for Uvicorn
+- `build_as_hypercorn_utils() -> HypercornUtils` - Build and wrap for Hypercorn
+- `build_as_granian_utils() -> GranianUtils` - Build and wrap for Granian
+- `set_server_implementation(implementation: ServerImplementationEnum) -> Self` - Select ASGI server
 - `configure_logging(mode, logging_config) -> None` - Configure logging
+
+### ASGI server selection
+
+Use `ServerImplementationEnum` to pick the server before `build_and_serve()`:
+
+```python
+from fastapi_factory_utilities.core.app.builder import ServerImplementationEnum
+
+MyAppBuilder().set_server_implementation(ServerImplementationEnum.GRANIAN).build_and_serve()
+```
+
+Available values: `UVICORN` (default), `HYPERCORN`, `GRANIAN`.
+
+Granian uses the embed server (`granian.server.embed.Server`), which accepts the in-process ASGI app object. Limitations:
+
+- Single worker only (`server.workers > 1` is ignored with a warning)
+- No file reload (`development.reload=True` is ignored with a warning)
+- Embed API is experimental upstream
 
 ### Configuration Loading
 

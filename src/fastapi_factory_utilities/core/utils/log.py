@@ -77,6 +77,13 @@ def clean_hypercorn_logger() -> None:
         logging.getLogger(logger_name).propagate = True
 
 
+def clean_granian_logger() -> None:
+    """Cleans the Granian loggers."""
+    for logger_name in ["_granian", "granian.access"]:
+        logging.getLogger(logger_name).handlers.clear()
+        logging.getLogger(logger_name).propagate = True
+
+
 def _drop_color_message_key(_: Any, __: Any, event_dict: EventDict) -> EventDict:  # pylint: disable=invalid-name
     """Cleans the `color_message` key from the event dictionary.
 

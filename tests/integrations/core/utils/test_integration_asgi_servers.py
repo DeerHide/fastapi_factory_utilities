@@ -15,6 +15,7 @@ from fastapi_factory_utilities.core.app.builder import ServerImplementationEnum
 from fastapi_factory_utilities.core.app.config import BaseApplicationConfig, DevelopmentConfig, RootConfig, ServerConfig
 from fastapi_factory_utilities.core.app.enums import EnvironmentEnum
 from fastapi_factory_utilities.core.services.status.services import StatusService
+from fastapi_factory_utilities.core.utils.granian import GranianUtils
 from fastapi_factory_utilities.core.utils.hypercorn import HypercornUtils
 from fastapi_factory_utilities.core.utils.uvicorn import UvicornUtils
 
@@ -148,6 +149,40 @@ async def test_hypercorn_utils_integration(free_port: int) -> None:
         await asyncio.wait_for(task, timeout=5.0)
 
 
+@pytest.mark.asyncio
+async def test_granian_utils_integration(free_port: int) -> None:
+    """Serve a FastAPI app with GranianUtils and validate response."""
+    app = FakeApplication(root_config=_build_root_config(port=free_port))
+    granian_utils = GranianUtils(app=app)
+    server = granian_utils.build_granian_server()
+
+    task = asyncio.create_task(server.serve())
+
+    base_url = f"http://127.0.0.1:{free_port}"
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            for _ in range(100):
+                try:
+                    response = await client.get(f"{base_url}/")
+                    if response.status_code == HTTP_OK:
+                        break
+                except (httpx.HTTPError, OSError):
+                    await asyncio.sleep(0.1)
+            else:
+                raise TimeoutError("Granian server did not become ready")
+
+            assert response.status_code == HTTP_OK
+            assert response.json() == {"status": "ok"}
+    finally:
+        server.stop()
+        await asyncio.wait_for(task, timeout=5.0)
+
+
 def test_server_implementation_enum_defaults_to_uvicorn() -> None:
     """Ensure the default implementation value remains uvicorn."""
     assert ServerImplementationEnum.UVICORN == "uvicorn"
+
+
+def test_server_implementation_enum_includes_granian() -> None:
+    """Ensure Granian is available as a server implementation."""
+    assert ServerImplementationEnum.GRANIAN == "granian"

@@ -77,6 +77,7 @@ taskiq-redis = "^1.0.9"
 certifi = "^2025.11.12"
 fastapi-csrf-protect = "^1.0.7"
 hypercorn = "^0.18.0"
+granian = "^2.7"
 
 [tool.poetry.group.test]
 optional = true
