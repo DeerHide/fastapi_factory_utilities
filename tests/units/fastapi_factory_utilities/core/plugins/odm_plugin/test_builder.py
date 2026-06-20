@@ -62,3 +62,22 @@ class TestODMBuilderBuildClient:
         assert "heartbeatFrequencyMS" not in client_kwargs
         assert client_kwargs["minPoolSize"] == 0
         assert client_kwargs["maxPoolSize"] == DEFAULT_MAX_POOL_SIZE
+
+    @patch("fastapi_factory_utilities.core.plugins.odm_plugin.builder.AsyncMongoClient")
+    def test_build_client_omits_max_idle_time_ms_when_zero(
+        self,
+        mock_async_mongo_client: MagicMock,
+    ) -> None:
+        """Zero max idle time means no limit and must not be forwarded to PyMongo."""
+        odm_config: ODMConfig = ODMConfig(
+            uri="mongodb://localhost:27017",
+            max_idle_time_ms=0,
+            heartbeat_frequency_ms=0,
+        )
+        builder: ODMBuilder = ODMBuilder(application=MagicMock(), odm_config=odm_config)
+
+        builder.build_client()
+
+        client_kwargs: dict[str, Any] = mock_async_mongo_client.call_args.kwargs
+        assert "maxIdleTimeMS" not in client_kwargs
+        assert "heartbeatFrequencyMS" not in client_kwargs

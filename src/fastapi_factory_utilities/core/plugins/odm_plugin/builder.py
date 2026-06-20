@@ -185,9 +185,9 @@ class ODMBuilder:
             "server_api": ServerApi(version=ServerApiVersion.V1),
             "tz_aware": True,
         }
-        if self._config.max_idle_time_ms is not None:
+        if self._config.max_idle_time_ms is not None and self._config.max_idle_time_ms > 0:
             client_kwargs["maxIdleTimeMS"] = self._config.max_idle_time_ms
-        if self._config.heartbeat_frequency_ms is not None:
+        if self._config.heartbeat_frequency_ms is not None and self._config.heartbeat_frequency_ms > 0:
             client_kwargs["heartbeatFrequencyMS"] = self._config.heartbeat_frequency_ms
 
         self._odm_client = AsyncMongoClient(**client_kwargs)
