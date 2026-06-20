@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.8.3] - 2026-06-20
+
+### Fixed
+
+- ODM plugin: omit ``maxIdleTimeMS`` and ``heartbeatFrequencyMS`` from ``AsyncMongoClient`` when configured as ``0``; PyMongo requires values greater than zero, and zero is intended to mean no limit (driver default).
+
 ## [5.8.2] - 2026-06-20
 
 ### Fixed
@@ -497,7 +503,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.3...HEAD
+[5.8.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.2...v5.8.3
 [5.8.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.1...v5.8.2
 [5.8.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.0...v5.8.1
 [5.8.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.7.0...v5.8.0
