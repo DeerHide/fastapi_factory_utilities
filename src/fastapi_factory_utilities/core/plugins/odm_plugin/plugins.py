@@ -1,5 +1,6 @@
 """Oriented Data Model (ODM) plugin package."""
 
+import asyncio
 from logging import INFO, Logger, getLogger
 from typing import Any, Self, cast
 
@@ -91,6 +92,22 @@ class ODMPlugin(PluginAbstract):
                 value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
             )
 
+    async def _warm_pool(self, client: AsyncMongoClient[Any], min_pool_size: int) -> None:
+        """Warm the MongoDB connection pool with concurrent ping commands.
+
+        Args:
+            client: The ODM client whose pool should be warmed.
+            min_pool_size: Number of concurrent connections to establish.
+        """
+        warm_count: int = max(min_pool_size, 1)
+        try:
+            await asyncio.gather(*[client.admin.command("ping") for _ in range(warm_count)])
+        except Exception:  # pylint: disable=broad-except
+            _logger.warning(
+                "Failed to warm MongoDB connection pool at startup; will retry on first use.",
+                min_pool_size=min_pool_size,
+            )
+
     async def on_startup(self) -> None:
         """Actions to perform on startup for the ODM plugin."""
         host: str
@@ -107,6 +124,8 @@ class ODMPlugin(PluginAbstract):
             assert (await odm_factory.odm_client.address) is not None
             host, port = cast(tuple[str, int], await odm_factory.odm_client.address)
             await odm_factory.odm_client.aconnect()
+            assert odm_factory.config is not None
+            await self._warm_pool(client=odm_factory.odm_client, min_pool_size=odm_factory.config.min_pool_size)
             self._odm_database = odm_factory.odm_database
             self._odm_client = odm_factory.odm_client
         except Exception as exception:  # pylint: disable=broad-except
