@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- API utilities: `fields` sparse-fieldset query param for search/list endpoints (`parse_fields_param`, `project`, `fields_query_param`) to prune response payloads by dotted paths (including `tasks[].name` list notation); always keeps `id` per result item.
+
 ## [5.7.0] - 2026-06-20
 
 ### Added

@@ -31,6 +31,9 @@ HTTP query examples:
 - Sorting (ascending order if no prefix is provided):
     - GET /api/v1/users?sort=name
     - GET /api/v1/users?sort=-name&sort=+age
+- Sparse fieldsets (search/list endpoints only):
+    - GET /api/v1/resources?fields=name,tasks[].name
+    - GET /api/v1/resources?fields=name&fields=tasks[].name
 """
 
 from .markers import (
@@ -43,6 +46,7 @@ from .markers import (
     has_updateable_flag,
 )
 from .pagination import PaginationPageOffset, PaginationSize, resolve_offset
+from .projection import FIELDS_QUERY_PARAM, fields_query_param, parse_fields_param, project
 from .query_abstract import QueryAbstract, QueryFilterNestedAbstract
 from .query_resolver import QueryResolver
 from .query_types import (
@@ -67,6 +71,7 @@ QueryFilterAbstract = QueryAbstract
 """Backward-compatible alias for :class:`QueryAbstract`."""
 
 __all__: list[str] = [
+    "FIELDS_QUERY_PARAM",
     "ApiEntityAbstract",
     "ApiField",
     "ApiResponseField",
@@ -91,8 +96,11 @@ __all__: list[str] = [
     "SearchableEntity",
     "SearchableField",
     "UpdateableField",
+    "fields_query_param",
     "has_response_flag",
     "has_searchable_flag",
     "has_updateable_flag",
+    "parse_fields_param",
+    "project",
     "resolve_offset",
 ]

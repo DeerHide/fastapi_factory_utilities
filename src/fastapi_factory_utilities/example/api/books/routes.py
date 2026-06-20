@@ -5,7 +5,9 @@ from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from starlette.responses import JSONResponse
 
+from fastapi_factory_utilities.core.utils.api import fields_query_param, project
 from fastapi_factory_utilities.example.entities.books import BookEntity
 from fastapi_factory_utilities.example.services.books import (
     BookService,
@@ -22,16 +24,22 @@ api_v2_books_router: APIRouter = APIRouter(prefix="/books")
 @api_v1_books_router.get(path="", response_model=BookListReponse)
 async def get_books(
     books_service: BookService = Depends(depends_book_service),
-) -> BookListReponse:
+    fields: list[str] = Depends(fields_query_param),
+) -> BookListReponse | JSONResponse:
     """Get all books.
 
     Args:
         books_service: Book service.
+        fields: Optional sparse fieldset paths for the search response.
 
     Returns:
         List of books.
     """
     books: list[BookEntity] = await books_service.get_all_books()
+
+    items: list[dict[str, object]] = [BookResponseModel(**book.model_dump()).model_dump(mode="json") for book in books]
+    if fields:
+        return JSONResponse({"books": project(items, fields), "size": len(items)})
 
     return BookListReponse(
         books=cast(
