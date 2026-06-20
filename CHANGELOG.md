@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.0] - 2026-06-20
+
+### Added
+
+- ODM plugin: warm the MongoDB connection pool on startup with ``min_pool_size``
+  concurrent ``ping`` commands so the first request avoids cold-connect latency.
+
 ## [5.5.0] - 2026-06-19
 
 ### Added
@@ -465,7 +472,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.4.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.6.0...HEAD
+[5.6.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.5.0...v5.6.0
+[5.5.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.4.0...v5.5.0
 [5.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.3...v5.4.0
 [5.3.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.2...v5.3.3
 [5.3.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.3.1...v5.3.2
