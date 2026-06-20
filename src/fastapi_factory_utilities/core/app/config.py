@@ -156,21 +156,21 @@ class GenericConfigBuilder(Generic[GenericConfig]):
             )
         except UnableToReadConfigFileError as exception:
             raise ConfigBuilderError(
-                message="Unable to read the application configuration file.",
+                message=str(exception),
                 config_class=self.config_class,
                 package=self.package_name,
                 filename=self.filename,
             ) from exception
         except ValueErrorConfigError as exception:
             raise ConfigBuilderError(
-                message="Value error when creating the configuration object.",
+                message=str(exception),
                 config_class=self.config_class,
                 package=self.package_name,
                 filename=self.filename,
             ) from exception
         except Exception as exception:
             raise ConfigBuilderError(
-                message="An error occurred while building the application configuration.",
+                message=str(exception),
                 config_class=self.config_class,
                 package=self.package_name,
                 filename=self.filename,

@@ -152,10 +152,12 @@ class TestBuildConfigFromFileInPackage:
         ) as (_, _, _):
             # Test
 
-            with pytest.raises(expected_exception=ValueErrorConfigError):
+            with pytest.raises(expected_exception=ValueErrorConfigError, match="key:") as exc_info:
                 build_config_from_file_in_package(
                     package_name=mock_value_package_name,
                     filename=mock_value_file_path,
                     config_class=TestConfigModel,
                     yaml_base_key="base_key",
                 )
+
+            assert "Invalid configuration values" in str(exc_info.value)
