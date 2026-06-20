@@ -84,28 +84,25 @@ class ODMPlugin(PluginAbstract):
                 database=self._odm_database,
                 document_models=self._document_models,
             )
-        except Exception as exception:  # pylint: disable=broad-except
-            _logger.error(f"ODM plugin failed to start. {exception}")
-            # TODO: Report the error to the status_service
-            # this will report the application as unhealthy
+        except Exception:  # pylint: disable=broad-except
             self._monitoring_subject.on_next(
                 value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
             )
+            _logger.exception("ODM plugin failed to start.")
+            raise
 
-    async def _warm_pool(self, client: AsyncMongoClient[Any], min_pool_size: int) -> None:
-        """Warm the MongoDB connection pool with concurrent ping commands.
+    async def _warm_pool(self, client: AsyncMongoClient[Any], timeout_s: float) -> None:
+        """Warm the MongoDB connection with a single ping round-trip.
 
         Args:
-            client: The ODM client whose pool should be warmed.
-            min_pool_size: Number of concurrent connections to establish.
+            client: The ODM client whose connection should be warmed.
+            timeout_s: Maximum time to wait for the ping to complete.
         """
-        warm_count: int = max(min_pool_size, 1)
         try:
-            await asyncio.gather(*[client.admin.command("ping") for _ in range(warm_count)])
+            await asyncio.wait_for(client.admin.command("ping"), timeout=timeout_s)
         except Exception:  # pylint: disable=broad-except
             _logger.warning(
-                "Failed to warm MongoDB connection pool at startup; will retry on first use.",
-                min_pool_size=min_pool_size,
+                "Failed to warm MongoDB connection at startup; will retry on first use.",
             )
 
     async def on_startup(self) -> None:
@@ -125,17 +122,18 @@ class ODMPlugin(PluginAbstract):
             host, port = cast(tuple[str, int], await odm_factory.odm_client.address)
             await odm_factory.odm_client.aconnect()
             assert odm_factory.config is not None
-            await self._warm_pool(client=odm_factory.odm_client, min_pool_size=odm_factory.config.min_pool_size)
+            await self._warm_pool(
+                client=odm_factory.odm_client,
+                timeout_s=odm_factory.config.connection_timeout_ms / ODMBuilder.MS_TO_S,
+            )
             self._odm_database = odm_factory.odm_database
             self._odm_client = odm_factory.odm_client
-        except Exception as exception:  # pylint: disable=broad-except
-            _logger.error(f"ODM plugin failed to start. {exception}")
-            # TODO: Report the error to the status_service
-            # this will report the application as unhealthy
+        except Exception:  # pylint: disable=broad-except
             self._monitoring_subject.on_next(
                 value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
             )
-            return None
+            _logger.exception("ODM plugin failed to start.")
+            raise
 
         self._add_to_state(key="odm_client", value=odm_factory.odm_client)
         self._add_to_state(key="odm_database", value=odm_factory.odm_database)
