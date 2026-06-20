@@ -57,7 +57,7 @@ class GranianUtils:
             ssl_cert=Path(self._ssl_certfile) if self._ssl_certfile else None,
             ssl_key=Path(self._ssl_keyfile) if self._ssl_keyfile else None,
             ssl_key_password=self._ssl_keyfile_password,
-            log_enabled=False,
+            log_enabled=True,
         )
 
     def serve(self) -> None:
