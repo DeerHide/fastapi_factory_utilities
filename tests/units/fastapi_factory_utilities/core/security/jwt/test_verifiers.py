@@ -5,12 +5,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from fastapi_factory_utilities.core.security.jwt.configs import JWTBearerAuthenticationConfig
 from fastapi_factory_utilities.core.security.jwt.exceptions import InvalidJWTError
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
 from fastapi_factory_utilities.core.security.jwt.verifiers import (
     GenericHydraJWTVerifier,
     JWTNoneVerifier,
     JWTVerifierAbstract,
+    clear_introspect_cache,
 )
 from fastapi_factory_utilities.core.security.types import JWTToken
 from fastapi_factory_utilities.core.services.hydra.exceptions import HydraOperationError
@@ -452,3 +454,157 @@ class TestGenericHydraJWTVerifier:
         await verifier.verify(jwt_token=token, jwt_payload=jwt_payload)
 
         mock_introspect_service.introspect.assert_awaited_once_with(token=token)
+
+
+def _make_jwt_payload(*, jti: str | None = "test-jti-123") -> JWTPayload:
+    """Build a JWT payload for cache tests."""
+    now = datetime.datetime.now(tz=datetime.UTC)
+    exp = now + datetime.timedelta(hours=1)
+    nbf = now - datetime.timedelta(minutes=5)
+    return JWTPayload(
+        scp="read write",
+        aud="api1 api2",
+        iss="https://example.com",
+        exp=int(exp.timestamp()),
+        iat=int(now.timestamp()),
+        nbf=int(nbf.timestamp()),
+        sub="user123",
+        jti=jti,
+    )
+
+
+class TestGenericHydraJWTVerifierIntrospectCache:
+    """Tests for GenericHydraJWTVerifier introspection caching."""
+
+    EXPECTED_TWO_INTROSPECT_CALLS: int = 2
+
+    @pytest.fixture(autouse=True)
+    def clear_introspect_cache_fixture(self) -> None:
+        """Reset the module-level introspection cache between tests."""
+        clear_introspect_cache()
+
+    @pytest.fixture
+    def cache_config(self) -> JWTBearerAuthenticationConfig:
+        """Create a JWT config with introspection caching enabled."""
+        return JWTBearerAuthenticationConfig(
+            issuer="https://example.com",
+            cache_enabled=True,
+            cache_ttl_seconds=300,
+        )
+
+    @pytest.fixture
+    def mock_introspect_service(self) -> AsyncMock:
+        """Create a mock Hydra introspect service."""
+        mock = AsyncMock()
+        mock.introspect.return_value = _make_introspect_object(active=True)
+        return mock
+
+    @pytest.fixture
+    def cached_verifier(
+        self,
+        mock_introspect_service: AsyncMock,
+        cache_config: JWTBearerAuthenticationConfig,
+    ) -> GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject]:
+        """Create a verifier with caching enabled."""
+        return GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject](
+            hydra_introspect_service=mock_introspect_service,
+            config=cache_config,
+        )
+
+    @pytest.mark.asyncio
+    async def test_verify_cache_hit_skips_hydra_introspect(
+        self,
+        cached_verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+    ) -> None:
+        """Test that a second verify with the same jti skips Hydra introspection."""
+        jwt_token = JWTToken("test.jwt.token")
+        jwt_payload = _make_jwt_payload(jti="shared-jti")
+
+        await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+        await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+
+        mock_introspect_service.introspect.assert_awaited_once_with(token=jwt_token)
+
+    @pytest.mark.asyncio
+    async def test_verify_different_jti_misses_cache(
+        self,
+        cached_verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+    ) -> None:
+        """Test that different jti values each trigger Hydra introspection."""
+        jwt_token = JWTToken("test.jwt.token")
+
+        await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=_make_jwt_payload(jti="jti-one"))
+        await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=_make_jwt_payload(jti="jti-two"))
+
+        assert mock_introspect_service.introspect.await_count == self.EXPECTED_TWO_INTROSPECT_CALLS
+
+    @pytest.mark.asyncio
+    async def test_verify_inactive_token_not_cached(
+        self,
+        cached_verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+    ) -> None:
+        """Test that inactive introspection results are never cached."""
+        mock_introspect_service.introspect.return_value = _make_introspect_object(active=False)
+        jwt_token = JWTToken("test.jwt.token")
+        jwt_payload = _make_jwt_payload(jti="inactive-jti")
+
+        with pytest.raises(InvalidJWTError):
+            await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+        with pytest.raises(InvalidJWTError):
+            await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+
+        assert mock_introspect_service.introspect.await_count == self.EXPECTED_TWO_INTROSPECT_CALLS
+
+    @pytest.mark.asyncio
+    async def test_verify_hydra_error_not_cached(
+        self,
+        cached_verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+    ) -> None:
+        """Test that Hydra errors are never cached."""
+        mock_introspect_service.introspect.side_effect = HydraOperationError("Hydra request failed")
+        jwt_token = JWTToken("test.jwt.token")
+        jwt_payload = _make_jwt_payload(jti="error-jti")
+
+        with pytest.raises(InvalidJWTError):
+            await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+        with pytest.raises(InvalidJWTError):
+            await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+
+        assert mock_introspect_service.introspect.await_count == self.EXPECTED_TWO_INTROSPECT_CALLS
+
+    @pytest.mark.asyncio
+    async def test_verify_without_jti_never_uses_cache(
+        self,
+        cached_verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+    ) -> None:
+        """Test that payloads without jti always introspect even when caching is enabled."""
+        jwt_token = JWTToken("test.jwt.token")
+        jwt_payload = _make_jwt_payload(jti=None)
+
+        await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+        await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+
+        assert mock_introspect_service.introspect.await_count == self.EXPECTED_TWO_INTROSPECT_CALLS
+
+    @pytest.mark.asyncio
+    async def test_verify_cache_disabled_introspects_every_call(
+        self,
+        mock_introspect_service: AsyncMock,
+    ) -> None:
+        """Test that caching disabled keeps introspecting on every verify call."""
+        verifier = GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject](
+            hydra_introspect_service=mock_introspect_service,
+            config=JWTBearerAuthenticationConfig(issuer="https://example.com", cache_enabled=False),
+        )
+        jwt_token = JWTToken("test.jwt.token")
+        jwt_payload = _make_jwt_payload(jti="disabled-cache-jti")
+
+        await verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+        await verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+
+        assert mock_introspect_service.introspect.await_count == self.EXPECTED_TWO_INTROSPECT_CALLS

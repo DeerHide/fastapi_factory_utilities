@@ -46,6 +46,10 @@ class JWTBearerAuthenticationConfig(BaseModel):
     header_name: str | None = Field(default=None, description="The header name.")
     cookie_name: str | None = Field(default=None, description="The cookie name.")
 
+    cache_enabled: bool = Field(default=False, description="Whether JWT introspection caching is enabled.")
+    cache_ttl_seconds: int = Field(default=300, description="Default TTL for cached introspection results in seconds.")
+    cache_max_entries: int = Field(default=10000, description="Maximum number of cached introspection results.")
+
     @field_validator("authorized_audiences", mode="before")
     @classmethod
     def validate_authorized_audiences(cls, v: str | list[str]) -> list[str]:

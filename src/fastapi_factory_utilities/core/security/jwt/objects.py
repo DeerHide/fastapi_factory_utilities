@@ -110,3 +110,4 @@ class JWTPayload(BaseModel):
         description="The not before date of the JWT token."
     )
     sub: OAuth2Subject = Field(description="The subject of the JWT token.")
+    jti: str | None = Field(default=None, description="The unique JWT ID claim.")
