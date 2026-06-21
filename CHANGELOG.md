@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.9.0] - 2026-06-21
+
+### Added
+
+- JWT: optional Hydra introspection cache keyed by verified ``jti`` claim, using ``cacheout`` with per-entry TTL capped by token expiration; configurable via ``JWTBearerAuthenticationConfig`` (``cache_enabled``, ``cache_ttl_seconds``, ``cache_max_entries``). Signature verification still runs on every request.
+
 ## [5.8.3] - 2026-06-20
 
 ### Fixed
@@ -503,7 +509,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.3...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.9.0...HEAD
+[5.9.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.3...v5.9.0
 [5.8.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.2...v5.8.3
 [5.8.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.1...v5.8.2
 [5.8.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.0...v5.8.1
