@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.10.0] - 2026-06-23
+
 ### Added
 
 - Logging: suppress ASGI access log lines for successful (HTTP 200) ``/sys/health`` and ``/sys/readiness`` probe requests (uvicorn, hypercorn, granian).
@@ -513,7 +515,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.9.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.10.0...HEAD
+[5.10.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.9.0...v5.10.0
 [5.9.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.3...v5.9.0
 [5.8.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.2...v5.8.3
 [5.8.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.1...v5.8.2
