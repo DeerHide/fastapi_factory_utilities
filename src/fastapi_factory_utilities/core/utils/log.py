@@ -1,6 +1,7 @@
 """Provides a function to setup the logging configuration."""
 
 import logging
+import re
 import sys
 from enum import StrEnum, auto
 from typing import Annotated, Any
@@ -82,6 +83,26 @@ def clean_granian_logger() -> None:
     for logger_name in ["_granian", "granian.access"]:
         logging.getLogger(logger_name).handlers.clear()
         logging.getLogger(logger_name).propagate = True
+
+
+_PROBE_ACCESS_200 = re.compile(r' - "(?:GET|HEAD) .*/sys/(?:health|readiness) HTTP/[\d.]+" 200$')
+
+
+class ProbeAccessLogFilter(logging.Filter):
+    """Suppress successful health/readiness probe access log lines."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Return False when the record is a successful probe access log line.
+
+        Args:
+            record (logging.LogRecord): The log record to evaluate.
+
+        Returns:
+            bool: False to suppress the record, True to emit it.
+        """
+        if not record.name.endswith(".access"):
+            return True
+        return _PROBE_ACCESS_200.search(record.getMessage()) is None
 
 
 def _drop_color_message_key(_: Any, __: Any, event_dict: EventDict) -> EventDict:  # pylint: disable=invalid-name
@@ -166,6 +187,7 @@ def setup_log(
     )
 
     handler = logging.StreamHandler()
+    handler.addFilter(ProbeAccessLogFilter())
     # Use OUR `ProcessorFormatter` to format all `logging` entries.
     handler.setFormatter(formatter)
     root_logger: logging.Logger = logging.getLogger()

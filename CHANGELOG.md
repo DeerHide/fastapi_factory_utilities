@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Logging: suppress ASGI access log lines for successful (HTTP 200) ``/sys/health`` and ``/sys/readiness`` probe requests (uvicorn, hypercorn, granian).
+
 ## [5.9.0] - 2026-06-21
 
 ### Added
