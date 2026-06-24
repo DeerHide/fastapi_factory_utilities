@@ -125,18 +125,21 @@ class SchedulerComponent:
         schedules: list[ScheduledTask] = await self._scheduler_source.get_schedules()
         _logger.info("Schedules retrieved", schedules=schedules)
 
-        self._schedule_cron = next(filter(lambda x: x.task_name == "heartbeat", schedules), None)
+        if "heartbeat" in self._schedulers_tasks:
+            self._schedule_cron = next(filter(lambda x: x.task_name == "heartbeat", schedules), None)
 
-        if self._schedule_cron is None:
-            _logger.info("No schedules found, scheduling task")
-            self._dyn_task = self.get_task("heartbeat")
-            task_created: CreatedSchedule[Any] = await self._dyn_task.schedule_by_cron(
-                source=self._scheduler_source, cron="* * * * *", msg="every minute"
-            )
-            self._schedule_cron = task_created.task
-            _logger.info("Task scheduled")
+            if self._schedule_cron is None:
+                _logger.info("No heartbeat schedule found, scheduling heartbeat task")
+                self._dyn_task = self.get_task("heartbeat")
+                task_created: CreatedSchedule[Any] = await self._dyn_task.schedule_by_cron(
+                    source=self._scheduler_source, cron="* * * * *", msg="every minute"
+                )
+                self._schedule_cron = task_created.task
+                _logger.info("Heartbeat task scheduled")
+            else:
+                _logger.info("Heartbeat schedule found, skipping scheduling")
         else:
-            _logger.info("Schedules found, skipping scheduling")
+            _logger.info("Heartbeat task not registered, skipping heartbeat scheduling")
 
         _logger.info("Starting worker and scheduler tasks")
         taskiq_fastapi.populate_dependency_context(self._stream_broker, app, app.state)  # type: ignore
