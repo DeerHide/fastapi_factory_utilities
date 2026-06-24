@@ -318,9 +318,104 @@ except ValidationError as e:
 5. **Connection Management**: Use robust connections for automatic reconnection
 6. **Message Validation**: Use Pydantic models for message data
 
+## AbstractManagedListener
+
+Opt-in managed consumer with pre-check gate, concurrency control, and automatic
+ack/reject settlement. Extends `AbstractListener` without breaking existing consumers.
+
+### MessageDeliveryOutcome
+
+| Outcome | AMQP action |
+|---------|-------------|
+| `CONTINUE` | Proceed to gate + processing (not settled) |
+| `ACK` | `message.ack()` |
+| `REQUEUE` | `message.reject(requeue=True)` |
+| `REQUEUE_DELAYED` | `message.reject(requeue=False)` — requires delay retry topology |
+
+### Implementation
+
+```python
+from fastapi_factory_utilities.core.plugins.aiopika import (
+    AbstractManagedListener,
+    GenericMessage,
+    MessageDeliveryOutcome,
+    get_concurrency_gate,
+)
+
+class OrderListener(AbstractManagedListener[OrderMessage]):
+    LISTENER_CONCURRENCY_LIMIT = 2
+
+    async def precheck(self, message: OrderMessage) -> MessageDeliveryOutcome:
+        if message.data.amount <= 0:
+            return MessageDeliveryOutcome.ACK
+        return MessageDeliveryOutcome.CONTINUE
+
+    async def process_message(self, message: OrderMessage) -> MessageDeliveryOutcome | None:
+        await process_order(message.data.order_id, message.data.amount)
+        return None  # None settles as ACK
+
+# Startup
+get_concurrency_gate().configure(global_limit=4)
+```
+
+### ConcurrencyGate
+
+Swappable interface with default `LocalConcurrencyGate` (process-local asyncio semaphores):
+
+```python
+from fastapi_factory_utilities.core.plugins.aiopika import (
+    LocalConcurrencyGate,
+    get_concurrency_gate,
+    set_concurrency_gate,
+)
+
+gate = get_concurrency_gate()
+gate.configure(global_limit=8)
+gate.configure_listener("order_listener", limit=2)
+
+# Future: set_concurrency_gate(RedisConcurrencyGate(redis_client))
+```
+
+Gate saturation returns `REQUEUE` without blocking the consumer callback.
+
+### Delay retry topology
+
+For `REQUEUE_DELAYED`, declare a TTL retry queue that dead-letters back to the main queue:
+
+```python
+from fastapi_factory_utilities.core.plugins.aiopika import (
+    build_main_queue_dead_letter_arguments,
+    declare_delay_retry_topology,
+)
+
+await declare_delay_retry_topology(
+    acquire_channel=queue._acquire_channel,
+    main_queue_name="orders",
+    retry_queue_name="orders-retry",
+    retry_delay_ms=30_000,
+)
+```
+
+Main queue arguments: `build_main_queue_dead_letter_arguments(retry_queue_name="orders-retry")`.
+
+### OpenTelemetry (optional)
+
+Managed listeners emit metrics (`aiopika.consumer.*`) and spans by default. Disable with
+`ENABLE_TELEMETRY = False` or inject `NoOpConsumerTelemetry()`.
+
+### Consuming-app adoption (example)
+
+Domain task executors can compose with the managed layer: map domain outcomes to
+`MessageDeliveryOutcome` inside `process_message` and keep lifecycle logic in the app.
+
 ## Reference
 
 - `src/fastapi_factory_utilities/core/plugins/aiopika/` - Plugin implementation
 - `src/fastapi_factory_utilities/core/plugins/aiopika/listener/abstract.py` - AbstractListener
+- `src/fastapi_factory_utilities/core/plugins/aiopika/listener/managed.py` - AbstractManagedListener
+- `src/fastapi_factory_utilities/core/plugins/aiopika/concurrency/` - ConcurrencyGate
+- `src/fastapi_factory_utilities/core/plugins/aiopika/delivery.py` - MessageDeliveryOutcome
+- `src/fastapi_factory_utilities/core/plugins/aiopika/telemetry.py` - ConsumerTelemetry
+- `src/fastapi_factory_utilities/core/plugins/aiopika/delay_queue.py` - Delay retry topology
 - `src/fastapi_factory_utilities/core/plugins/aiopika/publisher/abstract.py` - AbstractPublisher
 - `src/fastapi_factory_utilities/core/plugins/aiopika/message.py` - GenericMessage
