@@ -34,7 +34,7 @@ class TestPartStr:
 
     def test_too_long_rejected(self) -> None:
         """Parts longer than max length are rejected."""
-        with pytest.raises(ValueError, match="32"):
+        with pytest.raises(ValueError, match=r"32.*got 33"):
             PartStr("x" * 33)
 
 

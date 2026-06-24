@@ -25,11 +25,19 @@ class PartStr(str):
         if value == cls.WILDCARD:
             return value
         if not cls.pattern.match(value):
-            raise ValueError("Routing key part string must match the pattern.")
+            raise ValueError(
+                f"Routing key part string must match the pattern (got {len(value)}: {value!r}).",
+            )
         if len(value) < cls.min_length:
-            raise ValueError("Routing key part string must be at least 3 characters long.")
+            raise ValueError(
+                f"Routing key part string must be at least {cls.min_length} characters long "
+                f"(got {len(value)}: {value!r}).",
+            )
         if len(value) > cls.max_length:
-            raise ValueError("Routing key part string must be at most 32 characters long.")
+            raise ValueError(
+                f"Routing key part string must be at most {cls.max_length} characters long "
+                f"(got {len(value)}: {value!r}).",
+            )
         return value
 
     def __new__(cls, value: str) -> Self:
