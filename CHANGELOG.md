@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.10.1] - 2026-06-24
+
+### Fixed
+
+- Aiopika: include the offending value and length in ``PartStr`` validation errors so queue-name segment overflows are easier to diagnose at startup.
+
 ## [5.10.0] - 2026-06-23
 
 ### Added
@@ -515,7 +521,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.10.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.10.1...HEAD
+[5.10.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.10.0...v5.10.1
 [5.10.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.9.0...v5.10.0
 [5.9.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.3...v5.9.0
 [5.8.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.8.2...v5.8.3
