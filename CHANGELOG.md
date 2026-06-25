@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.13.1] - 2026-06-25
+
+### Fixed
+
+- Aiopika: ``AbstractPublisher.set_robust_connection`` now propagates the robust
+  connection to its owned exchange, fixing ``AiopikaPluginConnectionNotProvidedError``
+  when ``setup()`` declares the exchange after ``set_robust_connection``.
+
 ## [5.13.0] - 2026-06-25
 
 ### Added
