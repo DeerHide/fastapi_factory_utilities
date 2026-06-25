@@ -14,7 +14,10 @@ from typing import Annotated, Any, Generic, Literal, TypeVar, get_args, get_orig
 from pydantic import BaseModel, ConfigDict, Field, create_model
 from pydantic.fields import FieldInfo
 
-from fastapi_factory_utilities.core.utils.pydantic_path_fields import nested_basemodel_for_annotation
+from fastapi_factory_utilities.core.utils.pydantic_path_fields import (
+    nested_basemodel_for_annotation,
+    unwrap_optional_annotated,
+)
 
 from .markers import ApiField, has_response_flag, has_updateable_flag
 
@@ -158,11 +161,81 @@ def _field_to_create_model_spec(field_info: FieldInfo, annotation: Any) -> tuple
     return (annotation, field_info.default)
 
 
-def _container_response_annotation(field_info: FieldInfo, inner_model: type[BaseModel]) -> Any:
+def _container_response_annotation(field_info: FieldInfo, annotation: Any) -> Any:
     """Pick wrapper type for a nested response field (preserve optionality of the container)."""
     if field_info.is_required():
-        return inner_model
-    return inner_model | None
+        return annotation
+    return annotation | None
+
+
+@dataclass(frozen=True, slots=True)
+class _NestedContainerSpec:
+    """Describes a ``list[V]`` or ``dict[K, V]`` whose value type is a nested model."""
+
+    container_origin: type
+    key_type: Any
+    inner_cls: type[BaseModel]
+
+
+def _nested_container_spec(stripped: Any) -> _NestedContainerSpec | None:
+    """Return container metadata when ``stripped`` is ``list[V]`` or ``dict[K, V]`` with nested ``V``.
+
+    Args:
+        stripped: Field type with ``ApiField`` metadata removed.
+
+    Returns:
+        Container spec when the value type is an unambiguous nested ``BaseModel``, else ``None``.
+    """
+    base: Any = unwrap_optional_annotated(stripped)
+    origin: Any = get_origin(base)
+    args: tuple[Any, ...] = get_args(base) if origin is not None else ()
+    if origin is list and len(args) == 1:
+        inner_cls: type[BaseModel] | None = nested_basemodel_for_annotation(args[0])
+        if inner_cls is not None:
+            return _NestedContainerSpec(container_origin=list, key_type=None, inner_cls=inner_cls)
+    if origin is dict and len(args) == 2:  # noqa: PLR2004
+        inner_cls = nested_basemodel_for_annotation(args[1])
+        if inner_cls is not None:
+            return _NestedContainerSpec(container_origin=dict, key_type=args[0], inner_cls=inner_cls)
+    return None
+
+
+def _build_nested_api_response_annotation(
+    *,
+    owner_name: str,
+    field_name: str,
+    nested_cls: type[BaseModel],
+) -> type[BaseModel]:
+    """Build a nested API response model or raise when the nested type is not API-safe.
+
+    Args:
+        owner_name: Name of the model declaring ``field_name``.
+        field_name: Response field being projected.
+        nested_cls: Nested domain model type.
+
+    Returns:
+        Dynamically built nested API response model.
+
+    Raises:
+        ValueError: When ``nested_cls`` does not subclass :class:`ApiResponseModelAbstract`.
+    """
+    if not issubclass(nested_cls, ApiResponseModelAbstract):
+        msg = (
+            f"Field {field_name!r} on {owner_name} nests type {nested_cls.__name__!r}; "
+            "nested API fields must use a type that subclasses ApiResponseModelAbstract."
+        )
+        raise ValueError(msg) from None
+    return nested_cls.build_response_model()
+
+
+def _list_response_annotation(inner_model: type[BaseModel]) -> Any:
+    """Build a ``list[InnerApiResponse]`` annotation for dynamic response models."""
+    return list[inner_model]  # type: ignore[valid-type]
+
+
+def _dict_response_annotation(key_type: Any, inner_model: type[BaseModel]) -> Any:
+    """Build a ``dict[K, InnerApiResponse]`` annotation for dynamic response models."""
+    return dict[key_type, inner_model]  # type: ignore[valid-type]
 
 
 def _field_to_create_required_model_spec(annotation: Any) -> tuple[Any, Any]:
@@ -302,20 +375,33 @@ class ApiResponseModelAbstract(BaseModel):
             nested_cls = nested_basemodel_for_annotation(stripped)
 
             if nested_cls is not None:
-                if not issubclass(nested_cls, ApiResponseModelAbstract):
-                    msg = (
-                        f"Field {field_name!r} on {cls.__name__} nests type {nested_cls.__name__!r}; "
-                        "nested API fields must use a type that subclasses ApiResponseModelAbstract."
-                    )
-                    raise ValueError(msg) from None
-                inner_model = nested_cls.build_response_model()
+                inner_model = _build_nested_api_response_annotation(
+                    owner_name=cls.__name__,
+                    field_name=field_name,
+                    nested_cls=nested_cls,
+                )
                 inner_ann = _container_response_annotation(field_info, inner_model)
                 fields[field_name] = _field_to_create_model_spec(field_info, inner_ann)
             else:
-                annotation: Any = stripped
-                if annotation is None:
-                    annotation = Any
-                fields[field_name] = _field_to_create_model_spec(field_info, annotation)
+                container_spec = _nested_container_spec(stripped)
+                if container_spec is not None:
+                    built_inner: type[BaseModel] = _build_nested_api_response_annotation(
+                        owner_name=cls.__name__,
+                        field_name=field_name,
+                        nested_cls=container_spec.inner_cls,
+                    )
+                    container_ann: Any
+                    if container_spec.container_origin is list:
+                        container_ann = _list_response_annotation(built_inner)
+                    else:
+                        container_ann = _dict_response_annotation(container_spec.key_type, built_inner)
+                    inner_ann = _container_response_annotation(field_info, container_ann)
+                    fields[field_name] = _field_to_create_model_spec(field_info, inner_ann)
+                else:
+                    annotation: Any = stripped
+                    if annotation is None:
+                        annotation = Any
+                    fields[field_name] = _field_to_create_model_spec(field_info, annotation)
 
         return create_model(
             model_name,

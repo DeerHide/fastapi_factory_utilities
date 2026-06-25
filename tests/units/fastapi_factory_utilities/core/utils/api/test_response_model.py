@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import NoneType
-from typing import Annotated, Any, cast
+from typing import Annotated, Any, cast, get_args, get_origin
 
 import pytest
 from pydantic import BaseModel, Field, ValidationError
@@ -220,6 +220,94 @@ class TestBuildResponseModelNestedMarkedTypes:
         assert len(non_none) == 1
         inner_model = non_none[0]
         assert set(inner_model.model_fields) == {"id"}
+
+
+class ApiContainerNestedEntity(ApiResponseModelAbstract):
+    """Nested model used in list/dict container projection tests."""
+
+    id: Annotated[int, ApiField()]
+    label: Annotated[str, ApiField()] = "default"
+    hidden: str = "secret"
+
+
+class TestBuildResponseModelNestedContainers:
+    """``list[V]`` and ``dict[K, V]`` containers of nested API models are projected recursively."""
+
+    class ListContainerEntity(ApiResponseModelAbstract):
+        """Entity with a required list of nested API models."""
+
+        items: Annotated[list[ApiContainerNestedEntity], ApiField()] = Field(default_factory=list)
+
+    class DictContainerEntity(ApiResponseModelAbstract):
+        """Entity with a required dict of nested API models."""
+
+        by_key: Annotated[dict[str, ApiContainerNestedEntity], ApiField()] = Field(default_factory=dict)
+
+    class OptionalListContainerEntity(ApiResponseModelAbstract):
+        """Entity with an optional list container."""
+
+        items: Annotated[list[ApiContainerNestedEntity] | None, ApiField()] = None
+
+    class ScalarListEntity(ApiResponseModelAbstract):
+        """Entity with a scalar list (no nested model projection)."""
+
+        tags: Annotated[list[str], ApiField()] = Field(default_factory=list)
+
+    class BadListContainerEntity(ApiResponseModelAbstract):
+        """Entity whose list items are plain BaseModel instances."""
+
+        items: Annotated[list[_PlainNestedBaseModel], ApiField()] = Field(default_factory=list)
+
+    def test_list_container_projects_nested_fields_only(self) -> None:
+        """``list[NestedApi]`` becomes ``list[NestedApiApiResponse]`` without hidden leaves."""
+        response_model = cast(Any, self.ListContainerEntity.build_response_model())
+        items_ann = response_model.model_fields["items"].annotation
+        args = getattr(items_ann, "__args__", (items_ann,))
+        non_none = [a for a in args if a is not NoneType]
+        list_ann = non_none[0]
+        assert get_origin(list_ann) is list
+        inner_model = get_args(list_ann)[0]
+        assert isinstance(inner_model, type) and issubclass(inner_model, BaseModel)
+        assert set(inner_model.model_fields) == {"id", "label"}
+        obj = response_model(items=[{"id": 1, "label": "a", "hidden": "x"}])
+        assert obj.items[0].id == 1
+        assert obj.items[0].label == "a"
+
+    def test_dict_container_projects_nested_fields_only(self) -> None:
+        """``dict[str, NestedApi]`` becomes ``dict[str, NestedApiApiResponse]``."""
+        response_model = cast(Any, self.DictContainerEntity.build_response_model())
+        by_key_ann = response_model.model_fields["by_key"].annotation
+        args = getattr(by_key_ann, "__args__", (by_key_ann,))
+        non_none = [a for a in args if a is not NoneType]
+        dict_ann = non_none[0]
+        assert get_origin(dict_ann) is dict
+        key_type, inner_model = get_args(dict_ann)
+        assert key_type is str
+        assert isinstance(inner_model, type) and issubclass(inner_model, BaseModel)
+        assert set(inner_model.model_fields) == {"id", "label"}
+
+    def test_optional_list_container_allows_none(self) -> None:
+        """Optional ``list[NestedApi] | None`` preserves container optionality."""
+        response_model = cast(Any, self.OptionalListContainerEntity.build_response_model())
+        obj = response_model(items=None)
+        assert obj.items is None
+        inner = response_model.model_fields["items"].annotation
+        args = getattr(inner, "__args__", ())
+        non_none = [a for a in args if a is not NoneType]
+        assert len(non_none) == 1
+        list_type = non_none[0]
+        assert get_origin(list_type) is list
+
+    def test_scalar_list_annotation_is_unchanged(self) -> None:
+        """``list[str]`` is copied as-is (no nested projection)."""
+        response_model = cast(Any, self.ScalarListEntity.build_response_model())
+        tags_ann = response_model.model_fields["tags"].annotation
+        assert tags_ann == list[str]
+
+    def test_list_of_plain_nested_raises_value_error(self) -> None:
+        """``list[PlainBaseModel]`` rejects non-``ApiResponseModelAbstract`` item types."""
+        with pytest.raises(ValueError, match="must use a type that subclasses ApiResponseModelAbstract"):
+            self.BadListContainerEntity.build_response_model()
 
 
 class _UpdateablePlainNestedModel(BaseModel):
