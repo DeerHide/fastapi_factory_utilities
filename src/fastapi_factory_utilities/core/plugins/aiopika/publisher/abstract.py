@@ -2,7 +2,7 @@
 
 from typing import Any, ClassVar, Generic, Self, TypeVar
 
-from aio_pika.abc import TimeoutType
+from aio_pika.abc import AbstractRobustConnection, TimeoutType
 from aio_pika.message import Message
 from aiormq.abc import ConfirmationFrameType, DeliveredMessage
 from pamqp.commands import Basic
@@ -26,6 +26,11 @@ class AbstractPublisher(AbstractAiopikaResource, Generic[GenericMessageType]):
         super().__init__()
         self._name: str = name or self.__class__.__name__
         self._exchange: Exchange = exchange
+
+    def set_robust_connection(self, robust_connection: AbstractRobustConnection) -> Self:
+        """Set the robust connection and propagate it to the owned exchange."""
+        self._exchange.set_robust_connection(robust_connection)
+        return super().set_robust_connection(robust_connection)
 
     async def setup(self) -> Self:
         """Setup the publisher."""

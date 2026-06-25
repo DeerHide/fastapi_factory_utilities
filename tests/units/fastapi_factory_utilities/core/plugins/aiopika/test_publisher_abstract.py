@@ -1,5 +1,7 @@
 """Unit tests for AbstractPublisher.publish."""
 
+# pylint: disable=protected-access
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -24,6 +26,22 @@ class BrokenGenericMessage(GenericMessage[Payload]):
     def to_aiopika_message(self) -> Message:
         """Force conversion failure."""
         raise RuntimeError("cannot serialize")
+
+
+class TestAbstractPublisherSetRobustConnection:
+    """Tests for robust connection propagation to the owned exchange."""
+
+    def test_set_robust_connection_propagates_to_exchange(self) -> None:
+        """Publisher forwards the robust connection to its owned exchange."""
+        exchange_resource = MagicMock()
+        publisher = AbstractPublisher(exchange=exchange_resource)
+        connection = MagicMock()
+
+        result = publisher.set_robust_connection(connection)
+
+        exchange_resource.set_robust_connection.assert_called_once_with(connection)
+        assert publisher._robust_connection is connection
+        assert result is publisher
 
 
 class TestAbstractPublisherPublish:
