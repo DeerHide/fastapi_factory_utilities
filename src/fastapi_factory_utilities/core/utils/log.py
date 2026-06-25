@@ -157,10 +157,13 @@ def setup_log(
             # `message` key but the pretty ConsoleRenderer looks for `event`
             processors.append(_rename_event_key)
             # Format the exception only for JSON logs, as we want
-            # to pretty-print them when
-            # using the ConsoleRenderer
+            # to pretty-print them when using the ConsoleRenderer.
+            # show_locals=False: frame locals can hold non-JSON-serializable
+            # objects (e.g. bson.Binary), which break the JSONRenderer.
             processors.append(
-                structlog.processors.dict_tracebacks,
+                structlog.processors.ExceptionRenderer(
+                    structlog.tracebacks.ExceptionDictTransformer(show_locals=False),
+                ),
             )
             log_renderer = structlog.processors.JSONRenderer()
 
