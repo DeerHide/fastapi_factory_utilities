@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.13.2] - 2026-06-29
+
+### Removed
+
+- Taskiq: ``SchedulerComponent`` no longer auto-schedules a registered ``heartbeat``
+  task on startup; consumers must schedule cron tasks explicitly.
+
 ## [5.13.1] - 2026-06-25
 
 ### Fixed
@@ -557,7 +564,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.2...HEAD
+[5.13.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.1...v5.13.2
+[5.13.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.0...v5.13.1
 [5.13.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.12.1...v5.13.0
 [5.12.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.12.0...v5.12.1
 [5.12.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.11.0...v5.12.0
