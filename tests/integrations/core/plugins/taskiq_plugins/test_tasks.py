@@ -119,32 +119,3 @@ class TestTasks:
 
         # Cleanup
         await scheduler_component.shutdown()
-
-    async def test_heartbeat_task_scheduling(
-        self,
-        scheduler_component: SchedulerComponent,
-        redis_container: RedisFixture,
-        fastapi_app: FastAPI,
-    ) -> None:
-        """Test that heartbeat task is scheduled on startup."""
-        redis_url: str = redis_container.get_connection_url()
-        scheduler_component.configure(redis_connection_string=redis_url, app=fastapi_app)
-
-        # Register heartbeat task
-        async def heartbeat_task() -> str:
-            """Heartbeat task for testing."""
-            return "heartbeat"
-
-        scheduler_component.register_task(task=heartbeat_task, task_name="heartbeat")
-
-        # Start the scheduler (this should schedule the heartbeat task)
-        await scheduler_component.startup(app=fastapi_app)
-
-        # Wait a bit to ensure scheduling is complete
-        await asyncio.sleep(1)
-
-        # Verify the scheduler is running (indirectly verifies schedule was created)
-        assert scheduler_component.scheduler is not None
-
-        # Cleanup
-        await scheduler_component.shutdown()

@@ -18,8 +18,6 @@ from taskiq import (
     TaskiqScheduler,
 )
 from taskiq.api import run_receiver_task, run_scheduler_task
-from taskiq.scheduler.created_schedule import CreatedSchedule
-from taskiq.scheduler.scheduled_task import ScheduledTask
 from taskiq_redis import (
     ListRedisScheduleSource,
     RedisAsyncResultBackend,
@@ -38,8 +36,6 @@ class SchedulerComponent:
         self._stream_broker: RedisStreamBroker | None = None
         self._scheduler: TaskiqScheduler | None = None
         self._scheduler_source: ListRedisScheduleSource | None = None
-        self._dyn_task: AsyncTaskiqDecoratedTask[Any, Any] | None = None
-        self._schedule_cron: ScheduledTask | None = None
         self._schedulers_tasks: dict[str, AsyncTaskiqDecoratedTask[Any, Any]] = {}
         self._name_suffix: str = name_suffix
 
@@ -121,26 +117,6 @@ class SchedulerComponent:
         await self._stream_broker.startup()
         await self._scheduler.startup()
         _logger.info("Scheduler started")
-        _logger.info("Scheduling task")
-        schedules: list[ScheduledTask] = await self._scheduler_source.get_schedules()
-        _logger.info("Schedules retrieved", schedules=schedules)
-
-        if "heartbeat" in self._schedulers_tasks:
-            self._schedule_cron = next(filter(lambda x: x.task_name == "heartbeat", schedules), None)
-
-            if self._schedule_cron is None:
-                _logger.info("No heartbeat schedule found, scheduling heartbeat task")
-                self._dyn_task = self.get_task("heartbeat")
-                task_created: CreatedSchedule[Any] = await self._dyn_task.schedule_by_cron(
-                    source=self._scheduler_source, cron="* * * * *", msg="every minute"
-                )
-                self._schedule_cron = task_created.task
-                _logger.info("Heartbeat task scheduled")
-            else:
-                _logger.info("Heartbeat schedule found, skipping scheduling")
-        else:
-            _logger.info("Heartbeat task not registered, skipping heartbeat scheduling")
-
         _logger.info("Starting worker and scheduler tasks")
         taskiq_fastapi.populate_dependency_context(self._stream_broker, app, app.state)  # type: ignore
         self._worker_task: asyncio.Task[None] = asyncio.create_task(run_receiver_task(self._stream_broker))

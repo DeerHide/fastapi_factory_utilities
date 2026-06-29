@@ -129,24 +129,6 @@ class TestSchedulerComponent:
         with pytest.raises(ValueError, match="Result backend is not initialized"):
             await scheduler_component.startup(app=fastapi_app)
 
-    async def test_startup_without_heartbeat_task(
-        self,
-        scheduler_component: SchedulerComponent,
-        redis_container: RedisFixture,
-        fastapi_app: FastAPI,
-    ) -> None:
-        """Test starting the scheduler when no heartbeat task is registered."""
-        redis_url: str = redis_container.get_connection_url()
-        scheduler_component.configure(redis_connection_string=redis_url, app=fastapi_app)
-
-        await scheduler_component.startup(app=fastapi_app)
-
-        assert scheduler_component.scheduler is not None
-        assert scheduler_component.broker is not None
-
-        await asyncio.sleep(0.5)
-        await scheduler_component.shutdown()
-
     async def test_properties(
         self,
         scheduler_component: SchedulerComponent,
