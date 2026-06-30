@@ -87,7 +87,9 @@ class Queue(AbstractAiopikaResource):
 
     async def setup(self) -> Self:
         """Setup the queue."""
-        await super().setup()
+        await self.ensure_shared_channel_with(self._exchange)
+        if not self._exchange.is_declared:
+            await self._exchange.setup()
         if self._queue is None:
             await self._declare()
         await self._bind()

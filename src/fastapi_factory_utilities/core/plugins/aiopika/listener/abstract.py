@@ -35,7 +35,6 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessageType]):
 
     async def setup(self) -> Self:
         """Setup the listener."""
-        await super().setup()
         await self._queue.setup()
         return self
 

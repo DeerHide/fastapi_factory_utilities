@@ -64,16 +64,16 @@ class TestAbstractListenerLifecycle:
 
     @pytest.mark.asyncio
     async def test_setup_awaits_queue_setup(self) -> None:
-        """Setup delegates to the bound queue after acquiring a channel."""
+        """Setup delegates to the bound queue without acquiring a listener channel."""
         queue_resource = MagicMock()
         queue_resource.setup = AsyncMock(return_value=queue_resource)
         listener = _RecordingListener(queue=queue_resource)
-        listener._channel = MagicMock()  # type: ignore[attr-defined]
 
         result = await listener.setup()
 
         assert result is listener
         queue_resource.setup.assert_awaited_once()
+        assert listener._channel is None  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_listen_registers_exclusive_consumer(self) -> None:

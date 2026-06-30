@@ -40,14 +40,12 @@ plugin = AiopikaPlugin(rabbitmq_credentials_config=rabbitmq_config)
 
 ```python
 from fastapi import Request, Depends
-from fastapi_factory_utilities.core.plugins.aiopika.depends import (
-    depends_robust_connection,
-)
+from fastapi_factory_utilities.core.plugins.aiopika import depends_aiopika_robust_connection
 
 @router.get("/status")
 async def status(
     request: Request,
-    connection = Depends(depends_robust_connection),
+    connection = Depends(depends_aiopika_robust_connection),
 ):
     return {"connected": not connection.is_closed}
 ```
@@ -397,6 +395,27 @@ await declare_delay_retry_topology(
 ```
 
 Main queue arguments: `build_main_queue_dead_letter_arguments(retry_queue_name="orders-retry")`.
+
+Pass `reset_channel=queue.reset_channel` when the broker may close the channel on
+`PRECONDITION_FAILED` during declare/recreate.
+
+### Channel sharing
+
+The plugin opens **one connection** per application process. Channels are shared
+between related resources to avoid redundant broker handles:
+
+- `AbstractPublisher.setup()` declares only on the owned `Exchange` channel.
+- `AbstractListener.setup()` declares only on the bound `Queue` channel.
+- `Queue.setup()` shares one channel with its nested `Exchange` (declare + bind + consume).
+- Call `await queue.ensure_shared_channel_with(exchange)` before custom topology helpers
+  when both sides must reuse the same channel.
+- Call `resource.reset_channel()` after the broker closes a cached channel (for example
+  during queue recreate); the next `_acquire_channel()` opens a fresh one.
+
+Recommended setup order for consumers: attach the robust connection, then
+`await listener.setup()` (or `await queue.setup()` when wiring resources manually).
+Do not call `exchange.setup()` separately before `queue.setup()` unless the exchange
+is a standalone publisher resource.
 
 ### OpenTelemetry (optional)
 

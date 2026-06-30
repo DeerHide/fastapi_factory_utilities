@@ -37,6 +37,11 @@ class Exchange(AbstractAiopikaResource):
         self._is_declared: bool = False
 
     @property
+    def is_declared(self) -> bool:
+        """Return whether the exchange has been declared on the broker."""
+        return self._aiopika_exchange is not None
+
+    @property
     def exchange(self) -> AbstractExchange:
         """Get the Aiopika exchange."""
         if self._aiopika_exchange is None:

@@ -26,6 +26,38 @@ class AbstractAiopikaResource(ABC):
         self._channel = channel
         return self
 
+    def reset_channel(self) -> None:
+        """Clear the cached channel handle after broker-side closure."""
+        self._channel = None
+
+    @staticmethod
+    def _is_channel_usable(channel: AbstractChannel | None) -> bool:
+        """Return whether the cached channel can still be reused."""
+        return channel is not None and not channel.is_closed
+
+    async def ensure_shared_channel_with(self, other: "AbstractAiopikaResource") -> AbstractChannel:
+        """Ensure both resources share one open channel.
+
+        Reuses an already-open channel from either side when available; otherwise
+        acquires once and assigns it to both resources.
+
+        Args:
+            other: Related resource that should share the same channel.
+
+        Returns:
+            The shared channel instance.
+        """
+        # pylint: disable=protected-access
+        if self._is_channel_usable(other._channel):
+            self.set_channel(other._channel)  # type: ignore[arg-type]
+            return other._channel  # type: ignore[return-value]
+        if self._is_channel_usable(self._channel):
+            other.set_channel(self._channel)  # type: ignore[arg-type]
+            return self._channel  # type: ignore[return-value]
+        channel = await self._acquire_channel()
+        other.set_channel(channel)
+        return channel
+
     async def _acquire_channel(self) -> AbstractChannel:
         """Acquire the channel."""
         if self._robust_connection is None:

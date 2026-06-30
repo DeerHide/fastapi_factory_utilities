@@ -34,7 +34,6 @@ class AbstractPublisher(AbstractAiopikaResource, Generic[GenericMessageType]):
 
     async def setup(self) -> Self:
         """Setup the publisher."""
-        await super().setup()
         await self._exchange.setup()
         return self
 

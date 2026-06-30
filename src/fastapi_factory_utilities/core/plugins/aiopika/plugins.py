@@ -4,7 +4,6 @@ from typing import cast
 
 from aio_pika import connect_robust  # pyright: ignore[reportUnknownMemberType]
 from aio_pika.abc import AbstractRobustConnection
-from fastapi import Request
 from opentelemetry.instrumentation.aio_pika import AioPikaInstrumentor  # pyright: ignore[reportMissingTypeStubs]
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.trace import TracerProvider
@@ -83,15 +82,3 @@ class AiopikaPlugin(PluginAbstract):
         if self._robust_connection is not None:
             await self._robust_connection.close()
         _logger.debug("Aiopika plugin shutdown.")
-
-
-def depends_robust_connection(request: Request) -> AbstractRobustConnection:
-    """Depends on the robust connection.
-
-    Args:
-        request (Request): The request.
-
-    Returns:
-        AbstractRobustConnection: The robust connection.
-    """
-    return request.app.state.robust_connection
