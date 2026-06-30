@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.13.3] - 2026-06-30
+
+### Changed
+
+- Aiopika: publisher and listener setup no longer acquire unused AMQP channels;
+  queue and nested exchange share one channel via ``ensure_shared_channel_with``
+  and ``reset_channel``.
+- Aiopika: removed broken ``depends_robust_connection`` helper (use
+  ``depends_aiopika_robust_connection``).
+
 ## [5.13.2] - 2026-06-29
 
 ### Removed
@@ -564,7 +574,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.3...HEAD
+[5.13.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.2...v5.13.3
 [5.13.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.1...v5.13.2
 [5.13.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.0...v5.13.1
 [5.13.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.12.1...v5.13.0
