@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.14.0] - 2026-07-05
+
+### Added
+
+- Taskiq: ``SchedulerComponent.prune_unregistered_schedules()`` removes persisted
+  schedules for tasks no longer registered, self-healing the legacy ``heartbeat``
+  cron leftover.
+
 ## [5.13.3] - 2026-06-30
 
 ### Changed

@@ -101,6 +101,29 @@ class SchedulerComponent:
 
         return self
 
+    async def prune_unregistered_schedules(self) -> int:
+        """Delete persisted schedules whose task is no longer registered.
+
+        Returns:
+            int: Number of stale schedules removed.
+
+        Raises:
+            ValueError: If the scheduler source is not initialized.
+        """
+        if self._scheduler_source is None:
+            raise ValueError("Scheduler source is not initialized")
+        removed = 0
+        for schedule in await self._scheduler_source.get_schedules():
+            if schedule.task_name not in self._schedulers_tasks:
+                await self._scheduler_source.delete_schedule(schedule.schedule_id)
+                _logger.warning(
+                    "Pruned stale schedule for unregistered task",
+                    task_name=schedule.task_name,
+                    schedule_id=schedule.schedule_id,
+                )
+                removed += 1
+        return removed
+
     async def startup(self, app: FastAPI) -> None:
         """Start the scheduler."""
         if self._result_backend is None:
