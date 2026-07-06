@@ -100,7 +100,7 @@ locust = "^2.32.4"
 testcontainers = { version="^4.9.0", extras=["mongodb","rabbitmq", "redis"] }
 types-deprecated = "^1.2.15.20241117"
 types-pygments = "^2.18.0.20240506"
-types-colorama = "^0.4.15.20240311"
+types-colorama = "^0.4.15.20260508"
 types-protobuf = ">=5.29.1.20241207,<7.0.0.0"
 types-psutil = ">=7.2.2.20260518,<8.0.0.0"
 types-pyopenssl = "^24.1.0.20240722"
