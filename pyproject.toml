@@ -46,7 +46,7 @@ priority = "explicit"
 
 [tool.poetry.dependencies]
 python = ">=3.12,<4.0"
-structlog = ">=24.1,<26.0"
+structlog = ">=26.1.0,<27.0"
 typer = "^0"
 pydantic = "^2.8.2"
 fastapi = ">=0.115.13,<0.137.0" # Waiting for fixes in opentelemetry-instrumentation-fastapi
