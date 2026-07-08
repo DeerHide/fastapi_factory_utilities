@@ -24,7 +24,14 @@ from fastapi_factory_utilities.core.utils.redis_configs import RedisCredentialsC
 
 # With automatic Redis config from application
 plugin = TaskiqPlugin(name_suffix="my_app")
+```
 
+On Velmios, set ``name_suffix`` to the pulumi service name (the same string as
+``redis-<svc>``), e.g. ``youtube-integration``. ``SchedulerComponent`` prefixes
+all Redis keys with ``<name_suffix>:taskiq:…`` so they match the per-service
+Valkey ACL grant ``~<svc>:*``.
+
+```python
 # With custom Redis config
 redis_config = RedisCredentialsConfig(url="redis://localhost:6379")
 plugin = TaskiqPlugin(

@@ -22,6 +22,7 @@ class TestSchedulerComponent:
         scheduler_component: SchedulerComponent,
         redis_container: RedisFixture,
         fastapi_app: FastAPI,
+        taskiq_suffix_name: str,
     ) -> None:
         """Test configuring the scheduler component."""
         redis_url: str = redis_container.get_connection_url()
@@ -30,6 +31,13 @@ class TestSchedulerComponent:
         assert scheduler_component.scheduler is not None
         assert scheduler_component.broker is not None
         assert scheduler_component.scheduler_source is not None
+        assert scheduler_component.broker.queue_name.startswith(f"{taskiq_suffix_name}:")
+        assert scheduler_component.broker.consumer_group_name.startswith(f"{taskiq_suffix_name}:")
+        result_backend = scheduler_component.broker.result_backend
+        assert result_backend is not None
+        assert result_backend.prefix_str.startswith(f"{taskiq_suffix_name}:")
+        assert scheduler_component.broker.queue_name == f"{taskiq_suffix_name}:taskiq:stream"
+        assert result_backend.prefix_str == f"{taskiq_suffix_name}:taskiq:result"
 
     async def test_startup_and_shutdown(
         self,

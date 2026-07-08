@@ -76,22 +76,25 @@ class SchedulerComponent:
 
     def configure(self, redis_connection_string: str, app: FastAPI) -> Self:
         """Configure the scheduler component."""
+        # ponytail: keys must start with ``<name_suffix>:`` so per-service Valkey ACL
+        # grants (~<svc>:*) cover stream, result, and schedule prefixes.
+        key_prefix = self._name_suffix
         self._result_backend = RedisAsyncResultBackend(
             redis_url=redis_connection_string,
-            prefix_str=f"taskiq_result_backend_{self._name_suffix}",
+            prefix_str=f"{key_prefix}:taskiq:result",
             result_ex_time=120,
         )
         self._stream_broker = RedisStreamBroker(
             url=redis_connection_string,
-            queue_name=f"taskiq_stream_broker_{self._name_suffix}",
-            consumer_group_name=f"taskiq_consumer_group_{self._name_suffix}",
+            queue_name=f"{key_prefix}:taskiq:stream",
+            consumer_group_name=f"{key_prefix}:taskiq:consumers",
         ).with_result_backend(self._result_backend)
 
         taskiq_fastapi.populate_dependency_context(self._stream_broker, app)
 
         self._scheduler_source = ListRedisScheduleSource(
             url=redis_connection_string,
-            prefix=f"taskiq_schedule_source_{self._name_suffix}",
+            prefix=f"{key_prefix}:taskiq:schedule",
         )
 
         self._scheduler = TaskiqScheduler(
