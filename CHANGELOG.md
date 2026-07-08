@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.15.0] - 2026-07-08
+
+### Changed
+
+- **BREAKING** Taskiq: Redis stream, result-backend, and schedule-source keys are
+  now prefixed with ``<name_suffix>:taskiq:…`` (e.g.
+  ``youtube-integration:taskiq:stream``) so they fall under per-service Valkey ACL
+  grants ``~<svc>:*``. Services must set ``TaskiqPlugin(name_suffix=…)`` to the
+  pulumi service name (matching ``redis-<svc>``). Existing ``taskiq_*_<suffix>``
+  keys are orphaned on upgrade; cron schedules re-register on the next tick.
+
 ## [5.14.0] - 2026-07-05
 
 ### Added
@@ -582,7 +593,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.14.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.0...HEAD
+[5.15.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.14.0...v5.15.0
 [5.14.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.3...v5.14.0
 [5.13.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.2...v5.13.3
 [5.13.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.1...v5.13.2
