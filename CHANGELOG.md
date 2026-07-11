@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.15.1] - 2026-07-11
+
+### Fixed
+
+- ODM plugin: ``ODMPluginBaseException`` now subclasses ``Exception`` instead of
+  ``BaseException``, so duplicate-key and other ODM errors participate in normal
+  exception handling and can be mapped to HTTP responses instead of escaping as
+  unhandled ASGI failures.
+
 ## [5.15.0] - 2026-07-08
 
 ### Changed
@@ -593,7 +602,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.1...HEAD
+[5.15.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.0...v5.15.1
 [5.15.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.14.0...v5.15.0
 [5.14.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.3...v5.14.0
 [5.13.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.2...v5.13.3
