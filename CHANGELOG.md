@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.16.0] - 2026-07-14
+
+### Changed
+
+- OpenTelemetry SDK, OTLP exporters, and B3 propagator bumped to 1.43; aio-pika
+  instrumentation aligned to 0.64b0 so semantic-conventions resolve with the SDK.
+- structlog constraint raised to 26.x.
+- pymongo constraint raised to 4.17.x.
+- Dev-only type stubs refreshed (types-deprecated, types-pygments, types-colorama).
+
 ## [5.15.1] - 2026-07-11
 
 ### Fixed
@@ -602,7 +612,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.0...HEAD
+[5.16.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.1...v5.16.0
 [5.15.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.0...v5.15.1
 [5.15.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.14.0...v5.15.0
 [5.14.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.13.3...v5.14.0
