@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.16.1] - 2026-07-14
+
+### Changed
+
+- Dependency constraints bumped: uvicorn (>=0.51.0), pyaml (^26.7.0), certifi
+  (^2026.6.17), psutil (^7), pyupgrade (^3.21.2), locust (^2.45.0).
+- ``fastapi`` upper bound raised to ``<0.140.0`` now that
+  ``opentelemetry-instrumentation-fastapi`` 0.64b0 fixes FastAPI 0.137+ included-router
+  tracing.
+
 ## [5.16.0] - 2026-07-14
 
 ### Changed
@@ -612,7 +622,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.1...HEAD
+[5.16.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.0...v5.16.1
 [5.16.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.1...v5.16.0
 [5.15.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.0...v5.15.1
 [5.15.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.14.0...v5.15.0
