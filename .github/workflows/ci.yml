@@ -210,7 +210,7 @@ jobs:
           echo "Extracted release notes for v$VERSION:"
           cat release_notes.txt
       - name: Release
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v3.0.2
         with:
           body_path: release_notes.txt
           files: |

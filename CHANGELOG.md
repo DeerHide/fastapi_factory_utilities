@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Bump `softprops/action-gh-release` from v2.5.0 to v3.0.2 (Node.js 24 runtime) to clear the GitHub Actions Node 20 deprecation warning.
+
 ## [5.16.1] - 2026-07-14
 
 ### Changed
