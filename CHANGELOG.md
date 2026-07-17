@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- JWT decoder: unknown `kid` (`KeyError` from JWKS lookup) maps to
+  `InvalidJWTError` so callers get a clean auth failure instead of an
+  unhandled 500.
+
 ### Changed
 
 - Bump `softprops/action-gh-release` from v2.5.0 to v3.0.2 (Node.js 24 runtime) to clear the GitHub Actions Node 20 deprecation warning.
