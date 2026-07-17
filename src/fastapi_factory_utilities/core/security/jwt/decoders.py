@@ -149,8 +149,11 @@ class GenericJWTBearerTokenDecoder(JWTBearerTokenDecoderAbstract[GenericJWTPaylo
             try:
                 kid: str = self.get_kid_from_jwt_unsafe_header(jwt_token=jwt_token)
                 span.set_attribute(ATTR_KID, kid)
-                jwk: PyJWK = await self._jwks_store.get_jwk(kid=kid)
-                issuer: OAuth2Issuer = await self._jwks_store.get_issuer_by_kid(kid=kid)
+                try:
+                    jwk: PyJWK = await self._jwks_store.get_jwk(kid=kid)
+                    issuer: OAuth2Issuer = await self._jwks_store.get_issuer_by_kid(kid=kid)
+                except KeyError as e:
+                    raise InvalidJWTError(f"Unknown JWT kid: {kid}") from e
                 span.set_attribute(ATTR_ISSUER, str(issuer))
                 jwt_decoded: dict[str, Any] = await decode_jwt_token_payload(
                     jwt_token=jwt_token,

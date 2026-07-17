@@ -584,6 +584,25 @@ class TestGenericJWTBearerTokenDecoder:
                 assert "Failed to decode" in str(exc_info.value)
 
     @pytest.mark.asyncio
+    async def test_decode_payload_raises_invalid_jwt_error_on_unknown_kid(
+        self,
+        decoder: GenericJWTBearerTokenDecoder[JWTPayload],
+        jwt_token: JWTToken,
+        mock_jwks_store: MagicMock,
+    ) -> None:
+        """Unknown JWKS kid must map to InvalidJWTError (not leak as KeyError 500)."""
+        mock_jwks_store.get_jwk = AsyncMock(side_effect=KeyError("openapi-contract-test"))
+
+        with patch("fastapi_factory_utilities.core.security.jwt.decoders.get_unverified_header") as mock_get_header:
+            mock_get_header.return_value = {"kid": "openapi-contract-test"}
+
+            with pytest.raises(InvalidJWTError) as exc_info:
+                await decoder.decode_payload(jwt_token=jwt_token)
+
+            assert "Unknown JWT kid" in str(exc_info.value)
+            assert "openapi-contract-test" in str(exc_info.value)
+
+    @pytest.mark.asyncio
     async def test_decode_payload_raises_invalid_jwt_payload_error_on_validation_failure(
         self,
         decoder: GenericJWTBearerTokenDecoder[JWTPayload],
