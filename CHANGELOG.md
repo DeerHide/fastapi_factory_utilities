@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.16.2] - 2026-07-18
+
 ### Fixed
 
 - JWT decoder: unknown `kid` (`KeyError` from JWKS lookup) maps to
   `InvalidJWTError` so callers get a clean auth failure instead of an
   unhandled 500.
+- ``QueryResolver`` treats empty or whitespace-only filter query values as
+  absent (``?field=`` no longer fails coercion for UUID/enum filters).
 
 ### Changed
 
@@ -632,7 +636,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.2...HEAD
+[5.16.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.1...v5.16.2
 [5.16.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.0...v5.16.1
 [5.16.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.1...v5.16.0
 [5.15.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.0...v5.15.1
