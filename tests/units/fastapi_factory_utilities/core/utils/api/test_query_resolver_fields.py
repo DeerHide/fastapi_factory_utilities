@@ -1,5 +1,6 @@
 """End-to-end tests for :class:`QueryResolver` over a FastAPI app."""
 
+import uuid
 from http import HTTPStatus
 from typing import Annotated, Any, TypedDict, cast
 
@@ -182,4 +183,57 @@ class TestQueryFields:
             assert response.status_code == HTTPStatus.OK
             assert response.json()["fields"] == {
                 "id": {"name": "id", "operations": [{"operator": "in", "value": [7, 8, 9]}]},
+            }
+
+    def test_empty_string_filter_ignored(self, simple_fastapi_app: FastAPI) -> None:
+        """``?name=`` is treated as absent (no filter field)."""
+        client = TestClient(simple_fastapi_app)
+        with client:
+            response = client.get("/?page=1&page_size=10&sort=name&name=")
+            assert response.status_code == HTTPStatus.OK
+            assert response.json()["fields"] == {}
+
+    def test_whitespace_only_filter_ignored(self, simple_fastapi_app: FastAPI) -> None:
+        """``?name=%20`` is treated as absent (no filter field)."""
+        client = TestClient(simple_fastapi_app)
+        with client:
+            response = client.get("/?page=1&page_size=10&sort=name&name=%20")
+            assert response.status_code == HTTPStatus.OK
+            assert response.json()["fields"] == {}
+
+    def test_empty_uuid_filter_ignored(self) -> None:
+        """``?realm_id=`` with a UUID field does not raise and yields no fields."""
+        app = FastAPI()
+
+        def get_query_fields(request: Request) -> dict[str, Any]:
+            resolver = QueryResolver(raise_on_unauthorized_field=True)
+            resolver.add_authorized_field(field_name=QueryFieldName("realm_id"), field_type=uuid.UUID)
+            resolver.resolve(request=request)
+            return {"fields": cast(dict[str, QueryField[Any]], resolver.fields)}
+
+        app.get("/")(get_query_fields)
+        client = TestClient(app)
+        with client:
+            response = client.get("/?realm_id=")
+            assert response.status_code == HTTPStatus.OK
+            assert response.json()["fields"] == {}
+
+    def test_non_empty_filter_still_works(self, simple_fastapi_app: FastAPI) -> None:
+        """Non-empty values are still applied after empty-skip logic."""
+        client = TestClient(simple_fastapi_app)
+        with client:
+            response = client.get("/?page=1&page_size=10&sort=name&name=alice")
+            assert response.status_code == HTTPStatus.OK
+            assert response.json()["fields"] == {
+                "name": {"name": "name", "operations": [{"operator": "eq", "value": "alice"}]},
+            }
+
+    def test_in_operator_skips_empty_members(self, extended_fastapi_app: FastAPI) -> None:
+        """Empty members of ``id[in]=`` are dropped; remaining values are kept."""
+        client = TestClient(extended_fastapi_app)
+        with client:
+            response = client.get("/?page=1&page_size=10&sort=name&id[in]=7&id[in]=&id[in]=9")
+            assert response.status_code == HTTPStatus.OK
+            assert response.json()["fields"] == {
+                "id": {"name": "id", "operations": [{"operator": "in", "value": [7, 9]}]},
             }

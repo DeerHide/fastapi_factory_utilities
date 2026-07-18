@@ -316,12 +316,18 @@ class QueryResolver:
 
     @staticmethod
     def _aggregate_raw_query_params(query_params: Any) -> dict[str, str | list[str]]:
-        """Merge duplicate keys: ``in`` / ``nin`` collect values; others last-wins."""
+        """Merge duplicate keys: ``in`` / ``nin`` collect values; others last-wins.
+
+        Empty or whitespace-only values are treated as absent (skipped), matching
+        clients that send optional filters as ``?field=``.
+        """
         excluded = frozenset(QueryResolver.EXCLUDED_FIELDS)
         buckets: dict[str, list[str]] = {}
         key_meta: dict[str, QueryFieldOperatorEnum] = {}
         for raw_key, raw_value in query_params.multi_items():
             if raw_key in excluded:
+                continue
+            if not str(raw_value).strip():
                 continue
             validated_key = str(RawQueryFieldName(raw_key))
             _, operator = QueryField.extract_field_and_operator_from_query_field(validated_key)
