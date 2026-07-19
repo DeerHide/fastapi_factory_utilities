@@ -68,7 +68,7 @@ jobs:
         uses: actions/download-artifact@v8.0.1
         with:
           name: poetry-lock
-      - uses: anchore/sbom-action@v0.23.1
+      - uses: anchore/sbom-action@v0.24.0
         id: sbom
         with:
           file: ./poetry.lock
@@ -84,7 +84,7 @@ jobs:
           name: "${{ github.event.repository.name }}-sbom.spdx.json"
       - name: Scan current project
         id: scan
-        uses: anchore/scan-action@v7.3.2
+        uses: anchore/scan-action@v7.4.0
         with:
           cache-db: true
           sbom: "${{ github.event.repository.name }}-sbom.spdx.json"

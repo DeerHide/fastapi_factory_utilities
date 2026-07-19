@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Bump `anchore/sbom-action` to v0.24.0 and `anchore/scan-action` to v7.4.0 (Node.js 24) to clear GitHub Actions Node 20 deprecation warnings.
+
 ## [5.16.2] - 2026-07-18
 
 ### Fixed
