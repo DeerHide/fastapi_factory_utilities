@@ -4,6 +4,7 @@ from typing import Generic, TypeVar, cast
 
 from fastapi import Depends, Request
 from fastapi.datastructures import State
+from taskiq import TaskiqDepends
 
 from .config import AppCsrfConfig, BaseApplicationConfig, RootConfig
 
@@ -24,8 +25,12 @@ class DependsRootConfig(Generic[GenericRootConfig]):
         """Import the root config to the state."""
         setattr(state, "config", config)
 
-    def __call__(self, request: Request) -> GenericRootConfig:
-        """Dependency for the root config."""
+    def __call__(self, request: Request = TaskiqDepends()) -> GenericRootConfig:
+        """Dependency for the root config.
+
+        ``TaskiqDepends()`` default lets Taskiq inject the FastAPI-bound Request
+        in workers; FastAPI HTTP DI still injects Request by type.
+        """
         if not hasattr(request.app.state, "config"):
             raise ValueError("Root config not found in the state.")
         return self.export_from_state(state=request.app.state)

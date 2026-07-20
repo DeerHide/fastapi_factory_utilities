@@ -5,10 +5,13 @@ from http import HTTPStatus
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.testclient import TestClient
+from taskiq import TaskiqDepends
+from taskiq_dependencies import DependencyGraph
 
 from fastapi_factory_utilities.core.app.config import BaseApplicationConfig, RootConfig
+from fastapi_factory_utilities.core.app.depends import depends_root_config
 from fastapi_factory_utilities.core.app.enums import EnvironmentEnum
 from fastapi_factory_utilities.core.plugins.taskiq_plugins.depends import (
     DEPENDS_SCHEDULER_COMPONENT_KEY,
@@ -135,3 +138,31 @@ class TestDepends:
 
         # Cleanup
         await taskiq_plugin.on_shutdown()
+
+    async def test_depends_root_config_resolves_under_taskiq(
+        self,
+        mock_application: ApplicationAbstractProtocol,
+    ) -> None:
+        """DependsRootConfig must resolve when Taskiq injects Request (worker path)."""
+        fastapi_app: FastAPI = mock_application.get_asgi_app()
+        root_config: RootConfig = mock_application.get_config()
+        fastapi_app.state.config = root_config
+        request = Request(
+            scope={
+                "app": fastapi_app,
+                "type": "http",
+                "headers": [],
+                "method": "GET",
+                "path": "/",
+                "query_string": b"",
+            }
+        )
+
+        def target(root: RootConfig = TaskiqDepends(depends_root_config)) -> RootConfig:
+            return root
+
+        graph = DependencyGraph(target)
+        async with graph.async_ctx(initial_cache={Request: request}) as ctx:
+            kwargs = await ctx.resolve_kwargs()
+
+        assert kwargs["root"] is root_config
