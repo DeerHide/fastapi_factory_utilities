@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.16.3] - 2026-07-20
+
+### Fixed
+
+- ``DependsRootConfig`` uses ``request: Request = TaskiqDepends()`` so Taskiq
+  workers can resolve ``depends_root_config`` (and nested ``Depends`` chains)
+  without ``TypeError: missing 1 required positional argument: 'request'``.
+
 ### Changed
 
 - Bump `anchore/sbom-action` to v0.24.0 and `anchore/scan-action` to v7.4.0 (Node.js 24) to clear GitHub Actions Node 20 deprecation warnings.
@@ -640,7 +648,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.3...HEAD
+[5.16.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.2...v5.16.3
 [5.16.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.1...v5.16.2
 [5.16.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.0...v5.16.1
 [5.16.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.15.1...v5.16.0
