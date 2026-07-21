@@ -144,7 +144,9 @@ class SchedulerComponent:
         await self._scheduler.startup()
         _logger.info("Scheduler started")
         _logger.info("Starting worker and scheduler tasks")
-        taskiq_fastapi.populate_dependency_context(self._stream_broker, app, app.state)  # type: ignore
+        # Depends resolve via request.app.state (scope["app"]); do not pass Starlette
+        # State here — taskiq_fastapi does copy.copy(asgi_state) and State recurses.
+        taskiq_fastapi.populate_dependency_context(self._stream_broker, app)
         self._worker_task: asyncio.Task[None] = asyncio.create_task(run_receiver_task(self._stream_broker))
         self._scheduler_task: asyncio.Task[None] = asyncio.create_task(run_scheduler_task(self._scheduler))
         _logger.info("Worker and scheduler tasks started")
