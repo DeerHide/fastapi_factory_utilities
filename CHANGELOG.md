@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.16.4] - 2026-07-21
+
+### Fixed
+
+- Taskiq scheduler startup no longer passes Starlette ``State`` into
+  ``taskiq_fastapi.populate_dependency_context``. That library
+  ``copy.copy``s the ASGI state mapping; copying ``State`` recurses via
+  ``__getattr__`` and floods workers with ``RecursionError``. Depends already
+  resolve from ``request.app.state`` via ``scope["app"]``.
+
 ## [5.16.3] - 2026-07-20
 
 ### Fixed
@@ -648,7 +658,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.3...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.4...HEAD
+[5.16.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.3...v5.16.4
 [5.16.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.2...v5.16.3
 [5.16.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.1...v5.16.2
 [5.16.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.0...v5.16.1
