@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.16.5] - 2026-07-25
+
+### Fixed
+
+- Ruff/pre-commit: extend ``# noqa`` for ``PLR0917`` (too many positional
+  args) and put ``None`` last in ODM ``sort`` unions (``RUF036``) so tag
+  CI passes on current Ruff.
+
 ## [5.16.4] - 2026-07-21
 
 ### Fixed
@@ -658,7 +666,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.4...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.5...HEAD
+[5.16.5]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.4...v5.16.5
 [5.16.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.3...v5.16.4
 [5.16.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.2...v5.16.3
 [5.16.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.1...v5.16.2
