@@ -579,7 +579,7 @@ class TestQueryResolver:
             name=QueryFieldName("nope.deep"),
             operations=[],
         )
-        assert build_query_filter_kwargs(_RootNestedQuery, {QueryFieldName("nope.deep"): qf}) == {}
+        assert not build_query_filter_kwargs(_RootNestedQuery, {QueryFieldName("nope.deep"): qf})
 
     def test_build_query_filter_kwargs_empty_segment_raises(self) -> None:
         """Empty path segments (``a..b``) raise ``ValueError``."""

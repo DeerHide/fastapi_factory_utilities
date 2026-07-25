@@ -348,7 +348,7 @@ class TestListContainerUpdateableAndReconcile:
             entity_original=original,
             put_request=put_request,
         )
-        assert result.ignored_paths == []
+        assert not result.ignored_paths
         assert {c.path for c in result.changed} == {"rows"}
         assert result.entity_updated.rows[0].name == "new"
 

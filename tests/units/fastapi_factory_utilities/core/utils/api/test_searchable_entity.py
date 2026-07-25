@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from types import UnionType
+from types import NoneType, UnionType
 from typing import Annotated, Any, Generic, TypeVar, Union, cast, get_args, get_origin
 
 import pytest
@@ -334,7 +334,7 @@ class TestSearchableEntityListNestedQueryFilterModel:
         # Unwrap Optional to get the segment class.
         origin = get_origin(sub_ann)
         if origin is Union or origin is UnionType:
-            segment_cls = next(a for a in get_args(sub_ann) if a is not type(None))
+            segment_cls = next(a for a in get_args(sub_ann) if a is not NoneType)
         else:
             segment_cls = sub_ann
         assert isinstance(segment_cls, type) and issubclass(segment_cls, QueryFilterNestedAbstract)
@@ -399,7 +399,7 @@ class TestSearchableEntityGenericTypeVarResolution:
         assert config_ann is not None
         origin = get_origin(config_ann)
         if origin is Union or origin is UnionType:
-            segment_cls = next(a for a in get_args(config_ann) if a is not type(None))
+            segment_cls = next(a for a in get_args(config_ann) if a is not NoneType)
         else:
             segment_cls = config_ann
         assert isinstance(segment_cls, type) and issubclass(segment_cls, QueryFilterNestedAbstract)
