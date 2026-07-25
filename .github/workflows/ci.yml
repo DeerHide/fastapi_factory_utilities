@@ -75,21 +75,71 @@ jobs:
           name: poetry-lock
       - uses: anchore/sbom-action@v0.24.0
         id: sbom
-        env:
-          # Dependabot auto-closes alerts only from the default-branch graph;
-          # a refs/tags/* snapshot never reaches it. GITHUB_SHA is already the
-          # main tip because release tags point at the release commit.
-          GITHUB_REF: refs/heads/main
         with:
           file: ./poetry.lock
-          dependency-snapshot: true
+          # Snapshot is submitted below against refs/heads/main. The action
+          # reads github.context.ref, and runners ignore GITHUB_* env overrides,
+          # so dependency-snapshot here would only land on refs/tags/*.
+          dependency-snapshot: false
           upload-artifact: true
           upload-artifact-retention: 1
-          # attachReleaseAssets keys off refs/tags/; the GITHUB_REF override
-          # defeats it. softprops/action-gh-release already attaches the SBOM.
+          # softprops/action-gh-release already attaches the SBOM.
           upload-release-assets: false
           format: "spdx-json"
           artifact-name: "${{ github.event.repository.name }}-sbom.spdx.json"
+      - name: Submit dependency snapshot for main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          import os
+          import tomllib
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from urllib import request
+
+          lock = tomllib.loads(Path("poetry.lock").read_text())
+          resolved = {
+              pkg["name"]: {
+                  "package_url": f"pkg:pypi/{pkg['name']}@{pkg['version']}",
+                  "relationship": "direct",
+                  "scope": "runtime",
+              }
+              for pkg in lock["package"]
+          }
+          artifact = f"{os.environ['GITHUB_REPOSITORY'].split('/', 1)[1]}-sbom.spdx.json"
+          correlator = f"{os.environ['GITHUB_WORKFLOW']}_{os.environ['GITHUB_JOB']}_{artifact}"
+          snapshot = {
+              "version": 0,
+              "sha": os.environ["GITHUB_SHA"],
+              "ref": "refs/heads/main",
+              "job": {
+                  "correlator": correlator,
+                  "id": os.environ["GITHUB_RUN_ID"],
+              },
+              # Keep detector.name=syft so this replaces the anchore/sbom-action
+              # correlator pair rather than merging a second detector alongside it.
+              "detector": {
+                  "name": "syft",
+                  "version": "ci-poetry-lock",
+                  "url": "https://github.com/anchore/syft",
+              },
+              "scanned": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "manifests": {
+                  "poetry.lock": {
+                      "name": "poetry.lock",
+                      "file": {"source_location": "poetry.lock"},
+                      "resolved": resolved,
+                  }
+              },
+          }
+          Path("dependency-snapshot.json").write_text(json.dumps(snapshot))
+          print(f"correlator={correlator} packages={len(resolved)}")
+          PY
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/dependency-graph/snapshots" \
+            --input dependency-snapshot.json
       - name: Download SBOM
         uses: actions/download-artifact@v8.0.1
         with:
