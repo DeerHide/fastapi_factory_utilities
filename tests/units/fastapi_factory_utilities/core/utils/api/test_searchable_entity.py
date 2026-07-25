@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, cast
+from types import UnionType
+from typing import Annotated, Any, Generic, TypeVar, Union, cast, get_args, get_origin
 
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from starlette.requests import Request
 
 from fastapi_factory_utilities.core.utils.api import (
@@ -312,7 +313,7 @@ class TestSearchableEntityListNestedQueryFilterModel:
         features: Annotated[
             list[TestSearchableEntityListNestedQueryFilterModel.FeatureRowEntity],
             ApiField(response=False, searchable=True),
-        ] = []
+        ] = Field(default_factory=list)
 
     class ScalarListEntity(SearchableEntity):
         """Root entity with a searchable scalar list (must stay a leaf)."""
@@ -331,9 +332,6 @@ class TestSearchableEntityListNestedQueryFilterModel:
         assert filter_model.model_fields["features"].is_required() is False
 
         # Unwrap Optional to get the segment class.
-        from typing import get_args, get_origin, Union
-        from types import UnionType
-
         origin = get_origin(sub_ann)
         if origin is Union or origin is UnionType:
             segment_cls = next(a for a in get_args(sub_ann) if a is not type(None))
@@ -371,3 +369,46 @@ class TestSearchableEntityListNestedQueryFilterModel:
         fields = qm.get_fields()
         assert QueryFieldName("features.enabled") in fields
         assert fields[QueryFieldName("features.enabled")].operations[0].value is True
+
+
+_ConfigT = TypeVar("_ConfigT", bound=SearchableEntity)
+
+
+class TestSearchableEntityGenericTypeVarResolution:
+    """Concrete subclasses pin generic TypeVars so nested filter segments are built."""
+
+    class CfgEntity(SearchableEntity):
+        """Typed config nested under a feature row."""
+
+        mode: Annotated[str, ApiField(response=False, searchable=True)]
+
+    class FeatureRowBase(SearchableEntity, Generic[_ConfigT]):
+        """Generic feature row (mirrors ``FeatureForRealmEntityBase``)."""
+
+        feature: Annotated[str, ApiField(response=False, searchable=True)]
+        config: Annotated[_ConfigT | None, ApiField(response=False, searchable=True)] = None
+
+    class FeatureRowConcrete(FeatureRowBase[CfgEntity]):
+        """Concrete row pinning ``config`` to ``CfgEntity``."""
+
+    def test_concrete_generic_builds_nested_config_segment(self) -> None:
+        """Pinned ``config: Cfg | None`` becomes a nested filter segment, not a TypeVar leaf."""
+        filter_model = cast(Any, self.FeatureRowConcrete.build_query_filter_model())
+        assert set(filter_model.model_fields) == {"feature", "config", "page", "page_size", "sorts"}
+        config_ann = filter_model.model_fields["config"].annotation
+        assert config_ann is not None
+        origin = get_origin(config_ann)
+        if origin is Union or origin is UnionType:
+            segment_cls = next(a for a in get_args(config_ann) if a is not type(None))
+        else:
+            segment_cls = config_ann
+        assert isinstance(segment_cls, type) and issubclass(segment_cls, QueryFilterNestedAbstract)
+        assert set(segment_cls.model_fields) == {"mode"}
+
+    def test_erased_generic_base_keeps_config_as_leaf(self) -> None:
+        """On the erased generic base, unbound ``TypeVar`` config stays a QueryField leaf."""
+        filter_model = cast(Any, self.FeatureRowBase.build_query_filter_model())
+        config_ann = filter_model.model_fields["config"].annotation
+        assert config_ann is not None
+        assert "QueryField" in str(config_ann)
+        assert "QueryFilterSegment" not in str(config_ann)

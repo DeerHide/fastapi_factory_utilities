@@ -41,9 +41,9 @@ def _resolved_value_type(field_info: FieldInfo, hint: Any) -> Any:
     """
     hint_stripped = _strip_apifield_to_value_type(hint)
     resolved = field_info.annotation
-    if resolved is not None and nested_basemodel_for_annotation(resolved) is not None:
+    if resolved is not None and nested_basemodel_for_annotation(resolved, descend_sequences=True) is not None:
         return resolved
-    if nested_basemodel_for_annotation(hint_stripped) is not None:
+    if nested_basemodel_for_annotation(hint_stripped, descend_sequences=True) is not None:
         return hint_stripped
     if resolved is not None and not isinstance(resolved, TypeVar):
         # Optional[TypeVar] / unions containing TypeVar: fall back to hints.
@@ -121,7 +121,7 @@ class SearchableEntity(BaseModel):
         )
 
     @classmethod
-    def _build_query_filter_model(
+    def _build_query_filter_model(  # noqa: PLR0912
         cls,
         *,
         as_root: bool,
@@ -159,6 +159,7 @@ class SearchableEntity(BaseModel):
             nested_cls = nested_basemodel_for_annotation(
                 value_type,
                 exclude=(QueryAbstract, QueryFilterNestedAbstract),
+                descend_sequences=True,
             )
 
             if nested_cls is not None:

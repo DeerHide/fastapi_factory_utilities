@@ -9,6 +9,7 @@ from typing import Annotated, Any, Union, get_args, get_origin, get_type_hints
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
+
 def raise_if_dotted_path_prefix_conflict(field_paths: list[str]) -> None:
     """Raise if any path duplicates another or is a strict prefix of another."""
     paths = list(field_paths)
@@ -77,17 +78,20 @@ def unwrap_optional_annotated(annotation: Any) -> Any:
     return ann
 
 
-def nested_basemodel_for_annotation(
+def nested_basemodel_for_annotation(  # noqa: PLR0911
     annotation: Any,
     *,
     exclude: tuple[type[BaseModel], ...] = (),
+    descend_sequences: bool = False,
 ) -> type[BaseModel] | None:
     """Return a nested ``BaseModel`` type to descend into, or ``None`` if not unambiguous.
 
-    Descends into a direct model, a single-candidate optional/union of models, or a
-    homogeneous sequence container (``list`` / ``set`` / ``tuple`` / ``Sequence``)
-    whose item type is a ``BaseModel``. Scalar sequences (e.g. ``list[str]``) stay
-    leaves so MongoDB array-membership equality continues to work.
+    Descends into a direct model or a single-candidate optional/union of models.
+    When ``descend_sequences`` is ``True``, also descends into a homogeneous sequence
+    container (``list`` / ``set`` / ``tuple`` / ``Sequence``) whose item type is a
+    ``BaseModel`` — used by filter-path builders (e.g. ``features.enabled``). Leave
+    the flag ``False`` (default) for response/update shape builders so ``list[Model]``
+    keeps its container. Scalar sequences (e.g. ``list[str]``) stay leaves either way.
     """
     ann = unwrap_optional_annotated(annotation)
     if ann is None:
@@ -98,15 +102,15 @@ def nested_basemodel_for_annotation(
         return ann
     origin = get_origin(ann)
     args = get_args(ann) if origin is not None else ()
-    if origin is not None and args and _is_sequence_origin(origin):
+    if descend_sequences and origin is not None and args and _is_sequence_origin(origin):
         # Homogeneous containers: descend into the item type when it is a model.
-        return nested_basemodel_for_annotation(args[0], exclude=exclude)
+        return nested_basemodel_for_annotation(args[0], exclude=exclude, descend_sequences=True)
     if origin is not None and args and _is_union_origin(origin):
         candidates: list[type[BaseModel]] = []
         for a in args:
             if a is NoneType:
                 continue
-            inner = nested_basemodel_for_annotation(a, exclude=exclude)
+            inner = nested_basemodel_for_annotation(a, exclude=exclude, descend_sequences=descend_sequences)
             if inner is not None:
                 candidates.append(inner)
         if len(candidates) == 1:
@@ -139,7 +143,11 @@ def resolve_leaf_annotation_and_field_info(
         annotation = hints.get(segment, field_info.annotation)
         if i == len(parts) - 1:
             return annotation, field_info
-        nested = nested_basemodel_for_annotation(annotation, exclude=exclude_nested)
+        nested = nested_basemodel_for_annotation(
+            annotation,
+            exclude=exclude_nested,
+            descend_sequences=True,
+        )
         if nested is None:
             msg = (
                 f"Field {segment!r} on {current.__name__} is not a single nested model type (in path {dotted_path!r})."

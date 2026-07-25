@@ -309,6 +309,49 @@ class TestBuildResponseModelNestedContainers:
         with pytest.raises(ValueError, match="must use a type that subclasses ApiResponseModelAbstract"):
             self.BadListContainerEntity.build_response_model()
 
+    def test_list_container_exposed_fields_are_container_path(self) -> None:
+        """``get_exposed_fields`` lists the list container, not dotted item leaves."""
+        assert self.ListContainerEntity.get_exposed_fields() == ["items"]
+
+    def test_list_container_update_request_keeps_list_annotation(self) -> None:
+        """``build_update_request_model`` keeps a ``list[...]`` annotation for list fields."""
+        update_model = cast(Any, self.ListContainerEntity.build_update_request_model())
+        items_ann = update_model.model_fields["items"].annotation
+        assert get_origin(items_ann) is list
+
+
+class _UpdateableListRowEntity(ApiResponseModelAbstract):
+    """Row type for list-container updateable / reconcile regression tests."""
+
+    name: Annotated[str, ApiField(updateable=True)]
+
+
+class _UpdateableListContainerEntity(ApiResponseModelAbstract):
+    """Entity with an updateable list of nested API models."""
+
+    rows: Annotated[list[_UpdateableListRowEntity], ApiField(updateable=True)] = Field(default_factory=list)
+
+
+class TestListContainerUpdateableAndReconcile:
+    """List-of-model updateable paths stay on the container (v5.18.0 regression)."""
+
+    def test_updateable_fields_are_container_path(self) -> None:
+        """``get_updateable_fields`` returns ``rows``, not ``rows.name``."""
+        assert _UpdateableListContainerEntity.get_updateable_fields() == ["rows"]
+
+    def test_reconcile_applies_list_replacement(self) -> None:
+        """PUT replacing a list-of-model field is applied, not silently ignored."""
+        original = _UpdateableListContainerEntity(rows=[_UpdateableListRowEntity(name="old")])
+        put_cls = cast(Any, _UpdateableListContainerEntity.build_update_request_model())
+        put_request = put_cls.model_validate({"rows": [{"name": "new"}]})
+        result = _UpdateableListContainerEntity.reconcile_update_request(
+            entity_original=original,
+            put_request=put_request,
+        )
+        assert result.ignored_paths == []
+        assert {c.path for c in result.changed} == {"rows"}
+        assert result.entity_updated.rows[0].name == "new"
+
 
 class _UpdateablePlainNestedModel(BaseModel):
     """Plain nested model with one marked updateable field."""

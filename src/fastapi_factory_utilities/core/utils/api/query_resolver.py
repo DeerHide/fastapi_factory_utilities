@@ -226,6 +226,28 @@ def _nested_filter_model_type(annotation: Any) -> type[BaseModel] | None:
     return None
 
 
+def _segment_to_field_name(model_cls: type[BaseModel]) -> dict[str, str]:
+    """Map query-name segments (including dotted aliases) to Python field names."""
+    out: dict[str, str] = {}
+    for fname, finfo in model_cls.model_fields.items():
+        for seg in _query_name_segments_for_field(model_cls, fname, finfo):
+            out.setdefault(seg, fname)
+    return out
+
+
+def _match_longest_segment(
+    segment_map: Mapping[str, str],
+    parts: list[str],
+) -> tuple[str, int] | None:
+    """Return ``(python_field_name, parts_consumed)`` for the longest matching prefix."""
+    for length in range(len(parts), 0, -1):
+        joined = ".".join(parts[:length])
+        field_name = segment_map.get(joined)
+        if field_name is not None:
+            return field_name, length
+    return None
+
+
 def build_query_filter_kwargs(
     model: type[BaseModel],
     resolver_fields: Mapping[QueryFieldName, QueryField[Any]],
@@ -236,6 +258,10 @@ def build_query_filter_kwargs(
     keys directly to :meth:`pydantic.BaseModel.model_construct` silently drops them because
     they are not top-level field names. This helper rebuilds the nested segment tree so
     dotted filters reach :meth:`QueryAbstract.get_fields` and the MongoDB query builder.
+
+    Query-name segments are resolved against Python field names **and**
+    ``validation_alias`` values (including dotted aliases such as ``object1.field1``),
+    matching the longest prefix at each model level.
 
     Args:
         model: Root :class:`QueryAbstract` (or nested segment) model class.
@@ -253,18 +279,44 @@ def build_query_filter_kwargs(
         if not parts or any(not part for part in parts):
             msg = f"Invalid dotted query field name: {name!r}."
             raise ValueError(msg)
+
         node: dict[str, Any] = tree
-        for part in parts[:-1]:
-            child = node.setdefault(part, {})
-            if not isinstance(child, dict):
-                msg = f"Conflicting query field paths under {part!r} for {name!r}."
-                raise ValueError(msg)
-            node = child
-        leaf = parts[-1]
-        if leaf in node and isinstance(node[leaf], dict):
-            msg = f"Conflicting query field paths at {name!r}: leaf overlaps a nested segment."
-            raise ValueError(msg)
-        node[leaf] = field
+        current_cls: type[BaseModel] = model
+        remaining = parts
+        dropped = False
+        while remaining:
+            # ponytail: O(fields) map rebuild per key per level; fine for filter models.
+            # Hoist to a per-class cache if a model ever gets large.
+            segment_map = _segment_to_field_name(current_cls)
+            matched = _match_longest_segment(segment_map, remaining)
+            if matched is None:
+                dropped = True
+                break
+            field_name, consumed = matched
+            leftover = remaining[consumed:]
+            if leftover:
+                child = node.get(field_name)
+                if child is not None and not isinstance(child, dict):
+                    msg = f"Conflicting query field paths under {field_name!r} for {name!r}."
+                    raise ValueError(msg)
+                if child is None:
+                    child = {}
+                    node[field_name] = child
+                nested_cls = _nested_filter_model_type(current_cls.model_fields[field_name].annotation)
+                if nested_cls is None:
+                    msg = f"Cannot nest query filters under {field_name!r}: not a nested filter model."
+                    raise ValueError(msg)
+                node = child
+                current_cls = nested_cls
+                remaining = leftover
+            else:
+                if field_name in node and isinstance(node[field_name], dict):
+                    msg = f"Conflicting query field paths at {name!r}: leaf overlaps a nested segment."
+                    raise ValueError(msg)
+                node[field_name] = field
+                remaining = []
+        if dropped:
+            continue
     return _materialize_filter_kwargs(model, tree)
 
 

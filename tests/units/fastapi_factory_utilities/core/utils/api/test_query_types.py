@@ -127,6 +127,35 @@ class _FlatAliasDottedQuery(QueryAbstract):
     )
 
 
+class _DeepL3Filter(BaseModel):
+    """Third-level nested filter segment."""
+
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    leaf: QueryField[str] | None = Field(default=None)
+
+
+class _DeepL2Filter(BaseModel):
+    """Second-level nested filter segment."""
+
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
+    l3: _DeepL3Filter | None = Field(default=None)
+
+
+class _DeepRootQuery(QueryAbstract):
+    """Root query with three-level nesting (``l2.l3.leaf``)."""
+
+    l2: _DeepL2Filter | None = Field(default=None)
+
+
+class _MixedFlatNestedQuery(QueryAbstract):
+    """Root query mixing a flat leaf and a nested segment."""
+
+    label: QueryField[str] | None = Field(default=None)
+    object1: _NestedObject1Filter | None = Field(default=None)
+
+
 class _CycleNested(BaseModel):
     """Self-referential nested model (cycle guard)."""
 
@@ -508,6 +537,77 @@ class TestQueryResolver:
         fields = qm.get_fields()
         assert QueryFieldName("object1.field1") in fields
         assert fields[QueryFieldName("object1.field1")].operations[0].value == "abc"
+
+    def test_build_query_filter_kwargs_resolves_validation_alias(self) -> None:
+        """Dotted ``validation_alias`` keys re-nest onto the Python field name."""
+        resolver = QueryResolver().from_model(_FlatAliasDottedQuery)
+        req = _request("object1.field1=xyz&page=0&page_size=10")
+        resolver.resolve(req)
+        kwargs = build_query_filter_kwargs(_FlatAliasDottedQuery, resolver.fields)
+        assert set(kwargs) == {"object1__field1"}
+        qm = _FlatAliasDottedQuery.model_construct(**kwargs)
+        fields = qm.get_fields()
+        assert QueryFieldName("object1.field1") in fields
+        assert fields[QueryFieldName("object1.field1")].operations[0].value == "xyz"
+
+    def test_build_query_filter_kwargs_three_level_nesting(self) -> None:
+        """Three-level dotted paths re-nest through intermediate segments."""
+        resolver = QueryResolver().from_model(_DeepRootQuery)
+        req = _request("l2.l3.leaf=z&page=0&page_size=10")
+        resolver.resolve(req)
+        kwargs = build_query_filter_kwargs(_DeepRootQuery, resolver.fields)
+        qm = _DeepRootQuery.model_construct(**kwargs)
+        fields = qm.get_fields()
+        assert QueryFieldName("l2.l3.leaf") in fields
+        assert fields[QueryFieldName("l2.l3.leaf")].operations[0].value == "z"
+
+    def test_build_query_filter_kwargs_mixed_flat_and_nested(self) -> None:
+        """Flat and nested keys in one resolve both reach ``get_fields``."""
+        resolver = QueryResolver().from_model(_MixedFlatNestedQuery)
+        req = _request("label=hi&object1.field1=abc&page=0&page_size=10")
+        resolver.resolve(req)
+        kwargs = build_query_filter_kwargs(_MixedFlatNestedQuery, resolver.fields)
+        assert set(kwargs) == {"label", "object1"}
+        qm = _MixedFlatNestedQuery.model_construct(**kwargs)
+        fields = qm.get_fields()
+        assert QueryFieldName("label") in fields
+        assert QueryFieldName("object1.field1") in fields
+
+    def test_build_query_filter_kwargs_unknown_key_dropped(self) -> None:
+        """Unknown top-level dotted keys are dropped silently."""
+        qf = QueryField(
+            name=QueryFieldName("nope.deep"),
+            operations=[],
+        )
+        assert build_query_filter_kwargs(_RootNestedQuery, {QueryFieldName("nope.deep"): qf}) == {}
+
+    def test_build_query_filter_kwargs_empty_segment_raises(self) -> None:
+        """Empty path segments (``a..b``) raise ``ValueError``."""
+        qf = QueryField(name=QueryFieldName("a..b"), operations=[])
+        with pytest.raises(ValueError, match="Invalid dotted query field name"):
+            build_query_filter_kwargs(_RootNestedQuery, {QueryFieldName("a..b"): qf})
+
+    def test_build_query_filter_kwargs_leftover_past_leaf_raises(self) -> None:
+        """Leftover parts past a non-nestable leaf raise ``ValueError``."""
+        qf = QueryField(name=QueryFieldName("object1.field1.extra"), operations=[])
+        with pytest.raises(ValueError, match="Cannot nest query filters under"):
+            build_query_filter_kwargs(
+                _RootNestedQuery,
+                {QueryFieldName("object1.field1.extra"): qf},
+            )
+
+    def test_build_query_filter_kwargs_leaf_segment_conflict_raises(self) -> None:
+        """A leaf overlapping a nested segment raises ``ValueError``."""
+        leaf_qf = QueryField(name=QueryFieldName("object1"), operations=[])
+        nested_qf = QueryField(name=QueryFieldName("object1.field1"), operations=[])
+        with pytest.raises(ValueError, match="Conflicting query field paths"):
+            build_query_filter_kwargs(
+                _RootNestedQuery,
+                {
+                    QueryFieldName("object1"): leaf_qf,
+                    QueryFieldName("object1.field1"): nested_qf,
+                },
+            )
 
     def test_from_model_validation_alias_registers_dotted_key(self) -> None:
         """Leaf field with string ``validation_alias`` registers the dotted query name."""
