@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.17.0] - 2026-07-25
+
+### Added
+
+- ``setup_log`` injects ``trace_id`` / ``span_id`` (lowercase hex) from the
+  active OpenTelemetry span into every structlog and stdlib log record so
+  Loki lines can be correlated with Tempo traces.
+
 ## [5.16.5] - 2026-07-25
 
 ### Fixed
@@ -666,7 +674,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.5...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.17.0...HEAD
+[5.17.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.5...v5.17.0
 [5.16.5]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.4...v5.16.5
 [5.16.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.3...v5.16.4
 [5.16.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.2...v5.16.3
