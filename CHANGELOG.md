@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.0] - 2026-07-25
+
+### Added
+
+- ``nested_basemodel_for_annotation`` descends into homogeneous sequence
+  containers (``list`` / ``set`` / ``tuple`` / ``Sequence``) whose item type is
+  a ``BaseModel``, so ``SearchableEntity.build_query_filter_model`` builds
+  nested filter segments for ``list[Model]`` fields (e.g. ``features.enabled``).
+  Scalar sequences (``list[str]``, ``list[UUID]``, …) remain leaf
+  ``QueryField``s for MongoDB array-membership equality.
+- ``build_query_filter_kwargs`` re-nests dotted :class:`QueryResolver` fields
+  into kwargs for ``model.model_construct``, so generic search endpoints no
+  longer silently drop nested filters.
+- ``SearchableEntity.build_query_filter_model`` prefers Pydantic-resolved
+  ``FieldInfo.annotation`` over ``typing.get_type_hints`` so generic TypeVars
+  on concrete subclasses (e.g. ``config: MyConfig | None``) produce nested
+  filter segments instead of unbound ``TypeVar`` leaves.
+
 ## [5.17.0] - 2026-07-25
 
 ### Added
@@ -674,7 +692,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.17.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.0...HEAD
+[5.18.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.17.0...v5.18.0
 [5.17.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.5...v5.17.0
 [5.16.5]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.4...v5.16.5
 [5.16.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.3...v5.16.4
