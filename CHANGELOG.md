@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.1] - 2026-07-25
+
+### Fixed
+
+- ``nested_basemodel_for_annotation`` sequence descent is opt-in via
+  ``descend_sequences=True``. Unconditional descent in 5.18.0 collapsed
+  ``list[Model]`` response/update annotations to a scalar nested model, broke
+  ``get_exposed_fields`` / ``get_updateable_fields`` for list containers, and
+  caused ``reconcile_update_request`` to silently ignore PUT updates to
+  list-of-model fields. Filter builders (``SearchableEntity``, dotted path
+  helpers) pass ``descend_sequences=True``; response/update builders keep the
+  default.
+- ``build_query_filter_kwargs`` resolves query-name segments against
+  ``validation_alias`` values (longest-prefix match), so dotted alias escape
+  hatches such as ``object1.field1`` re-nest onto the Python field instead of
+  being dropped.
+
 ## [5.18.0] - 2026-07-25
 
 ### Added
@@ -692,7 +709,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.1...HEAD
+[5.18.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.0...v5.18.1
 [5.18.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.17.0...v5.18.0
 [5.17.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.5...v5.17.0
 [5.16.5]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.16.4...v5.16.5
