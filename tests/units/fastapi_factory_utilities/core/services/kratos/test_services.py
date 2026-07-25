@@ -796,7 +796,7 @@ class TestKratosIdentityGenericService:
         ],
     )
     @pytest.mark.asyncio
-    async def test_list_sessions_success(  # noqa: PLR0913
+    async def test_list_sessions_success(  # noqa: PLR0913,PLR0917
         self,
         concrete_service: KratosIdentityGenericService[MockIdentityObject, MockSessionObject],
         identity_id: KratosIdentityId,

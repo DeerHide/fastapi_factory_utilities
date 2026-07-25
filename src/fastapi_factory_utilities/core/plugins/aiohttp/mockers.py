@@ -12,7 +12,7 @@ import aiohttp
 from fastapi_factory_utilities.core.plugins.aiohttp.resources import AioHttpClientResource
 
 
-def build_mocked_aiohttp_response(  # noqa: PLR0913
+def build_mocked_aiohttp_response(  # noqa: PLR0913,PLR0917
     status: HTTPStatus,
     json: dict[str, Any] | list[Any] | str | None = None,
     text: str | None = None,
@@ -137,7 +137,7 @@ def build_mocked_aiohttp_response(  # noqa: PLR0913
 ParametricResponse = aiohttp.ClientResponse | None | Callable[..., aiohttp.ClientResponse | None]
 
 
-def build_mocked_aiohttp_resource(  # noqa: PLR0913
+def build_mocked_aiohttp_resource(  # noqa: PLR0913,PLR0917
     get: ParametricResponse = None,
     post: ParametricResponse = None,
     put: ParametricResponse = None,

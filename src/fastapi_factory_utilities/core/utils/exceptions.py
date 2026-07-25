@@ -177,7 +177,7 @@ class ExceptionMapping:
     context_hook: ExceptionContextHook | None = field(default=None)
 
 
-async def _resolve_hook_result(  # noqa: PLR0913
+async def _resolve_hook_result(  # noqa: PLR0913,PLR0917
     hook: ExceptionContextHook,
     exception: Exception,
     target_type: type[Exception],

@@ -15,7 +15,7 @@ class Queue(AbstractAiopikaResource):
 
     DEFAULT_OPERATION_TIMEOUT: ClassVar[TimeoutType] = 10.0
 
-    def __init__(  # pylint: disable=too-many-arguments # noqa: PLR0913
+    def __init__(  # pylint: disable=too-many-arguments # noqa: PLR0913,PLR0917
         self,
         name: QueueName,
         exchange: Exchange,

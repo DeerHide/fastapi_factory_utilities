@@ -386,7 +386,7 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
         projection_model: None = None,
         skip: int | None = None,
         limit: int | None = None,
-        sort: None | str | list[tuple[str, SortDirection]] = None,
+        sort: str | list[tuple[str, SortDirection]] | None = None,
         session: None = None,
         ignore_cache: bool = False,
         fetch_links: bool = False,
