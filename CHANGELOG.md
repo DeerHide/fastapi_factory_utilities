@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.5] - 2026-07-25
+
+### Fixed
+
+- Release CI posts the poetry.lock dependency snapshot via the Dependency
+  Submission API with ``ref: refs/heads/main``. Runners ignore ``GITHUB_*``
+  env overrides, so the v5.18.4 ``GITHUB_REF`` workaround never retargeted
+  ``anchore/sbom-action`` away from ``refs/tags/*``.
+
 ## [5.18.4] - 2026-07-25
 
 ### Fixed
@@ -734,7 +743,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.4...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.5...HEAD
+[5.18.5]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.4...v5.18.5
 [5.18.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.3...v5.18.4
 [5.18.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.2...v5.18.3
 [5.18.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.1...v5.18.2
