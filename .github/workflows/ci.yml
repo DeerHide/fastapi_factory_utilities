@@ -53,6 +53,11 @@ jobs:
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
           poetry install --with test
+  # Job id is part of the dependency-snapshot correlator
+  # (CI_<job>_<artifact-name>). Renaming strands the previous manifest under
+  # syft; same-detector correlators merge, so stale versions keep generating
+  # Dependabot alerts until the orphaned correlator is purged with an empty
+  # snapshot.
   dependency-scan:
     needs: setup
     runs-on: public-actions-runner-scale-set
@@ -70,12 +75,19 @@ jobs:
           name: poetry-lock
       - uses: anchore/sbom-action@v0.24.0
         id: sbom
+        env:
+          # Dependabot auto-closes alerts only from the default-branch graph;
+          # a refs/tags/* snapshot never reaches it. GITHUB_SHA is already the
+          # main tip because release tags point at the release commit.
+          GITHUB_REF: refs/heads/main
         with:
           file: ./poetry.lock
           dependency-snapshot: true
           upload-artifact: true
           upload-artifact-retention: 1
-          upload-release-assets: true
+          # attachReleaseAssets keys off refs/tags/; the GITHUB_REF override
+          # defeats it. softprops/action-gh-release already attaches the SBOM.
+          upload-release-assets: false
           format: "spdx-json"
           artifact-name: "${{ github.event.repository.name }}-sbom.spdx.json"
       - name: Download SBOM
