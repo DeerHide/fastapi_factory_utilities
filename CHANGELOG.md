@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.4] - 2026-07-25
+
+### Fixed
+
+- Release CI submits the Syft dependency snapshot against ``refs/heads/main``
+  so Dependabot can refresh the default-branch graph and auto-close alerts.
+  Tag-ref snapshots never reached that graph, leaving the November 2025
+  manifest frozen and generating false-positive alerts.
+
 ## [5.18.3] - 2026-07-25
 
 ### Fixed
@@ -725,7 +734,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.3...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.4...HEAD
+[5.18.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.3...v5.18.4
 [5.18.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.2...v5.18.3
 [5.18.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.1...v5.18.2
 [5.18.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.0...v5.18.1
