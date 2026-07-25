@@ -21,6 +21,7 @@ from fastapi_factory_utilities.core.utils.api import (
     QuerySortDirectionEnum,
     RawQueryFieldName,
     RawQuerySort,
+    build_query_filter_kwargs,
 )
 
 
@@ -495,6 +496,18 @@ class TestQueryResolver:
         key = QueryFieldName("object1.field1")
         assert key in resolver.fields
         assert resolver.fields[key].operations[0].value == "abc"
+
+    def test_build_query_filter_kwargs_renests_dotted_fields(self) -> None:
+        """Dotted resolver fields are rebuilt into nested ``model_construct`` kwargs."""
+        resolver = QueryResolver().from_model(_RootNestedQuery)
+        req = _request("object1.field1=abc&page=0&page_size=10")
+        resolver.resolve(req)
+        kwargs = build_query_filter_kwargs(_RootNestedQuery, resolver.fields)
+        assert set(kwargs) == {"object1"}
+        qm = _RootNestedQuery.model_construct(**kwargs)
+        fields = qm.get_fields()
+        assert QueryFieldName("object1.field1") in fields
+        assert fields[QueryFieldName("object1.field1")].operations[0].value == "abc"
 
     def test_from_model_validation_alias_registers_dotted_key(self) -> None:
         """Leaf field with string ``validation_alias`` registers the dotted query name."""

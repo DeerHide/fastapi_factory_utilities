@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from types import NoneType, UnionType
 from typing import Annotated, Any, Union, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
-
 
 def raise_if_dotted_path_prefix_conflict(field_paths: list[str]) -> None:
     """Raise if any path duplicates another or is a strict prefix of another."""
@@ -56,6 +56,11 @@ def _is_union_origin(origin: Any) -> bool:
     return origin is Union or origin is UnionType
 
 
+def _is_sequence_origin(origin: Any) -> bool:
+    """Return ``True`` for list/set/tuple/Sequence-like container origins."""
+    return origin in (list, set, tuple, frozenset) or origin is Sequence
+
+
 def unwrap_optional_annotated(annotation: Any) -> Any:
     """Strip ``Annotated`` wrappers and single-branch ``X | None`` types."""
     if annotation is None:
@@ -77,7 +82,13 @@ def nested_basemodel_for_annotation(
     *,
     exclude: tuple[type[BaseModel], ...] = (),
 ) -> type[BaseModel] | None:
-    """Return a nested ``BaseModel`` type to descend into, or ``None`` if not unambiguous."""
+    """Return a nested ``BaseModel`` type to descend into, or ``None`` if not unambiguous.
+
+    Descends into a direct model, a single-candidate optional/union of models, or a
+    homogeneous sequence container (``list`` / ``set`` / ``tuple`` / ``Sequence``)
+    whose item type is a ``BaseModel``. Scalar sequences (e.g. ``list[str]``) stay
+    leaves so MongoDB array-membership equality continues to work.
+    """
     ann = unwrap_optional_annotated(annotation)
     if ann is None:
         return None
@@ -87,15 +98,16 @@ def nested_basemodel_for_annotation(
         return ann
     origin = get_origin(ann)
     args = get_args(ann) if origin is not None else ()
+    if origin is not None and args and _is_sequence_origin(origin):
+        # Homogeneous containers: descend into the item type when it is a model.
+        return nested_basemodel_for_annotation(args[0], exclude=exclude)
     if origin is not None and args and _is_union_origin(origin):
         candidates: list[type[BaseModel]] = []
         for a in args:
             if a is NoneType:
                 continue
-            inner = unwrap_optional_annotated(a)
-            if isinstance(inner, type) and issubclass(inner, BaseModel):
-                if exclude and any(issubclass(inner, ex) for ex in exclude):
-                    continue
+            inner = nested_basemodel_for_annotation(a, exclude=exclude)
+            if inner is not None:
                 candidates.append(inner)
         if len(candidates) == 1:
             return candidates[0]

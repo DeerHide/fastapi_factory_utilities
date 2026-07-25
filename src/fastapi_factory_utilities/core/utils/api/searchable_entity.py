@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
+from typing import Annotated, Any, TypeVar, cast, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 from pydantic.fields import FieldInfo
@@ -27,6 +27,32 @@ def _strip_apifield_to_value_type(hint: Any) -> Any:
             return args[0]
         ann = args[0]
     return ann
+
+
+def _resolved_value_type(field_info: FieldInfo, hint: Any) -> Any:
+    """Return the runtime value type for filter construction.
+
+    Prefer :attr:`FieldInfo.annotation` when it resolves to a nested model
+    (Pydantic substitutes generic TypeVars on concrete subclasses). Fall back
+    to :func:`typing.get_type_hints` when the field annotation is still a
+    ``ForwardRef`` (common for nested class definitions), since hints resolve
+    those. For leaf fields, prefer the Pydantic annotation unless it is an
+    unbound TypeVar.
+    """
+    hint_stripped = _strip_apifield_to_value_type(hint)
+    resolved = field_info.annotation
+    if resolved is not None and nested_basemodel_for_annotation(resolved) is not None:
+        return resolved
+    if nested_basemodel_for_annotation(hint_stripped) is not None:
+        return hint_stripped
+    if resolved is not None and not isinstance(resolved, TypeVar):
+        # Optional[TypeVar] / unions containing TypeVar: fall back to hints.
+        origin = get_origin(resolved)
+        args = get_args(resolved) if origin is not None else ()
+        if any(isinstance(arg, TypeVar) for arg in args):
+            return hint_stripped
+        return resolved
+    return hint_stripped
 
 
 def _field_to_create_model_spec(field_info: FieldInfo, annotation: Any) -> tuple[Any, Any]:
@@ -129,9 +155,9 @@ class SearchableEntity(BaseModel):
                 msg = f"Field {field_name!r} is not defined on {cls.__name__}."
                 raise ValueError(msg) from exc
 
-            stripped = _strip_apifield_to_value_type(hints[field_name])
+            value_type = _resolved_value_type(field_info, hints[field_name])
             nested_cls = nested_basemodel_for_annotation(
-                stripped,
+                value_type,
                 exclude=(QueryAbstract, QueryFilterNestedAbstract),
             )
 
@@ -144,9 +170,13 @@ class SearchableEntity(BaseModel):
                     raise ValueError(msg) from None
                 inner_model = nested_cls.build_nested_query_filter_model(building=next_building)
                 inner_ann = _container_nested_annotation(field_info, inner_model)
-                fields[field_name] = _field_to_create_model_spec(field_info, inner_ann)
+                # Nested query segments are optional filters. Ignore entity defaults such as
+                # ``default_factory=list`` (list-of-model fields) which are not filter shapes.
+                if field_info.is_required():
+                    fields[field_name] = (inner_ann, ...)
+                else:
+                    fields[field_name] = (inner_ann, None)
             else:
-                value_type = stripped
                 fields[field_name] = (QueryField[value_type] | None, None)  # type: ignore[valid-type]
 
         if as_root:

@@ -29,6 +29,7 @@ from fastapi_factory_utilities.core.utils.api import (
     QueryResolver,
     QuerySort,
     RawQuerySort,
+    build_query_filter_kwargs,
 )
 
 
@@ -319,9 +320,7 @@ def test_queries_init_dotted_field_name_fastapi_to_mongo() -> None:
             page=page,
             page_size=page_size,
             sorts=resolver.sorts,
-            object1=Object1Filter.model_construct(
-                field1=resolver.fields.get(QueryFieldName("object1.field1")),
-            ),
+            **build_query_filter_kwargs(DotPathItemQuery, resolver.fields),
         )
         built = ODMQueryBuilder[DotPathItemQuery]().set_query_filter(qm).build()
         return {
@@ -371,7 +370,7 @@ async def test_find_dotted_object1_field1_matches_nested_document(async_motor_da
         page=PaginationPageOffset(0),
         page_size=PaginationSize(50),
         sorts=resolver.sorts,
-        object1=Object1Filter.model_construct(field1=resolver.fields[QueryFieldName("object1.field1")]),
+        **build_query_filter_kwargs(DotPathItemQuery, resolver.fields),
     )
     built = ODMQueryBuilder[DotPathItemQuery]().set_query_filter(qm).build()
     found = await repository.find(

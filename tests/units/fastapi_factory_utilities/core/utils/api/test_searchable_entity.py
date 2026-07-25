@@ -19,6 +19,7 @@ from fastapi_factory_utilities.core.utils.api import (
     QueryFilterNestedAbstract,
     QueryResolver,
     SearchableEntity,
+    build_query_filter_kwargs,
 )
 
 
@@ -293,3 +294,80 @@ class TestSearchableEntityNestedQueryFilterModel:
         """Mutually recursive SearchableEntity graphs raise a clear error."""
         with pytest.raises(ValueError, match="Circular SearchableEntity graph"):
             _CycleEntityA.build_query_filter_model()
+
+
+class TestSearchableEntityListNestedQueryFilterModel:
+    """``list[SearchableEntity]`` fields descend into a nested filter segment."""
+
+    class FeatureRowEntity(SearchableEntity):
+        """Element type for a searchable list of feature rows."""
+
+        feature: Annotated[str, ApiField(response=False, searchable=True)]
+        enabled: Annotated[bool, ApiField(response=False, searchable=True)]
+
+    class FeaturesDocumentEntity(SearchableEntity):
+        """Root entity with a searchable list of nested models."""
+
+        realm_id: Annotated[str, ApiField(response=False, searchable=True)]
+        features: Annotated[
+            list[TestSearchableEntityListNestedQueryFilterModel.FeatureRowEntity],
+            ApiField(response=False, searchable=True),
+        ] = []
+
+    class ScalarListEntity(SearchableEntity):
+        """Root entity with a searchable scalar list (must stay a leaf)."""
+
+        tags: Annotated[list[str], ApiField(response=False, searchable=True)]
+
+    def test_list_of_model_builds_nested_segment(self) -> None:
+        """``list[SearchableEntity]`` becomes a nested segment, not a QueryField leaf."""
+        filter_model = cast(Any, self.FeaturesDocumentEntity.build_query_filter_model())
+        assert set(filter_model.model_fields) == {"realm_id", "features", "page", "page_size", "sorts"}
+        sub_ann = filter_model.model_fields["features"].annotation
+        assert sub_ann is not None
+        # Optional because the entity field has a default (empty list).
+        assert "FeatureRowEntityQueryFilterSegment" in str(sub_ann)
+        assert filter_model.model_fields["features"].default is None
+        assert filter_model.model_fields["features"].is_required() is False
+
+        # Unwrap Optional to get the segment class.
+        from typing import get_args, get_origin, Union
+        from types import UnionType
+
+        origin = get_origin(sub_ann)
+        if origin is Union or origin is UnionType:
+            segment_cls = next(a for a in get_args(sub_ann) if a is not type(None))
+        else:
+            segment_cls = sub_ann
+        assert isinstance(segment_cls, type) and issubclass(segment_cls, QueryFilterNestedAbstract)
+        assert set(segment_cls.model_fields) == {"feature", "enabled"}
+
+    def test_list_of_model_registers_dotted_query_keys(self) -> None:
+        """Resolver authorizes ``features.enabled`` style keys for list-nested models."""
+        filter_model = cast(Any, self.FeaturesDocumentEntity.build_query_filter_model())
+        resolver = QueryResolver().from_model(filter_model)
+        req = _request("features.enabled=true&features.feature=reviews&page=0&page_size=10")
+        resolver.resolve(req)
+        assert QueryFieldName("features.enabled") in resolver.fields
+        assert QueryFieldName("features.feature") in resolver.fields
+        assert resolver.fields[QueryFieldName("features.enabled")].operations[0].value is True
+
+    def test_scalar_list_stays_leaf(self) -> None:
+        """``list[str]`` remains a QueryField leaf for MongoDB array-membership equality."""
+        filter_model = cast(Any, self.ScalarListEntity.build_query_filter_model())
+        tags_ann = filter_model.model_fields["tags"].annotation
+        assert tags_ann is not None
+        assert "QueryField" in str(tags_ann)
+        assert "QueryFilterSegment" not in str(tags_ann)
+
+    def test_list_nested_renest_reaches_get_fields(self) -> None:
+        """Resolver + renest + get_fields yields dotted ``features.enabled`` for Mongo paths."""
+        filter_model = cast(Any, self.FeaturesDocumentEntity.build_query_filter_model())
+        resolver = QueryResolver().from_model(filter_model)
+        req = _request("features.enabled=true&page=0&page_size=10")
+        resolver.resolve(req)
+        kwargs = build_query_filter_kwargs(filter_model, resolver.fields)
+        qm = filter_model.model_construct(**kwargs)
+        fields = qm.get_fields()
+        assert QueryFieldName("features.enabled") in fields
+        assert fields[QueryFieldName("features.enabled")].operations[0].value is True

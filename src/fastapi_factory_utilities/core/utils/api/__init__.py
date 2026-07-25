@@ -48,7 +48,7 @@ from .markers import (
 from .pagination import PaginationPageOffset, PaginationSize, resolve_offset
 from .projection import FIELDS_QUERY_PARAM, fields_query_param, parse_fields_param, project
 from .query_abstract import QueryAbstract, QueryFilterNestedAbstract
-from .query_resolver import QueryResolver
+from .query_resolver import QueryResolver, build_query_filter_kwargs
 from .query_types import (
     QueryField,
     QueryFieldName,
@@ -96,6 +96,7 @@ __all__: list[str] = [
     "SearchableEntity",
     "SearchableField",
     "UpdateableField",
+    "build_query_filter_kwargs",
     "fields_query_param",
     "has_response_flag",
     "has_searchable_flag",

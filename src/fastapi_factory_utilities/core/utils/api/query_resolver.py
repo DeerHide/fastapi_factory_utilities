@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from enum import Enum, Flag, IntEnum
 from types import NoneType, UnionType
 from typing import Annotated, Any, ClassVar, Self, Union, get_args, get_origin
@@ -223,6 +224,67 @@ def _nested_filter_model_type(annotation: Any) -> type[BaseModel] | None:
             return candidates[0]
         return None
     return None
+
+
+def build_query_filter_kwargs(
+    model: type[BaseModel],
+    resolver_fields: Mapping[QueryFieldName, QueryField[Any]],
+) -> dict[str, Any]:
+    """Re-nest dotted resolver fields into kwargs for ``model.model_construct``.
+
+    :class:`QueryResolver` yields flat dotted keys (``features.enabled``). Passing those
+    keys directly to :meth:`pydantic.BaseModel.model_construct` silently drops them because
+    they are not top-level field names. This helper rebuilds the nested segment tree so
+    dotted filters reach :meth:`QueryAbstract.get_fields` and the MongoDB query builder.
+
+    Args:
+        model: Root :class:`QueryAbstract` (or nested segment) model class.
+        resolver_fields: Flat mapping from :attr:`QueryResolver.fields`.
+
+    Returns:
+        Keyword arguments suitable for ``model.model_construct(**kwargs)``.
+
+    Raises:
+        ValueError: When a dotted path conflicts with a leaf, or a segment has no nested model.
+    """
+    tree: dict[str, Any] = {}
+    for name, field in resolver_fields.items():
+        parts = str(name).split(".")
+        if not parts or any(not part for part in parts):
+            msg = f"Invalid dotted query field name: {name!r}."
+            raise ValueError(msg)
+        node: dict[str, Any] = tree
+        for part in parts[:-1]:
+            child = node.setdefault(part, {})
+            if not isinstance(child, dict):
+                msg = f"Conflicting query field paths under {part!r} for {name!r}."
+                raise ValueError(msg)
+            node = child
+        leaf = parts[-1]
+        if leaf in node and isinstance(node[leaf], dict):
+            msg = f"Conflicting query field paths at {name!r}: leaf overlaps a nested segment."
+            raise ValueError(msg)
+        node[leaf] = field
+    return _materialize_filter_kwargs(model, tree)
+
+
+def _materialize_filter_kwargs(model_cls: type[BaseModel], tree: dict[str, Any]) -> dict[str, Any]:
+    """Turn a nested path tree into ``model_construct`` kwargs for ``model_cls``."""
+    result: dict[str, Any] = {}
+    for key, value in tree.items():
+        if key not in model_cls.model_fields:
+            continue
+        field_info = model_cls.model_fields[key]
+        if isinstance(value, dict):
+            nested_cls = _nested_filter_model_type(field_info.annotation)
+            if nested_cls is None:
+                msg = f"Cannot nest query filters under {key!r}: not a nested filter model."
+                raise ValueError(msg)
+            nested_kwargs = _materialize_filter_kwargs(nested_cls, value)
+            result[key] = nested_cls.model_construct(**nested_kwargs)
+        else:
+            result[key] = value
+    return result
 
 
 class QueryResolver:
