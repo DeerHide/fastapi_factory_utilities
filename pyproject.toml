@@ -27,8 +27,11 @@ classifiers = [
 ]
 version = "0.0.0"
 
-[tool.poetry.requires-plugins]
-poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+# ponytail: no [tool.poetry.requires-plugins] — Homebrew Poetry sees nmap's
+# ndiff==7.99 on sys.path and pins it into poetry-project-instance, which is
+# not on PyPI. Dynamic versioning still works via the build-system backend;
+# for CLI injection install: poetry self add "poetry-dynamic-versioning[plugin]"
+# (needs a non-brew Poetry, or a Poetry env without brew site-packages).
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -113,8 +116,8 @@ httpx = "^0.28.1"
 fastapi_factory_utilities-example = "fastapi_factory_utilities.example.__main__:main"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.pytest.ini_options]
 testpaths = "tests"
