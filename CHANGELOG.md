@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.3] - 2026-07-25
+
+### Fixed
+
+- Drop ``[tool.poetry.requires-plugins]`` so Homebrew Poetry can
+  ``poetry install`` when nmap's ``ndiff==7.99`` is visible on
+  ``sys.path``. Wire dynamic versioning through the PEP 517
+  ``poetry_dynamic_versioning.backend`` instead.
+
 ## [5.18.2] - 2026-07-25
 
 ### Fixed
@@ -716,7 +725,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.3...HEAD
+[5.18.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.2...v5.18.3
 [5.18.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.1...v5.18.2
 [5.18.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.0...v5.18.1
 [5.18.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.17.0...v5.18.0
