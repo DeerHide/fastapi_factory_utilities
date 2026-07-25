@@ -7,6 +7,7 @@ from enum import StrEnum, auto
 from typing import Annotated, Any
 
 import structlog
+from opentelemetry.trace import get_current_span
 from pydantic import BaseModel, BeforeValidator
 from structlog.types import EventDict
 
@@ -58,6 +59,20 @@ def _rename_event_key(_: Any, __: Any, event_dict: EventDict) -> EventDict:  # p
     See https://github.com/hynek/structlog/issues/35#issuecomment-591321744
     """
     event_dict["message"] = event_dict.pop("event")
+    return event_dict
+
+
+def _add_otel_trace_context(_: Any, __: Any, event_dict: EventDict) -> EventDict:  # pylint: disable=invalid-name
+    """Inject active trace/span ids so log lines link back to Tempo.
+
+    Uses lowercase 32/16-char hex, which Grafana derived fields expect.
+    When OpenTelemetry is inactive, ``get_current_span()`` returns
+    ``INVALID_SPAN`` and ``is_valid`` short-circuits so nothing is added.
+    """
+    span_context = get_current_span().get_span_context()
+    if span_context.is_valid:
+        event_dict["trace_id"] = format(span_context.trace_id, "032x")
+        event_dict["span_id"] = format(span_context.span_id, "016x")
     return event_dict
 
 
@@ -143,6 +158,7 @@ def setup_log(
             }
         ),
         _drop_color_message_key,
+        _add_otel_trace_context,
     ]
 
     log_renderer: structlog.dev.ConsoleRenderer | structlog.processors.JSONRenderer

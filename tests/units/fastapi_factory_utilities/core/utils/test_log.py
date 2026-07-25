@@ -1,11 +1,16 @@
 """Test the setup.log module."""
 
 import logging
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fastapi_factory_utilities.core.utils.log import ProbeAccessLogFilter, setup_log
+from fastapi_factory_utilities.core.utils.log import (
+    ProbeAccessLogFilter,
+    _add_otel_trace_context,
+    setup_log,
+)
 
 
 class TestSetupLog:
@@ -34,6 +39,46 @@ class TestSetupLog:
             for handler in root_logger.handlers
             for log_filter in handler.filters
         )
+
+
+class TestAddOtelTraceContext:
+    """Tests for the OpenTelemetry trace-id log processor."""
+
+    def test_injects_ids_when_span_is_valid(self) -> None:
+        """Valid span context yields lowercase hex trace_id and span_id."""
+        span_context = MagicMock()
+        span_context.is_valid = True
+        span_context.trace_id = 0xABCDEF0123456789ABCDEF0123456789
+        span_context.span_id = 0x0123456789ABCDEF
+        span = MagicMock()
+        span.get_span_context.return_value = span_context
+
+        event_dict: dict[str, Any] = {"event": "hello"}
+        with patch(
+            "fastapi_factory_utilities.core.utils.log.get_current_span",
+            return_value=span,
+        ):
+            result = _add_otel_trace_context(None, None, event_dict)
+
+        assert result["trace_id"] == "abcdef0123456789abcdef0123456789"
+        assert result["span_id"] == "0123456789abcdef"
+
+    def test_skips_ids_when_span_is_invalid(self) -> None:
+        """Invalid span leaves the event dict untouched."""
+        span_context = MagicMock()
+        span_context.is_valid = False
+        span = MagicMock()
+        span.get_span_context.return_value = span_context
+
+        event_dict: dict[str, Any] = {"event": "hello"}
+        with patch(
+            "fastapi_factory_utilities.core.utils.log.get_current_span",
+            return_value=span,
+        ):
+            result = _add_otel_trace_context(None, None, event_dict)
+
+        assert "trace_id" not in result
+        assert "span_id" not in result
 
 
 class TestProbeAccessLogFilter:
