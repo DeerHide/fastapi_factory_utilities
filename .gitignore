@@ -182,3 +182,6 @@ tmp
 # Agentic development files
 _bmad
 .cursor/commands/bmad
+
+# macOS
+.DS_Store
