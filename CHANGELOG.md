@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.19.1] - 2026-07-29
+
+### Fixed
+
+- S3 plugin pre-commit / CI: import ``aioboto3.session.Session`` for mypy,
+  rename ``S3PluginBaseException`` → ``S3PluginBaseError`` (N818), and clear
+  pylint findings in startup / fixtures / unit tests.
+
 ## [5.19.0] - 2026-07-29
 
 ### Added
@@ -757,7 +765,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.1...HEAD
+[5.19.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.0...v5.19.1
 [5.19.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.5...v5.19.0
 [5.18.5]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.4...v5.18.5
 [5.18.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.3...v5.18.4
