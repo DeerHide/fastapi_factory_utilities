@@ -82,6 +82,7 @@ fastapi-csrf-protect = "^1.0.7"
 hypercorn = "^0.18.0"
 granian = "^2.7"
 cacheout = "^0.16.0"
+aioboto3 = "^15.0.0"
 
 [tool.poetry.group.test]
 optional = true
@@ -100,7 +101,7 @@ ruff = "^0"
 pytest-asyncio = ">=0.25,<1.4"
 pytest-mongo = "^4.0.0"
 locust = "^2.45.0"
-testcontainers = { version="^4.9.0", extras=["mongodb","rabbitmq", "redis"] }
+testcontainers = {version = "^4.9.0", extras = ["mongodb", "rabbitmq", "redis", "minio"]}
 types-deprecated = "^1.3.1.20260520"
 types-pygments = "^2.20.0.20260518"
 types-colorama = "^0.4.15.20260508"
@@ -109,6 +110,7 @@ types-psutil = ">=7.2.2.20260518,<8.0.0.0"
 types-pyopenssl = "^24.1.0.20240722"
 types-ujson = "^5.10.0.20240515"
 httpx = "^0.28.1"
+minio = "^7"
 
 [tool.poetry.extras]
 
