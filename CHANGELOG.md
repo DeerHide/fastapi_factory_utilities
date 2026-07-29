@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.19.0] - 2026-07-29
+
+### Added
+
+- **S3Plugin** — async MinIO / S3 integration via aioboto3: shared long-lived
+  client, named buckets in YAML (`s3.buckets`), `S3BucketDepends` DI, and
+  STORAGE health / readiness. Declared buckets must already exist at startup.
+
+### Changed
+
+- Agent skill docs no longer live under `docs/skill/`; canonical skill is
+  [DeerHide/agent_skills](https://github.com/DeerHide/agent_skills/tree/main/skills/fastapi-factory-utilities)
+  (`docs/SKILL.md` pointer).
+
 ## [5.18.5] - 2026-07-25
 
 ### Fixed
@@ -743,7 +757,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.5...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.0...HEAD
+[5.19.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.5...v5.19.0
 [5.18.5]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.4...v5.18.5
 [5.18.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.3...v5.18.4
 [5.18.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.2...v5.18.3
