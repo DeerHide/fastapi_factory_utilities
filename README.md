@@ -20,6 +20,7 @@ This library consolidates common patterns, plugins, and utilities for creating m
 | [Architecture Decisions](docs/planning-artifacts/architecture.md) | Formal architectural decisions and implementation patterns |
 | [Source Tree](docs/knowledge/source-tree-analysis.md) | Annotated directory structure |
 | [Development Guide](docs/knowledge/development-guide.md) | Setup, testing, and contribution guide |
+| [Agent Skill](SKILL.md) | Points to canonical skill in DeerHide/agent_skills |
 
 ---
 
@@ -51,6 +52,7 @@ This library consolidates common patterns, plugins, and utilities for creating m
 ### 📨 Message Broker & Task Queue
 - **AioPika Plugin** for RabbitMQ message broker integration
 - **Taskiq Plugin** for distributed task queue with Redis backend
+- **S3 Plugin** for MinIO / S3 via async aioboto3 (named buckets + DI)
 - **Message-Driven Architecture** support with async consumers/producers
 
 > 📖 See [Plugin Architecture](docs/knowledge/architecture.md#plugin-architecture) for plugin details.
@@ -234,6 +236,7 @@ Each plugin extends your application with specific capabilities:
 | **`TaskiqPlugin`** | Background task processing with Redis | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
 | **`AioPikaPlugin`** | RabbitMQ messaging capabilities | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
 | **`AioHttpPlugin`** | Instrumented HTTP client | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
+| **`S3Plugin`** | Async MinIO / S3 (aioboto3), named buckets | [S3 skill reference](https://github.com/DeerHide/agent_skills/blob/main/skills/fastapi-factory-utilities/references/s3-plugin.md) |
 
 Plugins follow a consistent lifecycle:
 1. `on_load()` - Initial setup when plugin is registered
@@ -241,6 +244,8 @@ Plugins follow a consistent lifecycle:
 3. `on_shutdown()` - Cleanup during application shutdown
 
 > 📖 See [Plugin Lifecycle](docs/knowledge/architecture.md#plugin-lifecycle) for detailed flow.
+>
+> Agent skill docs (config examples, DI patterns): [DeerHide/agent_skills — fastapi-factory-utilities](https://github.com/DeerHide/agent_skills/tree/main/skills/fastapi-factory-utilities) (see also [docs/SKILL.md](docs/SKILL.md)).
 
 ### Security & Authentication
 
@@ -424,6 +429,7 @@ graph TB
         Taskiq[Taskiq Plugin<br/>Task Queue]
         AioPika[AioPika Plugin<br/>RabbitMQ]
         Http[AioHttp Plugin<br/>HTTP Client]
+        S3[S3 Plugin<br/>MinIO/S3]
     end
 
     App -->|registers| Plugins

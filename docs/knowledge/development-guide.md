@@ -292,6 +292,9 @@ async def test_with_mocked_http() -> None:
 | `fixture_taskiq_plugin` | function | Taskiq plugin |
 | `fixture_rabbitmq_container` | session | RabbitMQ Testcontainer |
 | `fixture_aiopika_plugin` | function | Aiopika plugin |
+| `fixture_minio_container` | session | MinIO Testcontainer |
+| `fixture_s3_buckets` | function | Created logical→physical buckets |
+| `fixture_s3_plugin_factory` | function | S3 plugin factory |
 
 ---
 
