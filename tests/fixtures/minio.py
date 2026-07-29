@@ -4,9 +4,9 @@ from collections.abc import AsyncGenerator, Callable, Generator
 from typing import Any
 from uuid import uuid4
 
-import aioboto3
 import pytest
 import pytest_asyncio
+from aioboto3.session import Session
 from testcontainers.community.minio import MinioContainer
 
 from fastapi_factory_utilities.core.plugins.s3_plugin import S3Config, S3Plugin
@@ -33,9 +33,10 @@ def build_s3_config_from_container(
         An ``S3Config`` suitable for ``S3Plugin`` injection.
     """
     config: dict[str, str] = minio_container.get_config()
+    endpoint: str = config["endpoint"]
     return S3Config.model_validate(
         {
-            "endpoint_url": f"http://{config['endpoint']}",
+            "endpoint_url": f"http://{endpoint}",
             "access_key_id": config["access_key"],
             "secret_access_key": config["secret_key"],
             "region": "us-east-1",
@@ -61,7 +62,7 @@ async def fixture_s3_buckets(minio_container: MinioContainer) -> AsyncGenerator[
         "thumbs": f"thumbs-{suffix}",
     }
     config: S3Config = build_s3_config_from_container(minio_container=minio_container, buckets=buckets)
-    session: aioboto3.Session = aioboto3.Session()
+    session: Session = Session()
     async with session.client(
         "s3",
         endpoint_url=config.endpoint_url,

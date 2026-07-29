@@ -1,7 +1,8 @@
 """Unit tests for S3 plugin lifecycle."""
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -85,7 +86,7 @@ class TestS3PluginStartup:
         plugin.set_application(mock_app)
         plugin.on_load()
 
-        with patch("fastapi_factory_utilities.core.plugins.s3_plugin.plugins.aioboto3.Session", return_value=mock_session):
+        with patch("fastapi_factory_utilities.core.plugins.s3_plugin.plugins.Session", return_value=mock_session):
             await plugin.on_startup()
 
         state = mock_app.get_asgi_app().state
@@ -127,7 +128,7 @@ class TestS3PluginStartup:
         plugin.set_application(mock_app)
         plugin.on_load()
 
-        with patch("fastapi_factory_utilities.core.plugins.s3_plugin.plugins.aioboto3.Session", return_value=mock_session):
+        with patch("fastapi_factory_utilities.core.plugins.s3_plugin.plugins.Session", return_value=mock_session):
             with pytest.raises(S3BucketNotFoundError):
                 await plugin.on_startup()
 
@@ -139,14 +140,12 @@ class TestS3PluginStartup:
     @pytest.mark.asyncio
     async def test_connect_failure_marks_unhealthy_and_reraises(self) -> None:
         """Client enter failures mark STORAGE unhealthy and propagate."""
-
-        @asynccontextmanager
-        async def failing_cm() -> AsyncIterator[MagicMock]:
-            raise ConnectionError("S3 unavailable")
-            yield MagicMock()  # pragma: no cover
+        failing_cm: MagicMock = MagicMock()
+        failing_cm.__aenter__ = AsyncMock(side_effect=ConnectionError("S3 unavailable"))
+        failing_cm.__aexit__ = AsyncMock(return_value=None)
 
         mock_session: MagicMock = MagicMock()
-        mock_session.client.return_value = failing_cm()
+        mock_session.client.return_value = failing_cm
 
         mock_subject: MagicMock = MagicMock()
         mock_status_service: MagicMock = MagicMock()
@@ -159,7 +158,7 @@ class TestS3PluginStartup:
         plugin.set_application(mock_app)
         plugin.on_load()
 
-        with patch("fastapi_factory_utilities.core.plugins.s3_plugin.plugins.aioboto3.Session", return_value=mock_session):
+        with patch("fastapi_factory_utilities.core.plugins.s3_plugin.plugins.Session", return_value=mock_session):
             with pytest.raises(ConnectionError, match="S3 unavailable"):
                 await plugin.on_startup()
 

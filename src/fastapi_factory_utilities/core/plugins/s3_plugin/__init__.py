@@ -6,7 +6,7 @@ from .depends import S3BucketDepends, depends_s3_client
 from .exceptions import (
     S3BucketNotFoundError,
     S3BucketResourceNotFoundError,
-    S3PluginBaseException,
+    S3PluginBaseError,
     S3PluginConfigError,
 )
 from .plugins import S3Plugin
@@ -21,7 +21,7 @@ __all__: list[str] = [
     "S3BucketResourceNotFoundError",
     "S3Config",
     "S3Plugin",
-    "S3PluginBaseException",
+    "S3PluginBaseError",
     "S3PluginConfigError",
     "depends_s3_client",
 ]

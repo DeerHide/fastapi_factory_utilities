@@ -3,7 +3,7 @@
 from contextlib import AsyncExitStack
 from typing import Any
 
-import aioboto3
+from aioboto3.session import Session
 from botocore.exceptions import ClientError
 from reactivex import Subject
 from structlog.stdlib import BoundLogger, get_logger
@@ -124,9 +124,10 @@ class S3Plugin(PluginAbstract):
         assert self._monitoring_subject is not None
 
         try:
-            session: aioboto3.Session = aioboto3.Session()
+            session: Session = Session()
             self._exit_stack = AsyncExitStack()
-            await self._exit_stack.__aenter__()
+            # Long-lived stack: enter once here, close in on_shutdown.
+            await self._exit_stack.__aenter__()  # pylint: disable=unnecessary-dunder-call
             self._s3_client = await self._exit_stack.enter_async_context(
                 session.client("s3", **self._builder.client_kwargs)
             )

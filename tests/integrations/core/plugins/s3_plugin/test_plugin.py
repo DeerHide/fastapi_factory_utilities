@@ -71,7 +71,7 @@ class TestS3PluginIntegration:
         state = mock_application.get_asgi_app().state
         for key in ("media", "thumbs"):
             resource: S3BucketResource = getattr(state, f"{STATE_BUCKET_PREFIX_KEY}{key}")
-            body: bytes = f"hello-{key}".encode("utf-8")
+            body: bytes = f"hello-{key}".encode()
             await resource.client.put_object(
                 Bucket=resource.bucket_name,
                 Key=f"{key}.txt",
