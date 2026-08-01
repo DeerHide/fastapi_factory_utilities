@@ -289,6 +289,33 @@ def instrument_redis(
         )
 
 
+def instrument_aiobotocore(
+    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
+    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    meter_provider: MeterProvider,  # pylint: disable=unused-argument
+    tracer_provider: TracerProvider,
+) -> None:
+    """Instrument ``aiobotocore`` (async S3 / MinIO via the S3 plugin).
+
+    Args:
+        application (ApplicationAbstractProtocol): The application.
+        config (OpenTelemetryConfig): The configuration.
+        meter_provider (MeterProvider): The meter provider (unused; spans only).
+        tracer_provider (TracerProvider): The tracer provider.
+
+    Returns:
+        None
+    """
+    if find_spec(name="aiobotocore") and find_spec(name="opentelemetry.instrumentation.botocore"):
+        from opentelemetry.instrumentation.botocore import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+            AiobotocoreInstrumentor,
+        )
+
+        AiobotocoreInstrumentor().instrument(  # pyright: ignore[reportUnknownMemberType]
+            tracer_provider=tracer_provider,
+        )
+
+
 INSTRUMENTS: list[Callable[..., Any]] = [
     instrument_fastapi,
     instrument_aiohttp,
@@ -300,6 +327,7 @@ INSTRUMENTS: list[Callable[..., Any]] = [
     instrument_system_metrics,
     instrument_httpx,
     instrument_redis,
+    instrument_aiobotocore,
 ]
 
 __all__: list[str] = ["INSTRUMENTS"]

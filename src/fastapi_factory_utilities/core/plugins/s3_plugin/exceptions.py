@@ -17,3 +17,7 @@ class S3BucketResourceNotFoundError(S3PluginBaseError):
 
 class S3BucketNotFoundError(S3PluginBaseError):
     """Exception when a configured bucket does not exist on the S3 endpoint."""
+
+
+class S3PresignNotConfiguredError(S3PluginBaseError):
+    """Exception when a presigned URL is requested without ``presign_endpoint_url``."""

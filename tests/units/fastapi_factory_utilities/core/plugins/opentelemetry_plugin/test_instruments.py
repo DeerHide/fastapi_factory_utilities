@@ -10,6 +10,7 @@ from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import 
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments import (
     INSTRUMENTS,
     instrument_aio_pika,
+    instrument_aiobotocore,
     instrument_aiohttp,
     instrument_asyncio,
     instrument_fastapi,
@@ -38,6 +39,7 @@ class TestInstrumentsRegistry:
             instrument_system_metrics,
             instrument_httpx,
             instrument_redis,
+            instrument_aiobotocore,
         ]
 
 

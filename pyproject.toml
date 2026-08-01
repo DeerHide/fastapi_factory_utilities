@@ -75,6 +75,7 @@ opentelemetry-instrumentation-asyncio = "^0"
 opentelemetry-instrumentation-system-metrics = "^0"
 opentelemetry-instrumentation-httpx = "^0"
 opentelemetry-instrumentation-redis = "^0"
+opentelemetry-instrumentation-botocore = "^0.64b0"
 psutil = "^7"
 taskiq-dependencies = { version="^1.5.8", source="velmios"}
 taskiq-fastapi = "^0.5.0"

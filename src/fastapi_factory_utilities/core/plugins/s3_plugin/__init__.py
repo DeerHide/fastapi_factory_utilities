@@ -8,9 +8,11 @@ from .exceptions import (
     S3BucketResourceNotFoundError,
     S3PluginBaseError,
     S3PluginConfigError,
+    S3PresignNotConfiguredError,
 )
 from .plugins import S3Plugin
 from .resources import S3BucketResource
+from .urls import parse_bucket_and_key
 
 __all__: list[str] = [
     "STATE_BUCKET_PREFIX_KEY",
@@ -23,5 +25,7 @@ __all__: list[str] = [
     "S3Plugin",
     "S3PluginBaseError",
     "S3PluginConfigError",
+    "S3PresignNotConfiguredError",
     "depends_s3_client",
+    "parse_bucket_and_key",
 ]

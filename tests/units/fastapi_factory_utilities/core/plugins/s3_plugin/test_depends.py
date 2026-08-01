@@ -31,7 +31,12 @@ class TestS3BucketDepends:
 
     def test_call_resolves_resource(self) -> None:
         """Named bucket resource is resolved from state."""
-        resource: S3BucketResource = S3BucketResource(key="media", bucket_name="media-bucket", client=MagicMock())
+        resource: S3BucketResource = S3BucketResource(
+            key="media",
+            bucket_name="media-bucket",
+            client=MagicMock(),
+            endpoint_url="http://localhost:9000",
+        )
         mock_request: MagicMock = MagicMock()
         setattr(mock_request.app.state, f"{STATE_BUCKET_PREFIX_KEY}media", resource)
 
@@ -57,8 +62,18 @@ class TestS3BucketDepends:
     def test_multiple_keys(self) -> None:
         """Different depends instances resolve distinct resources sharing a client."""
         shared_client: MagicMock = MagicMock()
-        media: S3BucketResource = S3BucketResource(key="media", bucket_name="media-bucket", client=shared_client)
-        thumbs: S3BucketResource = S3BucketResource(key="thumbs", bucket_name="thumbs-bucket", client=shared_client)
+        media: S3BucketResource = S3BucketResource(
+            key="media",
+            bucket_name="media-bucket",
+            client=shared_client,
+            endpoint_url="http://localhost:9000",
+        )
+        thumbs: S3BucketResource = S3BucketResource(
+            key="thumbs",
+            bucket_name="thumbs-bucket",
+            client=shared_client,
+            endpoint_url="http://localhost:9000",
+        )
         mock_request: MagicMock = MagicMock()
         setattr(mock_request.app.state, f"{STATE_BUCKET_PREFIX_KEY}media", media)
         setattr(mock_request.app.state, f"{STATE_BUCKET_PREFIX_KEY}thumbs", thumbs)

@@ -43,6 +43,7 @@ class S3Builder:
         self._keys: list[str] | None = keys
         self._selected_buckets: dict[str, str] | None = None
         self._client_kwargs: dict[str, Any] | None = None
+        self._presign_client_kwargs: dict[str, Any] | None = None
 
     @property
     def config(self) -> S3Config | None:
@@ -58,6 +59,11 @@ class S3Builder:
     def client_kwargs(self) -> dict[str, Any] | None:
         """Return kwargs for ``session.client("s3", **kwargs)``."""
         return self._client_kwargs
+
+    @property
+    def presign_client_kwargs(self) -> dict[str, Any] | None:
+        """Return kwargs for the public-endpoint signing client, or None."""
+        return self._presign_client_kwargs
 
     def build_s3_config(self) -> Self:
         """Build the S3 configuration from YAML or use the injected config.
@@ -119,6 +125,16 @@ class S3Builder:
         self._selected_buckets = {key: self._config.buckets[key] for key in self._keys}
         return self
 
+    def _botocore_config(self) -> Config:
+        """Build the shared botocore Config for S3 clients."""
+        return Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path"},
+            connect_timeout=self.CONNECT_TIMEOUT_S,
+            read_timeout=self.READ_TIMEOUT_S,
+            retries={"max_attempts": self.MAX_ATTEMPTS, "mode": "standard"},
+        )
+
     def build_client_kwargs(self) -> Self:
         """Build aioboto3 / botocore client kwargs from configuration.
 
@@ -134,20 +150,43 @@ class S3Builder:
                 "build_s3_config method or through parameter."
             )
 
-        botocore_config: Config = Config(
-            signature_version="s3v4",
-            s3={"addressing_style": "path"},
-            connect_timeout=self.CONNECT_TIMEOUT_S,
-            read_timeout=self.READ_TIMEOUT_S,
-            retries={"max_attempts": self.MAX_ATTEMPTS, "mode": "standard"},
-        )
         self._client_kwargs = {
             "endpoint_url": self._config.endpoint_url,
             "aws_access_key_id": self._config.access_key_id,
             "aws_secret_access_key": self._config.secret_access_key,
             "region_name": self._config.region,
             "verify": self._config.resolve_verify(),
-            "config": botocore_config,
+            "config": self._botocore_config(),
+        }
+        return self
+
+    def build_presign_client_kwargs(self) -> Self:
+        """Build kwargs for the public-endpoint signing client when configured.
+
+        Returns:
+            Self for chaining.
+
+        Raises:
+            S3PluginConfigError: If configuration is not set.
+        """
+        if self._config is None:
+            raise S3PluginConfigError(
+                "S3 configuration is not set. Provide the S3 configuration using "
+                "build_s3_config method or through parameter."
+            )
+
+        presign_host: str | None = self._config.resolve_presign_host()
+        if presign_host is None:
+            self._presign_client_kwargs = None
+            return self
+
+        self._presign_client_kwargs = {
+            "endpoint_url": presign_host,
+            "aws_access_key_id": self._config.access_key_id,
+            "aws_secret_access_key": self._config.secret_access_key,
+            "region_name": self._config.region,
+            "verify": self._config.resolve_verify(),
+            "config": self._botocore_config(),
         }
         return self
 
@@ -160,4 +199,5 @@ class S3Builder:
         self.build_s3_config()
         self.build_selected_buckets()
         self.build_client_kwargs()
+        self.build_presign_client_kwargs()
         return self

@@ -60,3 +60,27 @@ class TestS3Config:
         """Empty-string ca_bundle normalizes to None."""
         config: S3Config = S3Config(**{**_base_kwargs(), "ca_bundle": ""})  # type: ignore[arg-type]
         assert config.ca_bundle is None
+
+    def test_presign_defaults(self) -> None:
+        """Presign fields default to unset / 900s."""
+        config: S3Config = S3Config(**_base_kwargs())  # type: ignore[arg-type]
+        assert config.presign_endpoint_url is None
+        assert config.presign_expiry_seconds == 900  # noqa: PLR2004
+        assert config.resolve_presign_host() is None
+        assert config.resolve_presign_path_prefix() is None
+
+    def test_presign_host_and_path_split(self) -> None:
+        """Presign endpoint splits into host-only signing URL and path prefix."""
+        config: S3Config = S3Config(
+            **{
+                **_base_kwargs(),
+                "presign_endpoint_url": "https://storage.example.com/storage",
+            }
+        )  # type: ignore[arg-type]
+        assert config.resolve_presign_host() == "https://storage.example.com"
+        assert config.resolve_presign_path_prefix() == "/storage"
+
+    def test_empty_presign_endpoint_becomes_none(self) -> None:
+        """Empty-string presign_endpoint_url normalizes to None."""
+        config: S3Config = S3Config(**{**_base_kwargs(), "presign_endpoint_url": ""})  # type: ignore[arg-type]
+        assert config.presign_endpoint_url is None

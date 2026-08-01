@@ -51,6 +51,7 @@ class S3Plugin(PluginAbstract):
         self._monitoring_subject: Subject[Status] | None = None
         self._exit_stack: AsyncExitStack | None = None
         self._s3_client: Any | None = None
+        self._presign_client: Any | None = None
         self._bucket_resources: dict[str, S3BucketResource] = {}
 
     def on_load(self) -> None:
@@ -119,6 +120,7 @@ class S3Plugin(PluginAbstract):
         assert self._builder is not None
         assert self._builder.client_kwargs is not None
         assert self._builder.selected_buckets is not None
+        assert self._builder.config is not None
 
         self._setup_status()
         assert self._monitoring_subject is not None
@@ -133,6 +135,12 @@ class S3Plugin(PluginAbstract):
             )
             await self._warm_client(client=self._s3_client)
             await self._ensure_buckets_exist(client=self._s3_client, buckets=self._builder.selected_buckets)
+
+            if self._builder.presign_client_kwargs is not None:
+                # Public proxy is GET-only; do not warm or head_bucket.
+                self._presign_client = await self._exit_stack.enter_async_context(
+                    session.client("s3", **self._builder.presign_client_kwargs)
+                )
         except Exception:  # pylint: disable=broad-except
             self._monitoring_subject.on_next(
                 value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
@@ -141,9 +149,11 @@ class S3Plugin(PluginAbstract):
                 await self._exit_stack.aclose()
                 self._exit_stack = None
                 self._s3_client = None
+                self._presign_client = None
             _logger.exception("S3 plugin failed to start.")
             raise
 
+        config: S3Config = self._builder.config
         self._add_to_state(key=STATE_S3_CLIENT_KEY, value=self._s3_client)
         self._bucket_resources = {}
         for key, bucket_name in self._builder.selected_buckets.items():
@@ -151,14 +161,19 @@ class S3Plugin(PluginAbstract):
                 key=key,
                 bucket_name=bucket_name,
                 client=self._s3_client,
+                endpoint_url=config.endpoint_url,
+                presign_client=self._presign_client,
+                presign_path_prefix=config.resolve_presign_path_prefix(),
+                presign_expiry_seconds=config.presign_expiry_seconds,
             )
             self._bucket_resources[key] = resource
             self._add_to_state(key=f"{STATE_BUCKET_PREFIX_KEY}{key}", value=resource)
 
         _logger.info(
             "S3 plugin started.",
-            endpoint_url=self._builder.config.endpoint_url if self._builder.config else None,
+            endpoint_url=config.endpoint_url,
             buckets=list(self._builder.selected_buckets.keys()),
+            presign_configured=self._presign_client is not None,
         )
         self._monitoring_subject.on_next(
             value=Status(health=HealthStatusEnum.HEALTHY, readiness=ReadinessStatusEnum.READY)
@@ -170,5 +185,6 @@ class S3Plugin(PluginAbstract):
             await self._exit_stack.aclose()
             self._exit_stack = None
         self._s3_client = None
+        self._presign_client = None
         self._bucket_resources = {}
         _logger.debug("S3 plugin shutdown.")

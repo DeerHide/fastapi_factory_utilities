@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Self
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -18,6 +19,8 @@ class S3Config(BaseModel):
     tls_verify: bool = True
     ca_bundle: Path | None = None
     buckets: dict[str, str] = Field(min_length=1)
+    presign_endpoint_url: str | None = None
+    presign_expiry_seconds: int = Field(default=900, ge=1)
 
     @field_validator("ca_bundle", mode="before")
     @classmethod
@@ -53,6 +56,21 @@ class S3Config(BaseModel):
         if value is not None and not value.is_file():
             raise ValueError("ca_bundle path must exist and be a regular file")
         return value
+
+    @field_validator("presign_endpoint_url", mode="before")
+    @classmethod
+    def normalize_presign_endpoint_url(cls, value: object) -> str | None:
+        """Treat empty presign_endpoint_url as unset.
+
+        Args:
+            value: Raw presign endpoint value.
+
+        Returns:
+            A non-empty string, or None.
+        """
+        if value is None or value == "":
+            return None
+        return str(value)
 
     @field_validator("buckets")
     @classmethod
@@ -102,3 +120,31 @@ class S3Config(BaseModel):
         if self.ca_bundle is not None:
             return str(self.ca_bundle)
         return self.tls_verify
+
+    def resolve_presign_host(self) -> str | None:
+        """Return ``scheme://netloc`` of ``presign_endpoint_url`` for botocore signing.
+
+        botocore folds the endpoint path into the SigV4 canonical URI; Gateways that
+        strip a path prefix before MinIO validates the signature require signing
+        against the host only, with the path re-injected after.
+
+        Returns:
+            Host-only endpoint URL, or None when presigning is unset.
+        """
+        if not self.presign_endpoint_url:
+            return None
+        parsed = urlparse(self.presign_endpoint_url)
+        if not parsed.scheme or not parsed.netloc:
+            return None
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    def resolve_presign_path_prefix(self) -> str | None:
+        """Return the path prefix of ``presign_endpoint_url`` (e.g. ``/storage``).
+
+        Returns:
+            Path prefix without trailing slash, or None when unset / empty.
+        """
+        if not self.presign_endpoint_url:
+            return None
+        prefix: str = urlparse(self.presign_endpoint_url).path.rstrip("/")
+        return prefix or None

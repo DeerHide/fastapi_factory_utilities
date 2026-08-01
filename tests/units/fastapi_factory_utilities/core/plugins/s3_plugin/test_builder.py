@@ -76,3 +76,14 @@ class TestS3Builder:
         assert botocore_config.read_timeout == S3Builder.READ_TIMEOUT_S
         assert botocore_config.retries.get("max_attempts") == S3Builder.MAX_ATTEMPTS  # type: ignore[union-attr]
         assert botocore_config.retries.get("mode") == "standard"  # type: ignore[union-attr]
+        assert builder.presign_client_kwargs is None
+
+    def test_presign_client_kwargs_uses_host_only(self) -> None:
+        """Presign client signs against scheme://netloc, not the path prefix."""
+        mock_app: MagicMock = MagicMock()
+        builder: S3Builder = S3Builder(
+            application=mock_app,
+            s3_config=_config(presign_endpoint_url="https://storage.example.com/storage"),
+        ).build_all()
+        assert builder.presign_client_kwargs is not None
+        assert builder.presign_client_kwargs["endpoint_url"] == "https://storage.example.com"

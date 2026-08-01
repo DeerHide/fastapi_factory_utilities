@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.21.0] - 2026-08-01
+
+### Added
+
+- ``S3BucketResource`` bucket-scoped async helpers: ``get_bytes``, ``put_bytes``,
+  ``put_file``, ``download_to_file``, ``head_or_none``, ``list_keys``, ``delete``,
+  ``object_url``, ``key_from_url``, and ``presigned_get_url``.
+- Canonical object-URL codec (``parse_bucket_and_key``) with a strict percent-encoded
+  path-style writer and a tolerant reader that accepts path-style and virtual-host
+  legacy URLs regardless of endpoint host.
+- ``S3Config.presign_endpoint_url`` / ``presign_expiry_seconds`` and a second
+  signing-only aioboto3 client (host-only SigV4 + public path-prefix re-injection).
+- OpenTelemetry ``AiobotocoreInstrumentor`` (``opentelemetry-instrumentation-botocore``)
+  wired into the OpenTelemetry plugin instrument list.
+
 ## [5.20.0] - 2026-08-01
 
 ### Added
@@ -780,7 +795,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.20.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.0...HEAD
+[5.21.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.20.0...v5.21.0
 [5.20.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.1...v5.20.0
 [5.19.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.0...v5.19.1
 [5.19.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.5...v5.19.0
