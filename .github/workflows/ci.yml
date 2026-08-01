@@ -28,31 +28,42 @@ jobs:
           python3.12 --version
           poetry --version
           uv --version
-      # Generate poetry.lock file for the CI and upload it as an artifact
-      - name: Setup a local virtual environment (if no poetry.toml file)
+      # Resolve poetry.lock at most once per UTC day per pyproject.toml hash.
+      - name: Compute UTC date for dependency cache keys
+        id: depdate
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      - name: Cache poetry.lock resolution
+        id: lock-cache
+        uses: actions/cache@v5.0.3
+        with:
+          path: poetry.lock
+          key: poetry-lock-${{ hashFiles('pyproject.toml') }}-${{ steps.depdate.outputs.date }}
+      - name: Cache virtual environment
+        id: venv-cache
+        uses: actions/cache@v5.0.3
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('pyproject.toml') }}-${{ steps.depdate.outputs.date }}
+      - name: Configure Poetry virtualenvs
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
+      - name: Resolve dependencies
+        if: steps.lock-cache.outputs.cache-hit != 'true'
+        run: |
+          export PATH="/home/runner/.local/bin:$PATH"
           poetry lock
+      - name: Install the project dependencies
+        if: steps.lock-cache.outputs.cache-hit != 'true' || steps.venv-cache.outputs.cache-hit != 'true'
+        run: |
+          export PATH="/home/runner/.local/bin:$PATH"
+          poetry install --with test
       - name: Upload poetry.lock
         uses: actions/upload-artifact@v7.0.0
         with:
           name: poetry-lock
           path: poetry.lock
-      # Define a cache for the virtual environment based on the dependencies lock file
-      # This will speed up the CI by avoiding to reinstall the dependencies if they are already installed
-      - uses: actions/cache@v5.0.3
-        name: Define a cache for the virtual environment based on the dependencies lock file
-        with:
-          path: ./.venv
-          key: venv-${{ hashFiles('poetry.lock') }}
-          restore-keys: |
-            venv-
-      - name: Install the project dependencies
-        run: |
-          export PATH="/home/runner/.local/bin:$PATH"
-          poetry install --with test
   # Job id is part of the dependency-snapshot correlator. Renaming strands the
   # previous manifest under syft; same-detector correlators merge, so stale
   # versions keep generating Dependabot alerts until the orphaned correlator is
