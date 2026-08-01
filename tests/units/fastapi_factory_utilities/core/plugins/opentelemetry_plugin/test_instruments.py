@@ -13,7 +13,9 @@ from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments imp
     instrument_aiohttp,
     instrument_asyncio,
     instrument_fastapi,
+    instrument_httpx,
     instrument_pymongo,
+    instrument_redis,
     instrument_requests,
     instrument_system_metrics,
     instrument_urllib3,
@@ -34,6 +36,8 @@ class TestInstrumentsRegistry:
             instrument_urllib3,
             instrument_asyncio,
             instrument_system_metrics,
+            instrument_httpx,
+            instrument_redis,
         ]
 
 
@@ -353,6 +357,111 @@ class TestInstrumentSystemMetrics(_BaseInstrumentTest):
             ) as instrumentor_cls,
         ):
             instrument_system_metrics(
+                application=application,
+                config=config,
+                meter_provider=meter_provider,
+                tracer_provider=tracer_provider,
+            )
+            instrumentor_cls.assert_not_called()
+
+
+class TestInstrumentHttpx(_BaseInstrumentTest):
+    """Tests for ``instrument_httpx``."""
+
+    def test_calls_httpx_instrumentor_when_packages_available(
+        self,
+        application: MagicMock,
+        config: OpenTelemetryConfig,
+        tracer_provider: MagicMock,
+        meter_provider: MagicMock,
+    ) -> None:
+        """Verify the HTTPX instrumentor is invoked with tracer and meter providers."""
+        with (
+            patch(
+                "fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments.find_spec",
+                return_value=MagicMock(),
+            ),
+            patch("opentelemetry.instrumentation.httpx.HTTPXClientInstrumentor") as instrumentor_cls,
+        ):
+            instrument_httpx(
+                application=application,
+                config=config,
+                meter_provider=meter_provider,
+                tracer_provider=tracer_provider,
+            )
+            instrumentor_cls.return_value.instrument.assert_called_once_with(
+                tracer_provider=tracer_provider,
+                meter_provider=meter_provider,
+            )
+
+    def test_noop_when_packages_missing(
+        self,
+        application: MagicMock,
+        config: OpenTelemetryConfig,
+        tracer_provider: MagicMock,
+        meter_provider: MagicMock,
+    ) -> None:
+        """Verify instrumentation is skipped if httpx or the instrumentor is missing."""
+        with (
+            patch(
+                "fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments.find_spec",
+                return_value=None,
+            ),
+            patch("opentelemetry.instrumentation.httpx.HTTPXClientInstrumentor") as instrumentor_cls,
+        ):
+            instrument_httpx(
+                application=application,
+                config=config,
+                meter_provider=meter_provider,
+                tracer_provider=tracer_provider,
+            )
+            instrumentor_cls.assert_not_called()
+
+
+class TestInstrumentRedis(_BaseInstrumentTest):
+    """Tests for ``instrument_redis``."""
+
+    def test_calls_redis_instrumentor_when_packages_available(
+        self,
+        application: MagicMock,
+        config: OpenTelemetryConfig,
+        tracer_provider: MagicMock,
+        meter_provider: MagicMock,
+    ) -> None:
+        """Verify the Redis instrumentor is invoked with the tracer provider only."""
+        with (
+            patch(
+                "fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments.find_spec",
+                return_value=MagicMock(),
+            ),
+            patch("opentelemetry.instrumentation.redis.RedisInstrumentor") as instrumentor_cls,
+        ):
+            instrument_redis(
+                application=application,
+                config=config,
+                meter_provider=meter_provider,
+                tracer_provider=tracer_provider,
+            )
+            instrumentor_cls.return_value.instrument.assert_called_once_with(
+                tracer_provider=tracer_provider,
+            )
+
+    def test_noop_when_packages_missing(
+        self,
+        application: MagicMock,
+        config: OpenTelemetryConfig,
+        tracer_provider: MagicMock,
+        meter_provider: MagicMock,
+    ) -> None:
+        """Verify instrumentation is skipped if redis or the instrumentor is missing."""
+        with (
+            patch(
+                "fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments.find_spec",
+                return_value=None,
+            ),
+            patch("opentelemetry.instrumentation.redis.RedisInstrumentor") as instrumentor_cls,
+        ):
+            instrument_redis(
                 application=application,
                 config=config,
                 meter_provider=meter_provider,

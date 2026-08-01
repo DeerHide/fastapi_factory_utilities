@@ -3,6 +3,7 @@
 from typing import Any, Self
 from urllib.parse import ParseResult, urlparse
 
+from opentelemetry.baggage.propagation import W3CBaggagePropagator
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
     OTLPMetricExporter as OTLPMetricExporterGRPC,
 )
@@ -18,6 +19,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.propagators.b3 import B3MultiFormat
+from opentelemetry.propagators.composite import CompositePropagator
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import MetricReader, PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import (
@@ -30,6 +32,7 @@ from opentelemetry.sdk.resources import (
 from opentelemetry.sdk.trace import SynchronousMultiSpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import set_tracer_provider
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import (
     OpenTelemetryMeterConfig,
@@ -106,10 +109,14 @@ class OpenTelemetryPluginBuilder:
     def build_resource(self) -> Self:
         """Build a resource object for OpenTelemetry from the application and configs.
 
+        Uses ``Resource.create`` so ``OTEL_RESOURCE_ATTRIBUTES`` (and other
+        SDK resource detectors) merge with the application attributes. App
+        keys win on conflict.
+
         Returns:
             Self: The OpenTelemetryPluginFactory object.
         """
-        self._resource = Resource(
+        self._resource = Resource.create(
             attributes={
                 DEPLOYMENT_ENVIRONMENT: self._application.get_config().application.environment.value,
                 SERVICE_NAME: self._application.get_config().application.service_name,
@@ -283,8 +290,16 @@ class OpenTelemetryPluginBuilder:
             active_span_processor = SynchronousMultiSpanProcessor()
             active_span_processor.add_span_processor(span_processor=span_processor)
 
-            # Setup the TextMap Propagator for B3
-            set_global_textmap(http_text_format=B3MultiFormat())
+            # W3C tracecontext + baggage first; B3 kept for existing peers.
+            set_global_textmap(
+                http_text_format=CompositePropagator(
+                    [
+                        TraceContextTextMapPropagator(),
+                        W3CBaggagePropagator(),
+                        B3MultiFormat(),
+                    ]
+                )
+            )
 
         # Setup the Tracer Provider
         self._tracer_provider = TracerProvider(

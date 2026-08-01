@@ -233,6 +233,62 @@ def instrument_system_metrics(
         )
 
 
+def instrument_httpx(
+    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
+    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    meter_provider: MeterProvider,
+    tracer_provider: TracerProvider,
+) -> None:
+    """Instrument the ``httpx`` HTTP client.
+
+    Args:
+        application (ApplicationAbstractProtocol): The application.
+        config (OpenTelemetryConfig): The configuration.
+        meter_provider (MeterProvider): The meter provider.
+        tracer_provider (TracerProvider): The tracer provider.
+
+    Returns:
+        None
+    """
+    if find_spec(name="httpx") and find_spec(name="opentelemetry.instrumentation.httpx"):
+        from opentelemetry.instrumentation.httpx import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+            HTTPXClientInstrumentor,
+        )
+
+        HTTPXClientInstrumentor().instrument(  # pyright: ignore[reportUnknownMemberType]
+            tracer_provider=tracer_provider,
+            meter_provider=meter_provider,
+        )
+
+
+def instrument_redis(
+    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
+    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    meter_provider: MeterProvider,  # pylint: disable=unused-argument
+    tracer_provider: TracerProvider,
+) -> None:
+    """Instrument the ``redis`` client (Valkey / Taskiq-redis).
+
+    Args:
+        application (ApplicationAbstractProtocol): The application.
+        config (OpenTelemetryConfig): The configuration.
+        meter_provider (MeterProvider): The meter provider (unused; the
+            redis instrumentor only emits spans).
+        tracer_provider (TracerProvider): The tracer provider.
+
+    Returns:
+        None
+    """
+    if find_spec(name="redis") and find_spec(name="opentelemetry.instrumentation.redis"):
+        from opentelemetry.instrumentation.redis import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+            RedisInstrumentor,
+        )
+
+        RedisInstrumentor().instrument(  # pyright: ignore[reportUnknownMemberType]
+            tracer_provider=tracer_provider,
+        )
+
+
 INSTRUMENTS: list[Callable[..., Any]] = [
     instrument_fastapi,
     instrument_aiohttp,
@@ -242,6 +298,8 @@ INSTRUMENTS: list[Callable[..., Any]] = [
     instrument_urllib3,
     instrument_asyncio,
     instrument_system_metrics,
+    instrument_httpx,
+    instrument_redis,
 ]
 
 __all__: list[str] = ["INSTRUMENTS"]

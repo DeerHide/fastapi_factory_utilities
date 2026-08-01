@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.20.0] - 2026-08-01
+
+### Added
+
+- OpenTelemetry auto-instrumentation for ``httpx`` and ``redis`` (opt-in via
+  package presence, same ``find_spec`` pattern as other instruments).
+
+### Changed
+
+- ``OpenTelemetryPluginBuilder.build_resource`` uses ``Resource.create`` so
+  ``OTEL_RESOURCE_ATTRIBUTES`` (e.g. ``environment=stg``) merges with
+  application ``service.*`` / ``deployment.environment`` attributes.
+- Trace context propagator is now a composite of W3C ``tracecontext``,
+  ``baggage``, and B3 multi (was B3-only).
+
 ## [5.19.1] - 2026-07-29
 
 ### Fixed
@@ -765,7 +780,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.20.0...HEAD
+[5.20.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.1...v5.20.0
 [5.19.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.0...v5.19.1
 [5.19.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.5...v5.19.0
 [5.18.5]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.18.4...v5.18.5
