@@ -89,9 +89,11 @@ jobs:
       # upstream fetch, so grype auto-update stays on.
       - name: Seed Grype DB from node cache
         run: |
-          if [ -d /var/cache/grype-db/db ]; then
-            mkdir -p "$HOME/.cache/grype"
-            cp -r /var/cache/grype-db/. "$HOME/.cache/grype/"
+          if [ -d /var/cache/grype-db/6 ]; then
+            # DaemonSet sets GRYPE_DB_CACHE_DIR=/cache → /cache/6/; default
+            # grype cache is ~/.cache/grype/db/6/. Copy into the db/ subdir.
+            mkdir -p "$HOME/.cache/grype/db"
+            cp -r /var/cache/grype-db/. "$HOME/.cache/grype/db/"
           else
             echo "node Grype DB cache is cold; grype will fetch from upstream"
           fi
