@@ -255,13 +255,28 @@ def _is_mapping(value: Any) -> bool:
     return isinstance(value, dict)
 
 
-def _flatten_dict(data: dict[str, Any], *, prefix: str = "") -> dict[str, Any]:
-    """Flatten dictionaries into dotted paths."""
+def _flatten_dict(
+    data: dict[str, Any],
+    *,
+    prefix: str = "",
+    stop_at: set[str] | None = None,
+) -> dict[str, Any]:
+    """Flatten dictionaries into dotted paths.
+
+    When ``stop_at`` is provided, a path that is already a known updateable leaf
+    is kept as a whole value instead of being descended into. That lets a
+    union-typed updateable field (opaque to the model walker) be replaced
+    wholesale rather than key-patched under its children.
+    """
+    leaves: set[str] = stop_at or set()
     flattened: dict[str, Any] = {}
     for key, value in data.items():
         path = f"{prefix}.{key}" if prefix else key
+        if path in leaves:
+            flattened[path] = value
+            continue
         if _is_mapping(value):
-            nested = _flatten_dict(value, prefix=path)
+            nested = _flatten_dict(value, prefix=path, stop_at=stop_at)
             if nested:
                 flattened.update(nested)
             else:
@@ -501,7 +516,7 @@ class ApiResponseModelAbstract(BaseModel):
 
         original_data = entity_original.model_dump(mode="python")
         request_data = put_request.model_dump(mode="python")
-        flattened_request = _flatten_dict(request_data)
+        flattened_request = _flatten_dict(request_data, stop_at=updateable_paths)
 
         ignored_paths: list[str] = []
         unchanged_paths: list[str] = []
