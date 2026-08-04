@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.21.1] - 2026-08-04
+
+### Fixed
+
+- ``reconcile_update_request`` replaces union-typed updateable fields wholesale:
+  ``_flatten_dict`` stops descending at known updateable leaves so a
+  discriminated-union value is not key-patched into ignored child paths.
+
 ## [5.21.0] - 2026-08-01
 
 ### Added
@@ -795,7 +803,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.1...HEAD
+[5.21.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.0...v5.21.1
 [5.21.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.20.0...v5.21.0
 [5.20.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.1...v5.20.0
 [5.19.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.0...v5.19.1
