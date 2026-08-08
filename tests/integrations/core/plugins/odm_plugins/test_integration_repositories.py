@@ -213,3 +213,30 @@ class TestAbstractRepository:
         assert sorted_entities[0].my_field == "C"
         assert sorted_entities[1].my_field == "B"
         assert sorted_entities[2].my_field == "A"
+
+    @pytest.mark.asyncio()
+    async def test_count_all_and_filtered(self, async_motor_database: AsyncDatabase[Any]) -> None:
+        """Test count method with and without filters."""
+        await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
+        repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
+
+        entities = [
+            EntityForTest(id=uuid4(), my_field="test_1", category="A"),
+            EntityForTest(id=uuid4(), my_field="test_2", category="A"),
+            EntityForTest(id=uuid4(), my_field="test_3", category="B"),
+        ]
+        for entity in entities:
+            await repository.insert(entity=entity)
+
+        assert await repository.count() == 3  # noqa: PLR2004
+        assert await repository.count({"category": "A"}) == 2  # noqa: PLR2004
+        assert await repository.count({"category": "missing"}) == 0
+
+    @pytest.mark.asyncio()
+    async def test_collection_name_accessor(self, async_motor_database: AsyncDatabase[Any]) -> None:
+        """Public collection_name does not require reaching into _document_type."""
+        await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
+        repository: RepositoryForTest = RepositoryForTest(database=async_motor_database)
+        assert repository.collection_name == DocumentForTest.get_collection_name()
+        assert isinstance(repository.collection_name, str)
+        assert repository.collection_name != ""

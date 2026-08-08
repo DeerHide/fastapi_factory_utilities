@@ -53,6 +53,15 @@ class AbstractRepository(ABC, Generic[DocumentGenericType, EntityGenericType]):
         self._document_type: type[DocumentGenericType] = generic_args[0]
         self._entity_type: type[EntityGenericType] = generic_args[1]
 
+    @property
+    def collection_name(self) -> str:
+        """Return the Mongo collection name for this repository's document type.
+
+        Returns:
+            The collection name (from Beanie document settings).
+        """
+        return self._document_type.get_collection_name()
+
     @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncClientSession, None]:
         """Yield a new session."""
@@ -280,3 +289,28 @@ class AbstractRepository(ABC, Generic[DocumentGenericType, EntityGenericType]):
             raise ValueError(f"Failed to create entity from document: {error}") from error
 
         return entities
+
+    @managed_session()
+    async def count(
+        self,
+        *args: Mapping[str, Any] | bool,
+        session: AsyncClientSession | None = None,
+        **pymongo_kwargs: Any,
+    ) -> int:
+        """Count documents matching the given filter.
+
+        Args:
+            *args: The arguments to pass to the find/count method.
+            session: The session to use.
+            **pymongo_kwargs: Additional keyword arguments to pass to the find method.
+
+        Returns:
+            The number of matching documents.
+
+        Raises:
+            OperationError: If the operation fails.
+        """
+        try:
+            return await self._document_type.find(*args, session=session, **pymongo_kwargs).count()
+        except PyMongoError as error:
+            raise OperationError(f"Failed to count documents: {error}") from error
