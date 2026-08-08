@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.21.2] - 2026-08-08
+
 ### Fixed
 
 - Aiopika ``AbstractListener`` rejects decode/validation poison with
@@ -809,7 +811,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.2...HEAD
+[5.21.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.1...v5.21.2
 [5.21.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.0...v5.21.1
 [5.21.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.20.0...v5.21.0
 [5.20.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.19.1...v5.20.0
