@@ -44,7 +44,7 @@ class AbstractManagedListener(AbstractListener[GenericManagedMessageType], Gener
 
     LISTENER_CONCURRENCY_LIMIT: ClassVar[int | None] = None
     GATE_KEY: ClassVar[str | None] = None
-    POISON_MESSAGE_REQUEUE: ClassVar[bool] = True
+    POISON_MESSAGE_REQUEUE: ClassVar[bool] = False
     ENABLE_TELEMETRY: ClassVar[bool] = True
 
     def __init__(

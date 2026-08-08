@@ -57,18 +57,20 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessageType]):
             json_body = json.loads(body)
         except json.JSONDecodeError as e:
             _logger.error("Failed to decode message", error=e, body=incoming_message.body)
-            await incoming_message.reject(requeue=True)
+            # Poison: invalid JSON never becomes valid by requeue.
+            await incoming_message.reject(requeue=False)
             return
         except Exception as e:  # pylint: disable=broad-exception-caught
             _logger.error("Failed to decode message", error=e, body=incoming_message.body)
-            await incoming_message.reject(requeue=True)
+            await incoming_message.reject(requeue=False)
             return
         # Validate the message body to the message type
         try:
             message = self._message_type.model_validate(json_body)
         except ValidationError as e:
             _logger.error("Failed to validate message", error=e, body=body)
-            await incoming_message.reject(requeue=True)
+            # Poison: schema mismatch never becomes valid by requeue.
+            await incoming_message.reject(requeue=False)
             return
         message.set_incoming_message(incoming_message=incoming_message)
         await self.on_message(message=message)

@@ -147,19 +147,30 @@ class TestAbstractManagedListenerPipeline:
         incoming.reject.assert_awaited_once_with(requeue=True)
 
     @pytest.mark.asyncio
-    async def test_poison_message_drop_when_requeue_disabled(self) -> None:
-        """Invalid JSON is dropped when POISON_MESSAGE_REQUEUE is False."""
-
-        class DropPoisonListener(_ManagedListener):
-            POISON_MESSAGE_REQUEUE = False
-
-        listener = DropPoisonListener(queue=MagicMock(), telemetry=NoOpConsumerTelemetry())
+    async def test_poison_message_dropped_by_default(self) -> None:
+        """Invalid JSON is poison — default POISON_MESSAGE_REQUEUE is False."""
+        listener = _ManagedListener(queue=MagicMock(), telemetry=NoOpConsumerTelemetry())
         incoming = self._incoming({})
         incoming.body = b"not-json"
 
         await listener._on_message(incoming)  # type: ignore[attr-defined]
 
         incoming.reject.assert_awaited_once_with(requeue=False)
+
+    @pytest.mark.asyncio
+    async def test_poison_message_requeue_when_explicitly_enabled(self) -> None:
+        """Subclasses may opt back into requeue for poison bodies."""
+
+        class RequeuePoisonListener(_ManagedListener):
+            POISON_MESSAGE_REQUEUE = True
+
+        listener = RequeuePoisonListener(queue=MagicMock(), telemetry=NoOpConsumerTelemetry())
+        incoming = self._incoming({})
+        incoming.body = b"not-json"
+
+        await listener._on_message(incoming)  # type: ignore[attr-defined]
+
+        incoming.reject.assert_awaited_once_with(requeue=True)
 
     @pytest.mark.asyncio
     async def test_precheck_exception_requeues(self) -> None:

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Aiopika ``AbstractListener`` rejects decode/validation poison with
+  ``requeue=False`` (invalid bodies never become valid by redelivery).
+- ``AbstractManagedListener.POISON_MESSAGE_REQUEUE`` default is now ``False``.
+
 ## [5.21.1] - 2026-08-04
 
 ### Fixed

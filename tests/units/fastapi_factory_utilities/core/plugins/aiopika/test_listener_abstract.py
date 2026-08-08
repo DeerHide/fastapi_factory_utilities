@@ -189,8 +189,8 @@ class TestAbstractListenerOnMessage:
         incoming.reject.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_json_decode_error_rejects_requeue(self) -> None:
-        """Invalid JSON triggers reject with requeue."""
+    async def test_json_decode_error_rejects_without_requeue(self) -> None:
+        """Invalid JSON is poison — reject without requeue."""
         queue_resource = MagicMock()
         listener = _RecordingListener(queue=queue_resource)
         incoming = self._incoming(b"not-json{")
@@ -198,11 +198,11 @@ class TestAbstractListenerOnMessage:
         await listener._on_message(incoming)  # type: ignore[attr-defined]
 
         assert not listener.on_calls
-        incoming.reject.assert_awaited_once_with(requeue=True)
+        incoming.reject.assert_awaited_once_with(requeue=False)
 
     @pytest.mark.asyncio
-    async def test_non_json_decode_failure_rejects_requeue(self) -> None:
-        """Non-decodable UTF-8 body triggers reject with requeue."""
+    async def test_non_json_decode_failure_rejects_without_requeue(self) -> None:
+        """Non-decodable UTF-8 body is poison — reject without requeue."""
         queue_resource = MagicMock()
         listener = _RecordingListener(queue=queue_resource)
         incoming = self._incoming(b"\xff\xfe")
@@ -210,11 +210,11 @@ class TestAbstractListenerOnMessage:
         await listener._on_message(incoming)  # type: ignore[attr-defined]
 
         assert not listener.on_calls
-        incoming.reject.assert_awaited_once_with(requeue=True)
+        incoming.reject.assert_awaited_once_with(requeue=False)
 
     @pytest.mark.asyncio
-    async def test_validation_error_rejects_requeue(self) -> None:
-        """Schema validation failure triggers reject with requeue."""
+    async def test_validation_error_rejects_without_requeue(self) -> None:
+        """Schema validation failure is poison — reject without requeue."""
         queue_resource = MagicMock()
         listener = _RecordingListener(queue=queue_resource)
         incoming = self._incoming(json.dumps({"data": {}}).encode("utf-8"))
@@ -222,4 +222,4 @@ class TestAbstractListenerOnMessage:
         await listener._on_message(incoming)  # type: ignore[attr-defined]
 
         assert not listener.on_calls
-        incoming.reject.assert_awaited_once_with(requeue=True)
+        incoming.reject.assert_awaited_once_with(requeue=False)
