@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.22.0] - 2026-08-08
+
+### Added
+
+- ``RedisPlugin`` — general-purpose async Redis client (``redis.asyncio``) with
+  ``build_key`` namespacing, Depends accessors for HTTP/Taskiq, startup ``ping``,
+  shutdown ``aclose``, and ``StatusService`` registration as ``CACHE``. Separate
+  pool from ``TaskiqPlugin``; no TTL/serialization/fail-open policy in the plugin.
+- Direct ``redis`` dependency (``^8.0``).
+- ``AbstractRepository.count()`` and public ``collection_name`` accessor for
+  global match counts without reaching into ``_document_type``.
+
 ## [5.21.2] - 2026-08-08
 
 ### Fixed
@@ -811,7 +823,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.22.0...HEAD
+[5.22.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.2...v5.22.0
 [5.21.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.1...v5.21.2
 [5.21.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.0...v5.21.1
 [5.21.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.20.0...v5.21.0
