@@ -87,6 +87,10 @@ hypercorn = "^0.18.0"
 granian = "^2.7"
 cacheout = "^0.16.0"
 aioboto3 = "^15.0.0"
+# Optional testing doubles (install via `fastapi_factory_utilities[testing]`).
+pymongo-async-mock = {version = "^0.1.3", optional = true}
+fakeredis = {version = "^2.26.0", optional = true}
+moto = {version = "^5.0.0", extras = ["server"], optional = true}
 
 [tool.poetry.group.test]
 optional = true
@@ -103,7 +107,6 @@ pytest-xdist = "^3.6.1"
 pytest-cov = "^7.0.0"
 ruff = "^0"
 pytest-asyncio = ">=0.25,<1.4"
-pytest-mongo = "^4.0.0"
 locust = "^2.45.0"
 testcontainers = {version = "^4.9.0", extras = ["mongodb", "rabbitmq", "redis", "minio"]}
 types-deprecated = "^1.3.1.20260520"
@@ -115,8 +118,15 @@ types-pyopenssl = "^24.1.0.20240722"
 types-ujson = "^5.10.0.20240515"
 httpx = "^0.28.1"
 minio = "^7"
+pymongo-async-mock = "^0.1.3"
+fakeredis = "^2.26.0"
+moto = {version = "^5.0.0", extras = ["server"]}
 
 [tool.poetry.extras]
+testing = ["pymongo-async-mock", "fakeredis", "moto"]
+
+[tool.poetry.plugins."pytest11"]
+fastapi_factory_utilities = "fastapi_factory_utilities.core.testing.plugin"
 
 [tool.poetry.scripts]
 fastapi_factory_utilities-example = "fastapi_factory_utilities.example.__main__:main"
@@ -138,7 +148,6 @@ filterwarnings = [
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-mongo_params = ""
 
 [tool.black]
 line-length = 120

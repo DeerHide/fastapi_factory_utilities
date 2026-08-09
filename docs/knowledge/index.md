@@ -104,7 +104,7 @@ When working with this codebase, provide the AI with:
 - **Configuration**: Extend `RootConfig` for custom config
 - **Repositories**: Implement `AbstractRepository` for data access
 - **Exceptions**: Extend `FastAPIFactoryUtilitiesError` with auto-logging
-- **Testing**: Use in-memory mockers from `odm_plugin.mockers` and `aiohttp.mockers`
+- **Testing**: Use `core.testing` driver-seam doubles (mongomock, fakeredis, moto, …); see [Development Guide](development-guide.md#testing-patterns)
 
 ### Common Extension Points
 

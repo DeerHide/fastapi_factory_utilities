@@ -9,6 +9,7 @@ Objectives:
 
 import datetime
 import re
+import warnings
 from abc import ABC
 from collections.abc import AsyncGenerator, Callable, Mapping
 from contextlib import asynccontextmanager
@@ -177,8 +178,12 @@ def managed_session() -> Callable[[Callable[..., Any]], Callable[..., Any]]:
 class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGenericType]):
     """Abstract repository in memory for testing purposes.
 
-    This class provides an in-memory implementation of the repository pattern,
-    allowing tests to run without requiring a real database connection.
+    .. deprecated::
+        Prefer the mongomock-backed driver fake from
+        ``fastapi_factory_utilities.core.testing``
+        (``build_mongomock_database`` / ``mongomock_database`` fixture) so Beanie
+        and ``AbstractRepository`` run for real. This class hand-rolls a partial
+        query engine and will be removed after one release cycle.
     """
 
     def __init__(self, entities: list[EntityGenericType] | None = None) -> None:
@@ -187,6 +192,14 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
         Args:
             entities: Optional list of entities to pre-populate the repository with.
         """
+        warnings.warn(
+            "AbstractRepositoryInMemory is deprecated; use "
+            "fastapi_factory_utilities.core.testing.build_mongomock_database "
+            "(or the mongomock_database fixture) so Beanie/AbstractRepository "
+            "run against mongomock. This class will be removed after one release cycle.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._entities: dict[UUID, EntityGenericType] = {}
         if entities is not None:
             for entity in entities:

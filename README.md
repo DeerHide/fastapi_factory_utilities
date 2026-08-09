@@ -383,7 +383,15 @@ poetry run pytest tests/units/test_exceptions.py
 poetry run pytest -n auto
 ```
 
-> 📖 See [Development Guide - Testing](docs/knowledge/development-guide.md#running-tests) for testing patterns.
+Downstream services that want the shipped infra doubles (mongomock, fakeredis,
+moto, Taskiq `InMemoryBroker`, OTel in-memory exporters, recording AMQP
+publisher) install the optional extra and get fixtures via the `pytest11` plugin:
+
+```bash
+pip install 'fastapi_factory_utilities[testing]'
+```
+
+> 📖 See [Development Guide - Testing](docs/knowledge/development-guide.md#testing-patterns) for the driver-seam strategy, `RepositoryContract`, and container-only boundaries.
 
 ### Code Quality
 
