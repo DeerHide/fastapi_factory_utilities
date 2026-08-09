@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.23.0] - 2026-08-09
+
+### Added
+
+- ``fastapi_factory_utilities.core.testing`` — infrastructure test doubles at the
+  driver seam: mongomock via ``pymongo-async-mock`` (``build_mongomock_database``),
+  ``fakeredis``, moto ``ThreadedMotoServer`` for S3, ``taskiq.InMemoryBroker`` for
+  Taskiq, OTel in-memory exporters, plus a recording-only ``InMemoryPublisher`` and
+  ``build_incoming_message`` for AMQP (no broker simulation).
+- ``RepositoryContract`` shared suite run against both mongomock and a real Mongo
+  testcontainer in CI so the fake cannot silently drift from production.
+- ``testing`` Poetry extra (``pymongo-async-mock``, ``fakeredis``, ``moto[server]``)
+  and a ``pytest11`` plugin that registers the fixtures.
+- Container-only boundary documented: Mongo transactions / multi-doc atomicity and
+  all AMQP broker semantics (routing, confirms, DLX/TTL retry).
+
+### Deprecated
+
+- ``AbstractRepositoryInMemory`` — prefer ``build_mongomock_database`` /
+  ``mongomock_database`` so Beanie and ``AbstractRepository`` execute for real.
+  Emits ``DeprecationWarning``; removal planned after one release cycle.
+
+### Removed
+
+- Unused ``pytest-mongo`` test dependency.
+- ``find_spec("pytest")`` gating on ODM / aiohttp mocker exports (always exported).
+
 ## [5.22.0] - 2026-08-08
 
 ### Added
@@ -823,7 +850,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.22.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.23.0...HEAD
+[5.23.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.22.0...v5.23.0
 [5.22.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.2...v5.22.0
 [5.21.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.1...v5.21.2
 [5.21.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.0...v5.21.1
