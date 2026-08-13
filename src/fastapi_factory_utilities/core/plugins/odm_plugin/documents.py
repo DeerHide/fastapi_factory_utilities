@@ -30,3 +30,7 @@ class BaseDocument(Document):
         """Meta class for BaseDocument."""
 
         use_revision = True
+
+        # Dotted field paths (e.g. "creds.client_secret") to encrypt with CSFLE. Subclasses
+        # override this list; see `fastapi_factory_utilities.core.plugins.odm_plugin.encryption`.
+        encrypted_fields: list[str] = []  # noqa: RUF012

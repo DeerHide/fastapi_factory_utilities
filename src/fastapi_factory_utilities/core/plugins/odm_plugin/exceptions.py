@@ -23,3 +23,15 @@ class OperationError(ODMPluginBaseException):
     """Exception for when an operation fails."""
 
     pass
+
+
+class VaultUnwrapError(ODMPluginConfigError):
+    """Exception for when the CSFLE master key cannot be unwrapped from Vault."""
+
+    pass
+
+
+class EncryptedFieldIndexCollisionError(ODMPluginConfigError):
+    """Exception for when a declared encrypted field is also indexed."""
+
+    pass

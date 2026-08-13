@@ -19,7 +19,10 @@ from .fixtures.minio import (
 )
 from .fixtures.mongo import (
     fixture_async_motor_database,
+    fixture_csfle_fake_local_key,
+    fixture_encrypting_odm_factory,
     fixture_mongodb_database_name,
+    fixture_mongodb_enterprise_server_as_container,
     fixture_mongodb_server_as_container,
     fixture_odm_plugin_factory,
 )
@@ -50,9 +53,12 @@ setup_log(
 __all__: list[str] = [
     "fixture_aiopika_plugin",
     "fixture_async_motor_database",
+    "fixture_csfle_fake_local_key",
+    "fixture_encrypting_odm_factory",
     "fixture_microcks_container",
     "fixture_minio_container",
     "fixture_mongodb_database_name",
+    "fixture_mongodb_enterprise_server_as_container",
     "fixture_mongodb_server_as_container",
     "fixture_odm_plugin_factory",
     "fixture_rabbitmq_container",

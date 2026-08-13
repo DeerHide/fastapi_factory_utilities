@@ -16,6 +16,16 @@ opentelemetry:
 odm:
   uri: "${MONGO_URI:mongodb://localhost:27017}"
   database: "test"
+  # CSFLE (Client-Side Field Level Encryption), disabled by default. See
+  # fastapi_factory_utilities.core.plugins.odm_plugin.encryption for the field declaration
+  # mechanism. No shared-library path: mongocryptd is resolved from PATH.
+  # csfle_enabled: "${MONGO_CSFLE_ENABLED:false}"
+  # csfle_vault_address: "${MONGO_CSFLE_VAULT_ADDRESS:}"
+  # csfle_vault_auth_mount: "${MONGO_CSFLE_VAULT_AUTH_MOUNT:kubernetes-green}"
+  # csfle_vault_role: "${MONGO_CSFLE_VAULT_ROLE:}"
+  # csfle_vault_transit_key: "${MONGO_CSFLE_VAULT_TRANSIT_KEY:}"
+  # csfle_master_key_ciphertext: "${MONGO_CSFLE_MASTER_KEY_CIPHERTEXT:}"
+  # csfle_key_vault_collection: "__keyVault"
 
 logging:
   - name: pymongo

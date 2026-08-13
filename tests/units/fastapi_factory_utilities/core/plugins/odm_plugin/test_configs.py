@@ -48,3 +48,31 @@ class TestODMConfig:
         """Extra fields are forbidden."""
         with pytest.raises(ValidationError):
             ODMConfig(uri="mongodb://localhost:27017", unknown_field=True)
+
+    def test_csfle_disabled_by_default(self) -> None:
+        """CSFLE is off, and its fields are unset, unless explicitly configured."""
+        config: ODMConfig = ODMConfig(uri="mongodb://localhost:27017")
+
+        assert config.csfle_enabled is False
+        assert config.csfle_vault_address is None
+        assert config.csfle_key_vault_collection == "__keyVault"
+
+    def test_csfle_enabled_with_all_fields_set(self) -> None:
+        """CSFLE can be enabled when every required field is provided."""
+        config: ODMConfig = ODMConfig(
+            uri="mongodb://localhost:27017",
+            csfle_enabled=True,
+            csfle_vault_address="https://vault.red.velmios.io",
+            csfle_vault_auth_mount="kubernetes-green",
+            csfle_vault_role="payments-csfle-stg",
+            csfle_vault_transit_key="csfle-stg",
+            csfle_master_key_ciphertext="vault:v1:csfle-stg:AAAA....",
+        )
+
+        assert config.csfle_enabled is True
+        assert config.csfle_vault_transit_key == "csfle-stg"
+
+    def test_csfle_enabled_without_required_fields_is_rejected(self) -> None:
+        """Enabling CSFLE without its Vault fields fails validation, naming the missing fields."""
+        with pytest.raises(ValidationError, match="csfle_vault_address"):
+            ODMConfig(uri="mongodb://localhost:27017", csfle_enabled=True)

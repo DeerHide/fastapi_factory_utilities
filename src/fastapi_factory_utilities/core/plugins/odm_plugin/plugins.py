@@ -5,6 +5,7 @@ from logging import INFO, Logger, getLogger
 from typing import Any, Self, cast
 
 from beanie import Document, init_beanie  # pyright: ignore[reportUnknownVariableType]
+from bson import ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.asynchronous.mongo_client import AsyncMongoClient
 from reactivex import Subject
@@ -27,6 +28,7 @@ from .builder import ODMBuilder
 from .configs import ODMConfig
 from .depends import depends_odm_client, depends_odm_database
 from .documents import BaseDocument
+from .encryption import STARTUP_PROBE_COLLECTION, STARTUP_PROBE_FIELD
 from .exceptions import OperationError, UnableToCreateEntityDueToDuplicateKeyError
 from .helpers import PersistedEntity
 from .repositories import AbstractRepository
@@ -91,6 +93,36 @@ class ODMPlugin(PluginAbstract):
             _logger.exception("ODM plugin failed to start.")
             raise
 
+    async def _run_csfle_startup_probe(self) -> None:
+        """Force mongocryptd to spawn and connect at startup rather than on the first real write.
+
+        PyMongo spawns mongocryptd lazily, on the first automatically-encrypted operation,
+        unlike crypt_shared, which loads eagerly at client construction (see design.md
+        decision 3). A throwaway encrypted insert+delete against a dedicated startup-probe
+        collection closes that gap: a broken mongocryptd install, or Vault/key vault having
+        gone unreachable between the earlier unwrap and now, surfaces here instead of on the
+        first real request. There is no fallback to a non-encrypting client on failure.
+
+        Raises:
+            Exception: Any failure inserting or deleting the probe document. Marks the ODM
+                StatusService component unhealthy and re-raises.
+        """
+        assert self._odm_client is not None
+        assert self._odm_database is not None
+        assert self._monitoring_subject is not None
+
+        collection = self._odm_client[self._odm_database.name][STARTUP_PROBE_COLLECTION]
+        probe_id: ObjectId = ObjectId()
+        try:
+            await collection.insert_one({"_id": probe_id, STARTUP_PROBE_FIELD: "startup-smoke-test"})
+            await collection.delete_one({"_id": probe_id})
+        except Exception:  # pylint: disable=broad-except
+            self._monitoring_subject.on_next(
+                value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
+            )
+            _logger.exception("CSFLE startup smoke test failed: mongocryptd spawn/connect or Vault unreachable.")
+            raise
+
     async def _warm_pool(self, client: AsyncMongoClient[Any], timeout_s: float) -> None:
         """Warm the MongoDB connection with a single ping round-trip.
 
@@ -115,7 +147,8 @@ class ODMPlugin(PluginAbstract):
         assert self._component_instance is not None
 
         try:
-            odm_factory: ODMBuilder = ODMBuilder(application=self._application, odm_config=self._odm_config).build_all()
+            odm_factory: ODMBuilder = ODMBuilder(application=self._application, odm_config=self._odm_config)
+            await odm_factory.build_all(document_models=self._document_models)
             assert odm_factory.odm_client is not None
             assert odm_factory.odm_database is not None
             assert (await odm_factory.odm_client.address) is not None
@@ -139,6 +172,9 @@ class ODMPlugin(PluginAbstract):
         self._add_to_state(key="odm_database", value=odm_factory.odm_database)
 
         await self._setup_beanie()
+
+        if odm_factory.auto_encryption_opts is not None:
+            await self._run_csfle_startup_probe()
 
         assert self._odm_client is not None
 
