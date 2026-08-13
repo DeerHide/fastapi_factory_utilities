@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.24.0] - 2026-08-13
+
+### Added
+
+- CSFLE (Client-Side Field Level Encryption) support in the ODM plugin.
+  Services declare encrypted field paths as data on the document class
+  (``Settings.encrypted_fields``); ``ODMBuilder`` resolves those into a
+  client-side ``schemaMap``, unwraps the local KMS master key from Vault
+  Transit via the pod's projected ServiceAccount token
+  (``ODMConfig.csfle_*`` fields), and provisions a per-service Data
+  Encryption Key. Query analysis is delegated to ``mongocryptd``
+  (installed by the consuming service via an Aptfile — not bundled by
+  this library); ``ODMPlugin`` runs a throwaway encrypted round trip at
+  startup so ``mongocryptd``'s lazy spawn happens before the first real
+  request.
+- ``pymongo[encryption]`` extra (``pymongocrypt``, ``pymongo-auth-aws``).
+
 ## [5.23.0] - 2026-08-09
 
 ### Added
