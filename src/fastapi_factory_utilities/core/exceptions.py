@@ -154,3 +154,27 @@ class FastAPIFactoryUtilitiesError(Exception):
 
         # Call the parent class with the message so str(exception) returns it
         super().__init__(self.message)
+
+
+class MissingExtraError(FastAPIFactoryUtilitiesError):
+    """Raised when a plugin is imported without its Poetry extra installed."""
+
+    def __init__(self, extra: str, module: str, **kwargs: Any) -> None:
+        """Instantiate the error.
+
+        Args:
+            extra: Poetry extra name to install.
+            module: Backend module that was missing.
+            **kwargs: Additional attributes recorded on the exception.
+        """
+        super().__init__(
+            (
+                f"The '{extra}' extra is required (missing package '{module}'). "
+                f"Install with: pip install 'fastapi_factory_utilities[{extra}]'"
+            ),
+            extra=extra,
+            module=module,
+            **kwargs,
+        )
+        self.extra = extra
+        self.module = module

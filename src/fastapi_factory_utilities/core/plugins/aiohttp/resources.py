@@ -1,5 +1,7 @@
 """Aiohttp client factory."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -8,16 +10,18 @@ import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from importlib.util import find_spec
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import certifi
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.trace import TracerProvider
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
 from fastapi_factory_utilities.core.plugins.aiohttp.exceptions import AioHttpClientError
+
+if TYPE_CHECKING:
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.trace import TracerProvider
 
 _logger: BoundLogger = get_logger()
 

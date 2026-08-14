@@ -58,12 +58,56 @@ jobs:
         if: steps.lock-cache.outputs.cache-hit != 'true' || steps.venv-cache.outputs.cache-hit != 'true'
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
-          poetry install --with test
+          poetry install --with test --extras all
       - name: Upload poetry.lock
         uses: actions/upload-artifact@v7.0.0
         with:
           name: poetry-lock
           path: poetry.lock
+  mandatory-only:
+    runs-on: public-actions-runner-scale-set
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - name: Create mandatory-only venv
+        run: |
+          python3.12 -m venv /tmp/ffu-mandatory
+          /tmp/ffu-mandatory/bin/pip install --upgrade pip
+          /tmp/ffu-mandatory/bin/pip install .
+      - name: Assert optional backends are absent
+        run: /tmp/ffu-mandatory/bin/python scripts/assert_mandatory_only.py
+      - name: Seed Grype DB from node cache
+        run: |
+          if [ -d /var/cache/grype-db/6 ]; then
+            mkdir -p "$HOME/.cache/grype/db"
+            cp -r /var/cache/grype-db/. "$HOME/.cache/grype/db/"
+          else
+            echo "node Grype DB cache is cold; grype will fetch from upstream"
+          fi
+      - name: SBOM and Grype mandatory-only
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          syft /tmp/ffu-mandatory -o "spdx-json=${REPO_NAME}-mandatory-sbom.spdx.json"
+          set +e
+          grype "sbom:${REPO_NAME}-mandatory-sbom.spdx.json" --fail-on high \
+            -o "table=${REPO_NAME}-mandatory-grype-scan.txt"
+          GRYPE_EXIT=$?
+          set -e
+          cat "${REPO_NAME}-mandatory-grype-scan.txt"
+          exit $GRYPE_EXIT
+      - name: Upload mandatory SBOM
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: "${{ github.event.repository.name }}-mandatory-sbom.spdx.json"
+          path: "${{ github.event.repository.name }}-mandatory-sbom.spdx.json"
+      - name: Upload mandatory Grype report
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: "${{ github.event.repository.name }}-mandatory-grype-scan.txt"
+          path: "${{ github.event.repository.name }}-mandatory-grype-scan.txt"
   # Job id is part of the dependency-snapshot correlator. Renaming strands the
   # previous manifest under syft; same-detector correlators merge, so stale
   # versions keep generating Dependabot alerts until the orphaned correlator is
@@ -135,7 +179,9 @@ jobs:
         run: |
           grype --version
           set +e
-          grype "sbom:${REPO_NAME}-sbom.spdx.json" --fail-on high \
+          # Full lock includes extras; High CVEs in optional backends must not gate
+          # unrelated work. The mandatory-only job fails on High for the core install.
+          grype "sbom:${REPO_NAME}-sbom.spdx.json" \
             -o "table=${REPO_NAME}-grype-scan.txt" \
             -o "sarif=${REPO_NAME}-grype-scan.sarif"
           GRYPE_EXIT=$?
@@ -199,7 +245,7 @@ jobs:
       - name: Install the project dependencies
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
-          poetry install --with test
+          poetry install --with test --extras all
       - name: Run pre-commit (formatting, linting, type checking and tests)
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
@@ -210,6 +256,7 @@ jobs:
       - setup
       - pre-commit
       - dependency-scan
+      - mandatory-only
     runs-on: public-actions-runner-scale-set
     if: startsWith(github.ref, 'refs/tags/')
     environment: pypi

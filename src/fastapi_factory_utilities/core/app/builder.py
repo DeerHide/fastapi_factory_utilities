@@ -1,13 +1,10 @@
 """Provide the ApplicationGenericBuilder class."""
 
-from enum import StrEnum, auto
 from typing import Any, Generic, Self, TypeVar, get_args
 
 from fastapi_factory_utilities.core.app.config import GenericConfigBuilder, RootConfig
 from fastapi_factory_utilities.core.app.fastapi_builder import FastAPIBuilder
 from fastapi_factory_utilities.core.plugins import PluginAbstract
-from fastapi_factory_utilities.core.utils.granian import GranianUtils
-from fastapi_factory_utilities.core.utils.hypercorn import HypercornUtils
 from fastapi_factory_utilities.core.utils.log import LoggingConfig, LogModeEnum, setup_log
 from fastapi_factory_utilities.core.utils.uvicorn import UvicornUtils
 
@@ -16,23 +13,12 @@ from .application import ApplicationAbstract
 T = TypeVar("T", bound=ApplicationAbstract)
 
 
-class ServerImplementationEnum(StrEnum):
-    """Available ASGI server implementations."""
-
-    UVICORN = auto()
-    HYPERCORN = auto()
-    GRANIAN = auto()
-
-
 class ApplicationGenericBuilder(Generic[T]):
     """Application generic builder."""
 
     def __init__(self, plugins: list[PluginAbstract] | None = None) -> None:
         """Instanciate the ApplicationGenericBuilder."""
         self._uvicorn_utils: UvicornUtils | None = None
-        self._hypercorn_utils: HypercornUtils | None = None
-        self._granian_utils: GranianUtils | None = None
-        self._server_implementation: ServerImplementationEnum = ServerImplementationEnum.UVICORN
         self._root_config: RootConfig | None = None
         self._plugins: list[PluginAbstract] = plugins or []
         self._fastapi_builder: FastAPIBuilder | None = None
@@ -73,11 +59,6 @@ class ApplicationGenericBuilder(Generic[T]):
             Self: The builder.
         """
         self._fastapi_builder = fastapi_builder
-        return self
-
-    def set_server_implementation(self, implementation: ServerImplementationEnum) -> Self:
-        """Set the ASGI server implementation used by build_and_serve."""
-        self._server_implementation = implementation
         return self
 
     def _build_from_package_root_config(self) -> RootConfig:
@@ -126,26 +107,9 @@ class ApplicationGenericBuilder(Generic[T]):
         self._uvicorn_utils = UvicornUtils(app=self.build(**kwargs))
         return self._uvicorn_utils
 
-    def build_as_hypercorn_utils(self, **kwargs: Any) -> HypercornUtils:
-        """Build the application and provide HypercornUtils."""
-        self._hypercorn_utils = HypercornUtils(app=self.build(**kwargs))
-        return self._hypercorn_utils
-
-    def build_as_granian_utils(self, **kwargs: Any) -> GranianUtils:
-        """Build the application and provide GranianUtils."""
-        self._granian_utils = GranianUtils(app=self.build(**kwargs))
-        return self._granian_utils
-
     def build_and_serve(self, **kwargs: Any) -> None:
-        """Build the application and serve it with configured ASGI server."""
-        server_utils: UvicornUtils | HypercornUtils | GranianUtils
-        match self._server_implementation:
-            case ServerImplementationEnum.UVICORN:
-                server_utils = self._uvicorn_utils or self.build_as_uvicorn_utils(**kwargs)
-            case ServerImplementationEnum.HYPERCORN:
-                server_utils = self._hypercorn_utils or self.build_as_hypercorn_utils(**kwargs)
-            case ServerImplementationEnum.GRANIAN:
-                server_utils = self._granian_utils or self.build_as_granian_utils(**kwargs)
+        """Build the application and serve it with Uvicorn."""
+        server_utils: UvicornUtils = self._uvicorn_utils or self.build_as_uvicorn_utils(**kwargs)
 
         assert self._root_config is not None, "Root configuration is not set"
         self.configure_logging(mode=self._root_config.logging_mode, logging_config=self._root_config.logging)

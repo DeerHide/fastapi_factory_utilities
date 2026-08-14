@@ -14,6 +14,10 @@ from fastapi_factory_utilities.core.utils.exceptions import (
     exception_mapper,
 )
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*deprecated and will be removed in fastapi_factory_utilities 7.0.0:DeprecationWarning",
+)
+
 
 # Test exception classes (prefixed with underscore to avoid pytest collection)
 class _SourceError(Exception):

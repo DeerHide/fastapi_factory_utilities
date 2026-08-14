@@ -1,11 +1,12 @@
 """Provides the ApplicationAbstract class."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from beanie import Document
 from fastapi import FastAPI
 from fastapi_csrf_protect import CsrfProtect
 from structlog.stdlib import BoundLogger, get_logger
@@ -17,6 +18,9 @@ from fastapi_factory_utilities.core.services.status.services import StatusServic
 from .config import RootConfig
 from .csrf import DependsCsrfProtect
 from .fastapi_builder import FastAPIBuilder
+
+if TYPE_CHECKING:
+    from beanie import Document
 
 _logger: BoundLogger = get_logger(__name__)
 

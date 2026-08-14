@@ -103,6 +103,7 @@ from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, Literal, ParamSpec, TypeVar, overload
+from warnings import warn
 
 # Type variables for preserving function signatures
 Param = ParamSpec("Param")
@@ -454,6 +455,12 @@ def exception_mapper(
             )
             async def async_operation() -> None: ...
     """
+    warn(
+        "exception_mapper is deprecated and will be removed in fastapi_factory_utilities 7.0.0. "
+        "Use ExceptionMappingContext instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     def decorator(func: Callable[Param, RetTypeT]) -> Callable[Param, RetTypeT]:
         if asyncio.iscoroutinefunction(func):
@@ -577,6 +584,12 @@ class ExceptionMapper:
                 Executed before mapping-specific hooks. Result is merged with
                 specific hook result (specific values override generic).
         """
+        warn(
+            "ExceptionMapper is deprecated and will be removed in fastapi_factory_utilities 7.0.0. "
+            "Use ExceptionMappingContext instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._mappings = mappings
         self._generic_context_hook = generic_context_hook
 

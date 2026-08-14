@@ -1,12 +1,17 @@
 """Aiohttp client plugin."""
 
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.trace import TracerProvider
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
 
 from .builder import AioHttpClientBuilder
 from .constants import STATE_PREFIX_KEY
+
+if TYPE_CHECKING:
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.trace import TracerProvider
 
 
 class AioHttpClientPlugin(PluginAbstract):

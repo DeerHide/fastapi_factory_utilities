@@ -13,7 +13,7 @@ from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
 from .builder import OpenTelemetryPluginBuilder
 from .configs import OpenTelemetryConfig
 from .exceptions import OpenTelemetryPluginBaseException, OpenTelemetryPluginConfigError
-from .instruments import INSTRUMENTS
+from .instruments import apply_instruments
 
 __all__: list[str] = [
     "OpenTelemetryConfig",
@@ -61,8 +61,7 @@ class OpenTelemetryPlugin(PluginAbstract):
         assert self._meter_provider is not None
         assert self._otel_config is not None
 
-        for instrument in INSTRUMENTS:
-            instrument(self._application, self._otel_config, self._meter_provider, self._tracer_provider)
+        apply_instruments(self._application, self._otel_config, self._meter_provider, self._tracer_provider)
 
     def on_load(self) -> None:
         """On load."""

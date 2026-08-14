@@ -86,20 +86,6 @@ def clean_uvicorn_logger() -> None:
         logging.getLogger(logger_name).propagate = True
 
 
-def clean_hypercorn_logger() -> None:
-    """Cleans the Hypercorn loggers."""
-    for logger_name in ["hypercorn.error", "hypercorn.access"]:
-        logging.getLogger(logger_name).handlers.clear()
-        logging.getLogger(logger_name).propagate = True
-
-
-def clean_granian_logger() -> None:
-    """Cleans the Granian loggers."""
-    for logger_name in ["_granian", "granian.access"]:
-        logging.getLogger(logger_name).handlers.clear()
-        logging.getLogger(logger_name).propagate = True
-
-
 _PROBE_ACCESS_200 = re.compile(r' - "(?:GET|HEAD) .*/sys/(?:health|readiness) HTTP/[\d.]+" 200$')
 
 

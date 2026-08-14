@@ -1,5 +1,11 @@
 """ODM Plugin Module."""
 
+# ruff: noqa: E402
+# pylint: disable=wrong-import-position
+from fastapi_factory_utilities.core.plugins.extras import require_extra
+
+require_extra("mongo", "beanie")
+
 from .configs import ODMConfig
 from .depends import depends_odm_client, depends_odm_database
 from .documents import BaseDocument

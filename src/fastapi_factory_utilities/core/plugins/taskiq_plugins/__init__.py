@@ -1,6 +1,12 @@
 """Taskiq Plugin Module."""
 
+# ruff: noqa: E402
+# pylint: disable=wrong-import-position
 from importlib.util import find_spec
+
+from fastapi_factory_utilities.core.plugins.extras import require_extra
+
+require_extra("taskiq", "taskiq_redis")
 
 from .depends import depends_scheduler_component
 from .exceptions import TaskiqPluginBaseError, TaskiqPluginConfigError

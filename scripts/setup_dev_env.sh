@@ -5,7 +5,7 @@ set -euo pipefail
 # Poetry setup
 poetry config virtualenvs.in-project true
 poetry env use python3.12
-poetry install --with test --sync
+poetry install --with test --extras all --sync
 poetry lock
 poetry update --sync
 

@@ -87,14 +87,8 @@ This library consolidates common patterns, plugins, and utilities for creating m
 ## Requirements
 
 - **Python:** >= 3.12
-- **Key Dependencies:**
-  - FastAPI >= 0.115.13
-  - Beanie ^2.0.0
-  - Taskiq with Redis backend
-  - AioPika ^9.5.7
-  - OpenTelemetry SDK ^1.26.0
-  - Pydantic ^2.8.2
-  - Structlog >= 24.1
+- **Mandatory:** FastAPI, Pydantic, structlog, Uvicorn, aiohttp, PyJWT
+- **Extras:** Beanie/PyMongo (`mongo`), AioPika (`amqp`), aioboto3 (`s3`), Redis (`redis`), Taskiq Redis broker (`taskiq`), OpenTelemetry SDK (`otel`)
 
 > 📖 See [Project Overview](docs/knowledge/project-overview.md#technology-stack-summary) for complete dependency list.
 
@@ -106,13 +100,19 @@ This library consolidates common patterns, plugins, and utilities for creating m
 
 ```bash
 pip install fastapi-factory-utilities
+# Backing technologies are extras:
+pip install 'fastapi-factory-utilities[mongo,otel]'
+pip install 'fastapi-factory-utilities[all]'
 ```
 
 ### Using Poetry
 
 ```bash
 poetry add fastapi-factory-utilities
+poetry add fastapi-factory-utilities --extras mongo --extras otel
 ```
+
+Extras: `mongo`, `amqp`, `s3`, `redis`, `taskiq`, `otel`, `all`, `testing`. Importing a plugin without its extra raises `MissingExtraError` naming the extra to install. The bundled ASGI server is Uvicorn.
 
 ---
 

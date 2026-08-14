@@ -26,6 +26,7 @@ class MyMonitored(MonitoredAbstract):
 """
 
 from abc import ABC
+from warnings import warn
 
 from reactivex import Subject
 
@@ -48,6 +49,12 @@ class MonitoredAbstract(ABC):
             status_service (StatusService): The status service.
 
         """
+        warn(
+            "MonitoredAbstract is deprecated and will be removed in fastapi_factory_utilities 7.0.0. "
+            "Use StatusService.register_component_instance directly.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._monit_component_instance: ComponentInstanceType = component_instance
         self._monit_status_service_subject: Subject[Status] = status_service.register_component_instance(
             component_instance=component_instance

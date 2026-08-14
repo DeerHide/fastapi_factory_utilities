@@ -1,6 +1,5 @@
 """Integration tests for ASGI server utilities."""
 
-import asyncio
 import socket
 from threading import Thread
 from time import sleep
@@ -9,14 +8,10 @@ import httpx
 import pytest
 import uvicorn
 from fastapi import FastAPI
-from hypercorn.asyncio import serve as hypercorn_serve
 
-from fastapi_factory_utilities.core.app.builder import ServerImplementationEnum
 from fastapi_factory_utilities.core.app.config import BaseApplicationConfig, DevelopmentConfig, RootConfig, ServerConfig
 from fastapi_factory_utilities.core.app.enums import EnvironmentEnum
 from fastapi_factory_utilities.core.services.status.services import StatusService
-from fastapi_factory_utilities.core.utils.granian import GranianUtils
-from fastapi_factory_utilities.core.utils.hypercorn import HypercornUtils
 from fastapi_factory_utilities.core.utils.uvicorn import UvicornUtils
 
 HTTP_OK = 200
@@ -111,78 +106,3 @@ def test_uvicorn_utils_integration(free_port: int) -> None:
         server.should_exit = True
         thread.join(timeout=5)
         assert not thread.is_alive()
-
-
-@pytest.mark.asyncio
-async def test_hypercorn_utils_integration(free_port: int) -> None:
-    """Serve a FastAPI app with HypercornUtils and validate response."""
-    app = FakeApplication(root_config=_build_root_config(port=free_port))
-    hypercorn_utils = HypercornUtils(app=app)
-    config = hypercorn_utils.build_hypercorn_config()
-
-    shutdown_event = asyncio.Event()
-    task = asyncio.create_task(
-        hypercorn_serve(
-            app=app.get_asgi_app(),
-            config=config,
-            shutdown_trigger=shutdown_event.wait,
-        )
-    )
-
-    base_url = f"http://127.0.0.1:{free_port}"
-    try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            for _ in range(100):
-                try:
-                    response = await client.get(f"{base_url}/")
-                    if response.status_code == HTTP_OK:
-                        break
-                except (httpx.HTTPError, OSError):
-                    await asyncio.sleep(0.1)
-            else:
-                raise TimeoutError("Hypercorn server did not become ready")
-
-            assert response.status_code == HTTP_OK
-            assert response.json() == {"status": "ok"}
-    finally:
-        shutdown_event.set()
-        await asyncio.wait_for(task, timeout=5.0)
-
-
-@pytest.mark.asyncio
-async def test_granian_utils_integration(free_port: int) -> None:
-    """Serve a FastAPI app with GranianUtils and validate response."""
-    app = FakeApplication(root_config=_build_root_config(port=free_port))
-    granian_utils = GranianUtils(app=app)
-    server = granian_utils.build_granian_server()
-
-    task = asyncio.create_task(server.serve())
-
-    base_url = f"http://127.0.0.1:{free_port}"
-    try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            for _ in range(100):
-                try:
-                    response = await client.get(f"{base_url}/")
-                    if response.status_code == HTTP_OK:
-                        break
-                except (httpx.HTTPError, OSError):
-                    await asyncio.sleep(0.1)
-            else:
-                raise TimeoutError("Granian server did not become ready")
-
-            assert response.status_code == HTTP_OK
-            assert response.json() == {"status": "ok"}
-    finally:
-        server.stop()
-        await asyncio.wait_for(task, timeout=5.0)
-
-
-def test_server_implementation_enum_defaults_to_uvicorn() -> None:
-    """Ensure the default implementation value remains uvicorn."""
-    assert ServerImplementationEnum.UVICORN == "uvicorn"
-
-
-def test_server_implementation_enum_includes_granian() -> None:
-    """Ensure Granian is available as a server implementation."""
-    assert ServerImplementationEnum.GRANIAN == "granian"

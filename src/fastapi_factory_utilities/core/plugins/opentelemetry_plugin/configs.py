@@ -14,6 +14,27 @@ class ProtocolEnum(StrEnum):
     OTLP_HTTP = "otlp_http"
 
 
+class InstrumentationName(StrEnum):
+    """OpenTelemetry instrumentations that can be enabled by configuration."""
+
+    FASTAPI = "fastapi"
+    AIOHTTP = "aiohttp"
+    AIO_PIKA = "aio_pika"
+    PYMONGO = "pymongo"
+    REQUESTS = "requests"
+    URLLIB3 = "urllib3"
+    ASYNCIO = "asyncio"
+    SYSTEM_METRICS = "system_metrics"
+    HTTPX = "httpx"
+    REDIS = "redis"
+    AIOBOTOCORE = "aiobotocore"
+
+
+def _all_instrumentations() -> list[InstrumentationName]:
+    """Return every shipped instrumentation name."""
+    return list(InstrumentationName)
+
+
 class OpenTelemetryMeterConfig(BaseModel):
     """Provides the configuration model for the OpenTelemetry meter as sub-model."""
 
@@ -121,4 +142,9 @@ class OpenTelemetryConfig(BaseModel):
             "When enabled, attach a sanitized MongoDB command summary to PyMongo CLIENT spans "
             "via a request hook. Large ``$in`` arrays are truncated to keep span payloads bounded."
         ),
+    )
+
+    instrumentations: list[InstrumentationName] = Field(
+        default_factory=_all_instrumentations,
+        description="Instrumentations to load. Absent target libraries are skipped with a log line.",
     )

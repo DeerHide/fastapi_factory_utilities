@@ -42,7 +42,7 @@ poetry config virtualenvs.in-project true
 
 ```bash
 # Install all dependencies including test group
-poetry install --with test
+poetry install --with test --extras all
 ```
 
 This will:
@@ -515,7 +515,7 @@ def my_function(param1: str, param2: int) -> bool:
 
 ```bash
 poetry lock --no-update
-poetry install --with test
+poetry install --with test --extras all
 ```
 
 ### Pre-commit Cache Issues
@@ -549,7 +549,7 @@ export PYTHONPATH=./src:./tests:$PYTHONPATH
 
 | Task | Command |
 |------|---------|
-| Install deps | `poetry install --with test` |
+| Install deps | `poetry install --with test --extras all` |
 | Run tests | `poetry run pytest` |
 | Format code | `poetry run ruff format src tests` |
 | Lint code | `poetry run ruff check --fix src tests` |

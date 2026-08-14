@@ -1,5 +1,11 @@
 """S3 / MinIO Plugin Module."""
 
+# ruff: noqa: E402
+# pylint: disable=wrong-import-position
+from fastapi_factory_utilities.core.plugins.extras import require_extra
+
+require_extra("s3", "aioboto3")
+
 from .configs import S3Config
 from .constants import STATE_BUCKET_PREFIX_KEY, STATE_S3_CLIENT_KEY
 from .depends import S3BucketDepends, depends_s3_client

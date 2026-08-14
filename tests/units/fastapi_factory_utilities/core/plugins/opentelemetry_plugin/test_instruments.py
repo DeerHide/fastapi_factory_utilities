@@ -6,9 +6,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import OpenTelemetryConfig
+from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import InstrumentationName, OpenTelemetryConfig
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments import (
     INSTRUMENTS,
+    apply_instruments,
     instrument_aio_pika,
     instrument_aiobotocore,
     instrument_aiohttp,
@@ -28,19 +29,19 @@ class TestInstrumentsRegistry:
 
     def test_all_expected_instrumentors_are_registered(self) -> None:
         """Ensure every shipped instrumentor is in the registry in the documented order."""
-        assert INSTRUMENTS == [
-            instrument_fastapi,
-            instrument_aiohttp,
-            instrument_aio_pika,
-            instrument_pymongo,
-            instrument_requests,
-            instrument_urllib3,
-            instrument_asyncio,
-            instrument_system_metrics,
-            instrument_httpx,
-            instrument_redis,
-            instrument_aiobotocore,
-        ]
+        assert INSTRUMENTS == {
+            InstrumentationName.FASTAPI: instrument_fastapi,
+            InstrumentationName.AIOHTTP: instrument_aiohttp,
+            InstrumentationName.AIO_PIKA: instrument_aio_pika,
+            InstrumentationName.PYMONGO: instrument_pymongo,
+            InstrumentationName.REQUESTS: instrument_requests,
+            InstrumentationName.URLLIB3: instrument_urllib3,
+            InstrumentationName.ASYNCIO: instrument_asyncio,
+            InstrumentationName.SYSTEM_METRICS: instrument_system_metrics,
+            InstrumentationName.HTTPX: instrument_httpx,
+            InstrumentationName.REDIS: instrument_redis,
+            InstrumentationName.AIOBOTOCORE: instrument_aiobotocore,
+        }
 
 
 class _BaseInstrumentTest:
@@ -470,3 +471,66 @@ class TestInstrumentRedis(_BaseInstrumentTest):
                 tracer_provider=tracer_provider,
             )
             instrumentor_cls.assert_not_called()
+
+
+class TestApplyInstruments(_BaseInstrumentTest):
+    """Tests for config-driven instrumentation loading."""
+
+    def test_disabled_instrumentors_are_not_imported(
+        self,
+        application: MagicMock,
+        tracer_provider: MagicMock,
+        meter_provider: MagicMock,
+    ) -> None:
+        """Only enabled instrumentors are imported."""
+        imported: list[str] = []
+        real_import = __import__
+
+        def tracking_import(name: str, *args: object, **kwargs: object) -> object:
+            imported.append(name)
+            return real_import(name, *args, **kwargs)
+
+        config = OpenTelemetryConfig(
+            instrumentations=[InstrumentationName.FASTAPI, InstrumentationName.PYMONGO],
+        )
+        with patch("builtins.__import__", side_effect=tracking_import):
+            apply_instruments(
+                application=application,
+                config=config,
+                meter_provider=meter_provider,
+                tracer_provider=tracer_provider,
+            )
+
+        otel_instrumentation_imports = [name for name in imported if name.startswith("opentelemetry.instrumentation.")]
+        assert "opentelemetry.instrumentation.botocore" not in otel_instrumentation_imports
+        assert "opentelemetry.instrumentation.aio_pika" not in otel_instrumentation_imports
+        assert "opentelemetry.instrumentation.redis" not in otel_instrumentation_imports
+        assert "opentelemetry.instrumentation.httpx" not in otel_instrumentation_imports
+        assert "opentelemetry.instrumentation.urllib3" not in otel_instrumentation_imports
+        assert "opentelemetry.instrumentation.requests" not in otel_instrumentation_imports
+
+    def test_skip_logs_when_target_library_is_missing(
+        self,
+        application: MagicMock,
+        config: OpenTelemetryConfig,
+        tracer_provider: MagicMock,
+        meter_provider: MagicMock,
+    ) -> None:
+        """Absent target libraries are skipped with a log line."""
+        with (
+            patch(
+                "fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments.find_spec",
+                return_value=None,
+            ),
+            patch(
+                "fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments._logger",
+            ) as logger,
+        ):
+            instrument_pymongo(
+                application=application,
+                config=config,
+                meter_provider=meter_provider,
+                tracer_provider=tracer_provider,
+            )
+            logger.info.assert_called_once()
+            assert "pymongo" in logger.info.call_args.args

@@ -8,10 +8,24 @@ from typing import Any
 
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.trace import TracerProvider
+from structlog.stdlib import BoundLogger, get_logger
 
-from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import OpenTelemetryConfig
+from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import (
+    InstrumentationName,
+    OpenTelemetryConfig,
+)
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.pymongo_hooks import build_pymongo_request_hook
 from fastapi_factory_utilities.core.protocols import ApplicationAbstractProtocol
+
+_logger: BoundLogger = get_logger()
+
+
+def _available(name: str, *modules: str) -> bool:
+    """Return True when every module is importable; otherwise log a skip and return False."""
+    if all(find_spec(module) for module in modules):
+        return True
+    _logger.info("Skipping %s instrumentation: target library not installed", name)
+    return False
 
 
 def instrument_fastapi(
@@ -21,7 +35,7 @@ def instrument_fastapi(
     tracer_provider: TracerProvider,
 ) -> None:
     """Instrument the FastAPI application."""
-    if find_spec(name="fastapi") and find_spec(name="opentelemetry.instrumentation.fastapi"):
+    if _available("fastapi", "fastapi", "opentelemetry.instrumentation.fastapi"):
         from opentelemetry.instrumentation.fastapi import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             FastAPIInstrumentor,
         )
@@ -52,7 +66,7 @@ def instrument_aiohttp(
     Returns:
         None
     """
-    if find_spec(name="aiohttp") and find_spec(name="opentelemetry.instrumentation.aiohttp_client"):
+    if _available("aiohttp", "aiohttp", "opentelemetry.instrumentation.aiohttp_client"):
         from opentelemetry.instrumentation.aiohttp_client import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             AioHttpClientInstrumentor,
         )
@@ -70,7 +84,7 @@ def instrument_aio_pika(
     tracer_provider: TracerProvider,
 ) -> None:
     """Instrument the AioPika application."""
-    if find_spec(name="aio_pika") and find_spec(name="opentelemetry.instrumentation.aio_pika"):
+    if _available("aio_pika", "aio_pika", "opentelemetry.instrumentation.aio_pika"):
         from opentelemetry.instrumentation.aio_pika import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             AioPikaInstrumentor,
         )
@@ -104,7 +118,7 @@ def instrument_pymongo(
     Returns:
         None
     """
-    if find_spec(name="pymongo") and find_spec(name="opentelemetry.instrumentation.pymongo"):
+    if _available("pymongo", "pymongo", "opentelemetry.instrumentation.pymongo"):
         from opentelemetry.instrumentation.pymongo import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             PymongoInstrumentor,
         )
@@ -138,7 +152,7 @@ def instrument_requests(
     Returns:
         None
     """
-    if find_spec(name="requests") and find_spec(name="opentelemetry.instrumentation.requests"):
+    if _available("requests", "requests", "opentelemetry.instrumentation.requests"):
         from opentelemetry.instrumentation.requests import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             RequestsInstrumentor,
         )
@@ -166,7 +180,7 @@ def instrument_urllib3(
     Returns:
         None
     """
-    if find_spec(name="urllib3") and find_spec(name="opentelemetry.instrumentation.urllib3"):
+    if _available("urllib3", "urllib3", "opentelemetry.instrumentation.urllib3"):
         from opentelemetry.instrumentation.urllib3 import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             URLLib3Instrumentor,
         )
@@ -195,7 +209,7 @@ def instrument_asyncio(
     Returns:
         None
     """
-    if find_spec(name="opentelemetry.instrumentation.asyncio"):
+    if _available("asyncio", "opentelemetry.instrumentation.asyncio"):
         from opentelemetry.instrumentation.asyncio import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             AsyncioInstrumentor,
         )
@@ -223,7 +237,7 @@ def instrument_system_metrics(
     Returns:
         None
     """
-    if find_spec(name="psutil") and find_spec(name="opentelemetry.instrumentation.system_metrics"):
+    if _available("system_metrics", "psutil", "opentelemetry.instrumentation.system_metrics"):
         from opentelemetry.instrumentation.system_metrics import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             SystemMetricsInstrumentor,
         )
@@ -250,7 +264,7 @@ def instrument_httpx(
     Returns:
         None
     """
-    if find_spec(name="httpx") and find_spec(name="opentelemetry.instrumentation.httpx"):
+    if _available("httpx", "httpx", "opentelemetry.instrumentation.httpx"):
         from opentelemetry.instrumentation.httpx import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             HTTPXClientInstrumentor,
         )
@@ -279,7 +293,7 @@ def instrument_redis(
     Returns:
         None
     """
-    if find_spec(name="redis") and find_spec(name="opentelemetry.instrumentation.redis"):
+    if _available("redis", "redis", "opentelemetry.instrumentation.redis"):
         from opentelemetry.instrumentation.redis import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             RedisInstrumentor,
         )
@@ -306,7 +320,7 @@ def instrument_aiobotocore(
     Returns:
         None
     """
-    if find_spec(name="aiobotocore") and find_spec(name="opentelemetry.instrumentation.botocore"):
+    if _available("aiobotocore", "aiobotocore", "opentelemetry.instrumentation.botocore"):
         from opentelemetry.instrumentation.botocore import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             AiobotocoreInstrumentor,
         )
@@ -316,18 +330,30 @@ def instrument_aiobotocore(
         )
 
 
-INSTRUMENTS: list[Callable[..., Any]] = [
-    instrument_fastapi,
-    instrument_aiohttp,
-    instrument_aio_pika,
-    instrument_pymongo,
-    instrument_requests,
-    instrument_urllib3,
-    instrument_asyncio,
-    instrument_system_metrics,
-    instrument_httpx,
-    instrument_redis,
-    instrument_aiobotocore,
-]
+INSTRUMENTS: dict[InstrumentationName, Callable[..., Any]] = {
+    InstrumentationName.FASTAPI: instrument_fastapi,
+    InstrumentationName.AIOHTTP: instrument_aiohttp,
+    InstrumentationName.AIO_PIKA: instrument_aio_pika,
+    InstrumentationName.PYMONGO: instrument_pymongo,
+    InstrumentationName.REQUESTS: instrument_requests,
+    InstrumentationName.URLLIB3: instrument_urllib3,
+    InstrumentationName.ASYNCIO: instrument_asyncio,
+    InstrumentationName.SYSTEM_METRICS: instrument_system_metrics,
+    InstrumentationName.HTTPX: instrument_httpx,
+    InstrumentationName.REDIS: instrument_redis,
+    InstrumentationName.AIOBOTOCORE: instrument_aiobotocore,
+}
 
-__all__: list[str] = ["INSTRUMENTS"]
+
+def apply_instruments(
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
+    meter_provider: MeterProvider,
+    tracer_provider: TracerProvider,
+) -> None:
+    """Import and apply only the instrumentations listed in ``config.instrumentations``."""
+    for name in config.instrumentations:
+        INSTRUMENTS[name](application, config, meter_provider, tracer_provider)
+
+
+__all__: list[str] = ["INSTRUMENTS", "apply_instruments"]
