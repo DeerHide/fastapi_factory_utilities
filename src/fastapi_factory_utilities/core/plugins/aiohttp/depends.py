@@ -3,9 +3,9 @@
 from fastapi import Request
 from fastapi.datastructures import State
 
-from .constants import STATE_PREFIX_KEY
-from .exceptions import AioHttpClientResourceNotFoundError
-from .resources import AioHttpClientResource
+from fastapi_factory_utilities.core.plugins.aiohttp.exceptions import AioHttpClientResourceNotFoundError
+from fastapi_factory_utilities.core.plugins.aiohttp.resources import AioHttpClientResource
+from fastapi_factory_utilities.core.plugins.state import AIOHTTP_RESOURCE_PREFIX
 
 
 class AioHttpResourceDepends:
@@ -18,7 +18,7 @@ class AioHttpResourceDepends:
     @classmethod
     def export_from_state(cls, state: State, key: str) -> AioHttpClientResource:
         """Export the Aiohttp resource from the state."""
-        resource: AioHttpClientResource | None = getattr(state, f"{STATE_PREFIX_KEY}{key}", None)
+        resource: AioHttpClientResource | None = getattr(state, AIOHTTP_RESOURCE_PREFIX.resource_attr(key), None)
         if resource is None:
             raise AioHttpClientResourceNotFoundError("Aiohttp resource not found in the application state.", key=key)
         return resource

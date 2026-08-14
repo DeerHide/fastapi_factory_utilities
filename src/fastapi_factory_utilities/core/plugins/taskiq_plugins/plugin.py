@@ -9,9 +9,9 @@ from fastapi_factory_utilities.core.plugins.redis_plugin.configs import (
     build_redis_credentials_config,
 )
 from fastapi_factory_utilities.core.plugins.redis_plugin.exceptions import RedisPluginConfigError
+from fastapi_factory_utilities.core.plugins.state import SCHEDULER_COMPONENT
 from fastapi_factory_utilities.core.plugins.taskiq_plugins.exceptions import TaskiqPluginConfigError
 
-from .depends import DEPENDS_SCHEDULER_COMPONENT_KEY
 from .schedulers import SchedulerComponent
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ class TaskiqPlugin(PluginAbstract):
         self._scheduler_component.configure(
             redis_connection_string=self._redis_credentials_config.url, app=self._application.get_asgi_app()
         )
-        self._add_to_state(key=DEPENDS_SCHEDULER_COMPONENT_KEY, value=self._scheduler_component)
+        self._add_to_state(key=SCHEDULER_COMPONENT, value=self._scheduler_component)
         # Register the hook if provided
         if self._register_hook is not None:
             self._register_hook(self._scheduler_component)

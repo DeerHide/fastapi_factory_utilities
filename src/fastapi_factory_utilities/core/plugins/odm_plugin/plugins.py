@@ -12,6 +12,7 @@ from reactivex import Subject
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
+from fastapi_factory_utilities.core.plugins.state import ODM_CLIENT, ODM_DATABASE
 from fastapi_factory_utilities.core.protocols import ApplicationAbstractProtocol
 from fastapi_factory_utilities.core.services.status.enums import (
     ComponentTypeEnum,
@@ -168,8 +169,8 @@ class ODMPlugin(PluginAbstract):
             _logger.exception("ODM plugin failed to start.")
             raise
 
-        self._add_to_state(key="odm_client", value=odm_factory.odm_client)
-        self._add_to_state(key="odm_database", value=odm_factory.odm_database)
+        self._add_to_state(key=ODM_CLIENT, value=odm_factory.odm_client)
+        self._add_to_state(key=ODM_DATABASE, value=odm_factory.odm_database)
 
         await self._setup_beanie()
 

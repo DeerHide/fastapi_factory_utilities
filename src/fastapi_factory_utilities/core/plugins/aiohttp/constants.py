@@ -1,3 +1,5 @@
-"""Aiohttp plugin constants."""
+"""Backward-compatible aliases for aiohttp plugin state keys."""
 
-STATE_PREFIX_KEY: str = "aiohttp_resource_"
+from fastapi_factory_utilities.core.plugins.state import AIOHTTP_RESOURCE_PREFIX
+
+STATE_PREFIX_KEY: str = AIOHTTP_RESOURCE_PREFIX.attr

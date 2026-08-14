@@ -5,9 +5,9 @@ from typing import Any
 from fastapi import Request
 from fastapi.datastructures import State
 
-from .constants import STATE_BUCKET_PREFIX_KEY, STATE_S3_CLIENT_KEY
-from .exceptions import S3BucketResourceNotFoundError
-from .resources import S3BucketResource
+from fastapi_factory_utilities.core.plugins.s3_plugin.exceptions import S3BucketResourceNotFoundError
+from fastapi_factory_utilities.core.plugins.s3_plugin.resources import S3BucketResource
+from fastapi_factory_utilities.core.plugins.state import S3_BUCKET_PREFIX, S3_CLIENT, get_from_state
 
 
 def depends_s3_client(request: Request) -> Any:
@@ -19,7 +19,7 @@ def depends_s3_client(request: Request) -> Any:
     Returns:
         The shared aiobotocore S3 client.
     """
-    return getattr(request.app.state, STATE_S3_CLIENT_KEY)
+    return get_from_state(request.app.state, S3_CLIENT)
 
 
 class S3BucketDepends:
@@ -47,7 +47,7 @@ class S3BucketDepends:
         Raises:
             S3BucketResourceNotFoundError: If the key is not present in state.
         """
-        resource: S3BucketResource | None = getattr(state, f"{STATE_BUCKET_PREFIX_KEY}{key}", None)
+        resource: S3BucketResource | None = getattr(state, S3_BUCKET_PREFIX.resource_attr(key), None)
         if resource is None:
             raise S3BucketResourceNotFoundError(
                 "S3 bucket resource not found in the application state.",

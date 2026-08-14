@@ -1,51 +1,45 @@
 """Provides the dependencies for the Taskiq plugin."""
 
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi import Request
 from taskiq import TaskiqDepends
 
+from fastapi_factory_utilities.core.plugins.state import SCHEDULER_COMPONENT, get_from_state
+
 if TYPE_CHECKING:
     from .schedulers import SchedulerComponent
 
-DEPENDS_SCHEDULER_COMPONENT_KEY: str = "scheduler_component"
+__all__: list[str] = [
+    "DEPENDS_SCHEDULER_COMPONENT_KEY",
+    "depends_scheduler_component",
+]
+
+DEPENDS_SCHEDULER_COMPONENT_KEY: str = SCHEDULER_COMPONENT.attr
 
 
 def depends_scheduler_component(
     request: Request = TaskiqDepends(),
 ) -> "SchedulerComponent":
-    """Dependency injection for the scheduler component."""
-    return getattr(request.app.state, DEPENDS_SCHEDULER_COMPONENT_KEY)
+    """Dependency injection for the scheduler component.
+
+    Raises:
+        PluginNotRegisteredError: If no ``TaskiqPlugin`` was registered.
+    """
+    return get_from_state(request.app.state, SCHEDULER_COMPONENT)
 
 
 if find_spec("beanie") is not None:
-    from pymongo.asynchronous.database import AsyncDatabase
+    from fastapi_factory_utilities.core.plugins.odm_plugin.depends import (  # noqa: F401  # pylint: disable=unused-import
+        depends_odm_database,
+    )
 
-    def depends_odm_database(request: Request = TaskiqDepends()) -> AsyncDatabase[Any]:
-        """Acquire the ODM database from the request.
-
-        Args:
-            request (Request): The request.
-
-        Returns:
-            AsyncDatabase: The ODM database.
-        """
-        return request.app.state.odm_database
-
+    __all__.append("depends_odm_database")
 
 if find_spec("aio_pika") is not None:
-    from aio_pika.abc import AbstractRobustConnection
+    from fastapi_factory_utilities.core.plugins.aiopika.depends import (  # noqa: F401  # pylint: disable=unused-import
+        depends_aiopika_robust_connection,
+    )
 
-    from fastapi_factory_utilities.core.plugins.aiopika.depends import DEPENDS_AIOPIKA_ROBUST_CONNECTION_KEY
-
-    def depends_aiopika_robust_connection(request: Request = TaskiqDepends()) -> AbstractRobustConnection:
-        """Acquire the Aiopika robust connection from the request.
-
-        Args:
-            request (Request): The request.
-
-        Returns:
-            AbstractRobustConnection: The Aiopika robust connection.
-        """
-        return getattr(request.app.state, DEPENDS_AIOPIKA_ROBUST_CONNECTION_KEY)
+    __all__.append("depends_aiopika_robust_connection")

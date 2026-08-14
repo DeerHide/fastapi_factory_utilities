@@ -13,6 +13,7 @@ from fastapi_factory_utilities.core.plugins.redis_plugin.exceptions import (
     RedisPluginConfigError,
     RedisPluginNotStartedError,
 )
+from fastapi_factory_utilities.core.plugins.state import REDIS_CLIENT, REDIS_PLUGIN
 from fastapi_factory_utilities.core.services.status.enums import (
     ComponentTypeEnum,
     HealthStatusEnum,
@@ -23,8 +24,6 @@ from fastapi_factory_utilities.core.services.status.types import (
     ComponentInstanceType,
     Status,
 )
-
-from .constants import STATE_REDIS_CLIENT_KEY, STATE_REDIS_PLUGIN_KEY
 
 _logger: BoundLogger = get_logger()
 
@@ -142,8 +141,8 @@ class RedisPlugin(PluginAbstract):
             _logger.exception("Redis plugin failed to start.")
             raise
 
-        self._add_to_state(key=STATE_REDIS_CLIENT_KEY, value=self._client)
-        self._add_to_state(key=STATE_REDIS_PLUGIN_KEY, value=self)
+        self._add_to_state(key=REDIS_CLIENT, value=self._client)
+        self._add_to_state(key=REDIS_PLUGIN, value=self)
         _logger.info("Redis plugin started.", name_suffix=self._name_suffix)
         self._monitoring_subject.on_next(
             value=Status(health=HealthStatusEnum.HEALTHY, readiness=ReadinessStatusEnum.READY)

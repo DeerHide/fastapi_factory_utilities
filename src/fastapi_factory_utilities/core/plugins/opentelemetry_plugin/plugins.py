@@ -3,12 +3,12 @@
 import asyncio
 from typing import Self, cast
 
-from fastapi import Request
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.trace import TracerProvider
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
+from fastapi_factory_utilities.core.plugins.state import METER_PROVIDER, OTEL_CONFIG, TRACER_PROVIDER
 
 from .builder import OpenTelemetryPluginBuilder
 from .configs import OpenTelemetryConfig
@@ -71,9 +71,9 @@ class OpenTelemetryPlugin(PluginAbstract):
         assert self._tracer_provider is not None
         assert self._meter_provider is not None
         assert self._otel_config is not None
-        self._add_to_state(key="tracer_provider", value=self._tracer_provider)
-        self._add_to_state(key="meter_provider", value=self._meter_provider)
-        self._add_to_state(key="otel_config", value=self._otel_config)
+        self._add_to_state(key=TRACER_PROVIDER, value=self._tracer_provider)
+        self._add_to_state(key=METER_PROVIDER, value=self._meter_provider)
+        self._add_to_state(key=OTEL_CONFIG, value=self._otel_config)
         # Instrument the FastAPI application and AioHttpClient, ...
         self._instrument()
         _logger.debug(f"OpenTelemetry plugin loaded. {self._otel_config.activate=}")
@@ -119,18 +119,3 @@ class OpenTelemetryPlugin(PluginAbstract):
         )
 
         _logger.debug("OpenTelemetry plugin closed.")
-
-
-def depends_tracer_provider(request: Request) -> TracerProvider:
-    """Get the tracer provider."""
-    return request.app.state.tracer_provider
-
-
-def depends_meter_provider(request: Request) -> MeterProvider:
-    """Get the meter provider."""
-    return request.app.state.meter_provider
-
-
-def depends_otel_config(request: Request) -> OpenTelemetryConfig:
-    """Get the OpenTelemetry config."""
-    return request.app.state.otel_config

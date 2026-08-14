@@ -15,8 +15,8 @@ from fastapi_factory_utilities.core.plugins.aiopika.configs import (
     RabbitMQCredentialsConfig,
     build_rabbitmq_credentials_config,
 )
+from fastapi_factory_utilities.core.plugins.state import AIOPIKA_CONNECTION, METER_PROVIDER, TRACER_PROVIDER
 
-from .depends import DEPENDS_AIOPIKA_ROBUST_CONNECTION_KEY
 from .exceptions import AiopikaPluginBaseError
 
 _logger: BoundLogger = get_logger(__package__)
@@ -67,10 +67,10 @@ class AiopikaPlugin(PluginAbstract):
         assert self._rabbitmq_credentials_config is not None
 
         tracer_provider: TracerProvider | None = cast(
-            TracerProvider | None, getattr(self._application.get_asgi_app().state, "tracer_provider", None)
+            TracerProvider | None, getattr(self._application.get_asgi_app().state, TRACER_PROVIDER.attr, None)
         )
         meter_provider: MeterProvider | None = cast(
-            MeterProvider | None, getattr(self._application.get_asgi_app().state, "meter_provider", None)
+            MeterProvider | None, getattr(self._application.get_asgi_app().state, METER_PROVIDER.attr, None)
         )
         if tracer_provider is None or meter_provider is None:
             raise AiopikaPluginBaseError("Tracer provider or meter provider not found in the application state.")
@@ -85,7 +85,7 @@ class AiopikaPlugin(PluginAbstract):
             )
         except Exception as exception:
             raise AiopikaPluginBaseError("Unable to connect to the AMQP server.") from exception
-        self._add_to_state(key=DEPENDS_AIOPIKA_ROBUST_CONNECTION_KEY, value=self._robust_connection)
+        self._add_to_state(key=AIOPIKA_CONNECTION, value=self._robust_connection)
         _logger.debug(
             "Aiopika plugin connected to the AMQP server.", amqp_url=self._rabbitmq_credentials_config.amqp_url
         )

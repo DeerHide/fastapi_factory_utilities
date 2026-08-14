@@ -1,4 +1,6 @@
-"""S3 plugin constants."""
+"""Backward-compatible aliases for S3 plugin state keys."""
 
-STATE_S3_CLIENT_KEY: str = "s3_client"
-STATE_BUCKET_PREFIX_KEY: str = "s3_bucket_"
+from fastapi_factory_utilities.core.plugins.state import S3_BUCKET_PREFIX, S3_CLIENT
+
+STATE_S3_CLIENT_KEY: str = S3_CLIENT.attr
+STATE_BUCKET_PREFIX_KEY: str = S3_BUCKET_PREFIX.attr

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from fastapi import Request
 from taskiq import TaskiqDepends
 
-from .constants import STATE_REDIS_CLIENT_KEY, STATE_REDIS_PLUGIN_KEY
+from fastapi_factory_utilities.core.plugins.state import REDIS_CLIENT, REDIS_PLUGIN, get_from_state
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
@@ -23,8 +23,11 @@ def depends_redis(request: Request = TaskiqDepends()) -> "Redis":
 
     Returns:
         The shared ``redis.asyncio.Redis`` client.
+
+    Raises:
+        PluginNotRegisteredError: If no ``RedisPlugin`` was registered.
     """
-    return getattr(request.app.state, STATE_REDIS_CLIENT_KEY)
+    return get_from_state(request.app.state, REDIS_CLIENT)
 
 
 def depends_redis_plugin(request: Request = TaskiqDepends()) -> "RedisPlugin":
@@ -35,5 +38,8 @@ def depends_redis_plugin(request: Request = TaskiqDepends()) -> "RedisPlugin":
 
     Returns:
         The started ``RedisPlugin`` instance.
+
+    Raises:
+        PluginNotRegisteredError: If no ``RedisPlugin`` was registered.
     """
-    return getattr(request.app.state, STATE_REDIS_PLUGIN_KEY)
+    return get_from_state(request.app.state, REDIS_PLUGIN)

@@ -9,6 +9,7 @@ from reactivex import Subject
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
+from fastapi_factory_utilities.core.plugins.state import S3_BUCKET_PREFIX, S3_CLIENT
 from fastapi_factory_utilities.core.services.status.enums import (
     ComponentTypeEnum,
     HealthStatusEnum,
@@ -22,7 +23,6 @@ from fastapi_factory_utilities.core.services.status.types import (
 
 from .builder import S3Builder
 from .configs import S3Config
-from .constants import STATE_BUCKET_PREFIX_KEY, STATE_S3_CLIENT_KEY
 from .exceptions import S3BucketNotFoundError
 from .resources import S3BucketResource
 
@@ -154,7 +154,7 @@ class S3Plugin(PluginAbstract):
             raise
 
         config: S3Config = self._builder.config
-        self._add_to_state(key=STATE_S3_CLIENT_KEY, value=self._s3_client)
+        self._add_to_state(key=S3_CLIENT, value=self._s3_client)
         self._bucket_resources = {}
         for key, bucket_name in self._builder.selected_buckets.items():
             resource: S3BucketResource = S3BucketResource(
@@ -167,7 +167,7 @@ class S3Plugin(PluginAbstract):
                 presign_expiry_seconds=config.presign_expiry_seconds,
             )
             self._bucket_resources[key] = resource
-            self._add_to_state(key=f"{STATE_BUCKET_PREFIX_KEY}{key}", value=resource)
+            self._add_to_state(key=S3_BUCKET_PREFIX.resource_attr(key), value=resource)
 
         _logger.info(
             "S3 plugin started.",

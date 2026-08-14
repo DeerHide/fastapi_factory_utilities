@@ -2,6 +2,9 @@
 
 from unittest.mock import MagicMock
 
+import pytest
+from fastapi import FastAPI
+
 from fastapi_factory_utilities.core.plugins.redis_plugin.configs import RedisCredentialsConfig
 from fastapi_factory_utilities.core.plugins.redis_plugin.constants import (
     STATE_REDIS_CLIENT_KEY,
@@ -9,6 +12,7 @@ from fastapi_factory_utilities.core.plugins.redis_plugin.constants import (
 )
 from fastapi_factory_utilities.core.plugins.redis_plugin.depends import depends_redis, depends_redis_plugin
 from fastapi_factory_utilities.core.plugins.redis_plugin.plugins import RedisPlugin
+from fastapi_factory_utilities.core.plugins.state import PluginNotRegisteredError
 
 
 class TestDependsRedis:
@@ -30,3 +34,12 @@ class TestDependsRedis:
         mock_request: MagicMock = MagicMock()
         setattr(mock_request.app.state, STATE_REDIS_PLUGIN_KEY, plugin)
         assert depends_redis_plugin(mock_request) is plugin
+
+    def test_depends_redis_names_missing_plugin(self) -> None:
+        """Missing Redis client is PluginNotRegisteredError, not AttributeError."""
+
+        class _Req:
+            app = FastAPI()
+
+        with pytest.raises(PluginNotRegisteredError, match="RedisPlugin"):
+            depends_redis(_Req())  # type: ignore[arg-type]
