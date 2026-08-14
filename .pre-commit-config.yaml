@@ -9,8 +9,8 @@ repos:
     hooks:
       - id: poetry lock and update
         name: poetry lock and update
-        entry: "poetry"
-        args: ["update", "--with=test", "--extras", "all", "--sync"]
+        entry: bash
+        args: ["-c", "poetry update --with=test --lock && poetry sync --with test --all-extras"]
         language: system
         types: [python]
         pass_filenames: false
