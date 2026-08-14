@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-08-14
+
+### Added
+
+- Optional extras ``mongo``, ``amqp``, ``s3``, ``redis``, ``taskiq``, ``otel``,
+  and ``all``. Backing technologies are no longer mandatory; importing a plugin
+  without its extra raises ``MissingExtraError`` naming the extra to install.
+- ``OpenTelemetryConfig.instrumentations`` selects which instrumentors to load.
+  Absent target libraries are skipped with a log line.
+
+### Changed
+
+- **BREAKING:** install the extras you use
+  (``fastapi_factory_utilities[mongo,otel]``, …). ``[all]`` restores the 5.x
+  kitchen-sink set minus Granian/Hypercorn.
+- **BREAKING:** Uvicorn is the only bundled ASGI server. ``granian.py`` and
+  ``hypercorn.py`` are deleted (zero consumer importers). Bring your own server
+  if you need a different one; FFU still exposes the ASGI app.
+- OpenTelemetry instrumentors import lazily from configuration instead of
+  eagerly at plugin import.
+- **Required consumer action:** bump to ``fastapi-factory-utilities ^6.0.0``
+  and declare the extras you actually import. A 5.x pin will not install
+  6.0.0. Thin services that only see FFU through ``velmios_core`` wait for
+  that wrapper to publish a 6.x line.
+
+### Deprecated
+
+- ``ExceptionMapper``, ``exception_mapper``, and ``MonitoredAbstract`` emit
+  ``DeprecationWarning`` and will be removed in ``7.0.0``. Use
+  ``ExceptionMappingContext`` and ``StatusService.register_component_instance``.
+
 ## [5.25.0] - 2026-08-14
 
 ### Added
@@ -890,7 +921,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.25.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.0.0...HEAD
+[6.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.25.0...v6.0.0
 [5.25.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.24.0...v5.25.0
 [5.24.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.23.0...v5.24.0
 [5.23.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.22.0...v5.23.0
