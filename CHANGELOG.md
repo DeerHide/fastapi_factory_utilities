@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1] - 2026-08-14
+
+### Fixed
+
+- Mandatory-only CI job uses Poetry instead of ``python3.12 -m venv``.
+  The runner has no ``ensurepip``, so the ``v6.0.0`` tag never reached
+  PyPI. Install ``6.0.1``.
+- Pre-push ``poetry update --sync`` no longer strips extras. Poetry 2.4
+  ``update`` has no ``--extras``; the hook now locks, then
+  ``sync --all-extras``.
+
 ## [6.0.0] - 2026-08-14
 
 ### Added
@@ -921,7 +932,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.0.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.0.1...HEAD
+[6.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.0.0...v6.0.1
 [6.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.25.0...v6.0.0
 [5.25.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.24.0...v5.25.0
 [5.24.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.23.0...v5.24.0
