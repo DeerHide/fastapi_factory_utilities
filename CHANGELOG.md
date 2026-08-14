@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.25.0] - 2026-08-14
+
+### Added
+
+- Package-root ``__init__.py`` so ``py.typed`` is carried by a regular package
+  and PEP 561 types resolve from an installed wheel.
+- Package-level re-exports of symbols consumers already deep-imported:
+  ``ODMConfig``, ``OAuth2Scope`` / ``OAuth2Issuer`` / ``OAuth2Audience`` /
+  ``OAuth2Subject``, ``KratosSessionAuthenticationService``, ``JWTLocation``,
+  ``HydraJWKSStoreError``, ``DependsCsrfProtect``, ``RedisCredentialsConfig``,
+  ``RabbitMQCredentialsConfig``. These are re-exports of existing symbols with
+  no behaviour change. See README "Public API and deprecation".
+- Optional ``connection_factory`` on ``AiopikaPlugin`` (defaults to
+  ``connect_robust``) so tests can inject a double without patching a private
+  module path.
+
+### Changed
+
+- Documented the public-API boundary: public means listed in an
+  ``__init__.__all__``; private modules may move in minors without a shim; a
+  public removal gets a ``DeprecationWarning`` naming the replacement, held at
+  least one minor, removed no earlier than the next major.
+
 ## [5.24.0] - 2026-08-13
 
 ### Added
@@ -867,7 +890,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.23.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.25.0...HEAD
+[5.25.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.24.0...v5.25.0
+[5.24.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.23.0...v5.24.0
 [5.23.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.22.0...v5.23.0
 [5.22.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.2...v5.22.0
 [5.21.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.21.1...v5.21.2
