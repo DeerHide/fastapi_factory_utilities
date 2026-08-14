@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.2.0] - 2026-08-14
+
+### Added
+
+- Application-state registry (``core.plugins.state``). Plugin writes and
+  ``depends_*`` reads share named keys. A missing plugin raises
+  ``PluginNotRegisteredError`` naming the plugin. A plugin used before
+  ``set_application`` raises ``PluginNotBoundError``. OpenTelemetry
+  accessors live in ``opentelemetry_plugin.depends``.
+
 ## [6.1.0] - 2026-08-14
 
 ### Added
@@ -958,7 +968,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.1.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.2.0...HEAD
+[6.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.1.0...v6.2.0
 [6.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.0.1...v6.1.0
 [6.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.0.0...v6.0.1
 [6.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v5.25.0...v6.0.0
