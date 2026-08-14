@@ -4,10 +4,12 @@ from .configs import (
     DependsJWTBearerAuthenticationConfig,
     JWTBearerAuthenticationConfig,
     JWTBearerAuthenticationConfigBuilder,
+    JWTLocation,
 )
 from .decoders import GenericJWTBearerTokenDecoder, JWTBearerTokenDecoderAbstract, decode_jwt_token_payload
 from .exceptions import (
     ExpiredJWTError,
+    HydraJWKSStoreError,
     InvalidJWTError,
     InvalidJWTPayploadError,
     JWTAuthenticationError,
@@ -31,6 +33,7 @@ __all__: list[str] = [
     "ExpiredJWTError",
     "GenericHydraJWTVerifier",
     "GenericJWTBearerTokenDecoder",
+    "HydraJWKSStoreError",
     "InvalidJWTError",
     "InvalidJWTPayploadError",
     "JWKStoreAbstract",
@@ -41,6 +44,7 @@ __all__: list[str] = [
     "JWTBearerAuthenticationConfigBuilder",
     "JWTBearerAuthenticationConfigBuilderError",
     "JWTBearerTokenDecoderAbstract",
+    "JWTLocation",
     "JWTNoneVerifier",
     "JWTPayload",
     "JWTVerifierAbstract",

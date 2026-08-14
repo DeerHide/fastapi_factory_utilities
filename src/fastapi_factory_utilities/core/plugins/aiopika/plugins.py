@@ -1,5 +1,6 @@
 """Provides the Aiopika plugin."""
 
+from collections.abc import Awaitable, Callable
 from typing import cast
 
 from aio_pika import connect_robust  # pyright: ignore[reportUnknownMemberType]
@@ -21,14 +22,28 @@ from .exceptions import AiopikaPluginBaseError
 
 _logger: BoundLogger = get_logger(__package__)
 
+ConnectionFactory = Callable[..., Awaitable[AbstractRobustConnection]]
+
 
 class AiopikaPlugin(PluginAbstract):
     """Aiopika plugin."""
 
-    def __init__(self, rabbitmq_credentials_config: RabbitMQCredentialsConfig | None = None) -> None:
-        """Initialize the Aiopika plugin."""
+    def __init__(
+        self,
+        rabbitmq_credentials_config: RabbitMQCredentialsConfig | None = None,
+        connection_factory: ConnectionFactory | None = None,
+    ) -> None:
+        """Initialize the Aiopika plugin.
+
+        Args:
+            rabbitmq_credentials_config: Optional injected credentials (skips YAML).
+            connection_factory: Optional AMQP connection factory. Defaults to
+                ``aio_pika.connect_robust``. Tests inject a double here instead of
+                patching this module.
+        """
         super().__init__()
         self._rabbitmq_credentials_config: RabbitMQCredentialsConfig | None = rabbitmq_credentials_config
+        self._connection_factory: ConnectionFactory = connection_factory or connect_robust
         self._robust_connection: AbstractRobustConnection | None = None
 
     @property
@@ -69,7 +84,9 @@ class AiopikaPlugin(PluginAbstract):
             meter_provider=meter_provider,
         )
         try:
-            self._robust_connection = await connect_robust(url=str(self._rabbitmq_credentials_config.amqp_url))
+            self._robust_connection = await self._connection_factory(
+                url=str(self._rabbitmq_credentials_config.amqp_url)
+            )
         except Exception as exception:
             raise AiopikaPluginBaseError("Unable to connect to the AMQP server.") from exception
         self._add_to_state(key=DEPENDS_AIOPIKA_ROBUST_CONNECTION_KEY, value=self._robust_connection)

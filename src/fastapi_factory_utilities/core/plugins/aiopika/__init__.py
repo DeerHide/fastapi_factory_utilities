@@ -1,5 +1,7 @@
 """Aiopika Plugin Module."""
 
+from fastapi_factory_utilities.core.utils.rabbitmq_configs import RabbitMQCredentialsConfig
+
 from .builders import EventRoutingKeyBuilder, ExchangeNameBuilder, ListenerRoutingKeyBuilder, QueueNameBuilder
 from .concurrency import (
     ConcurrencyGate,
@@ -53,6 +55,7 @@ __all__: list[str] = [
     "Queue",
     "QueueName",
     "QueueNameBuilder",
+    "RabbitMQCredentialsConfig",
     "RoutingKey",
     "build_main_queue_dead_letter_arguments",
     "build_retry_queue_arguments",

@@ -116,6 +116,23 @@ poetry add fastapi-factory-utilities
 
 ---
 
+## Public API and deprecation
+
+A symbol is **public** if and only if it is listed in a package `__init__.__all__`. Import it from that package, not from the defining submodule. Everything else — module paths, module names, class internals — is private and may move in a minor release without a shim.
+
+**SemVer**
+
+- Breaking: removing or renaming a symbol in an `__all__`; removing an extra; raising the minimum Python.
+- Adding a public symbol, or moving a private module, is a minor or patch.
+
+**Deprecation**
+
+A public removal first ships a `DeprecationWarning` that names the replacement, is held for at least one minor, and is removed no earlier than the next major. The CHANGELOG states the removal version. A deprecation with live consumers is either migrated or withdrawn — it is not left warning indefinitely.
+
+Plugins that open an external connection accept that client (or its factory) as an optional constructor argument. Do not monkeypatch FFU internals.
+
+---
+
 ## Quick Start
 
 Here's a minimal example to create a microservice with MongoDB and OpenTelemetry:

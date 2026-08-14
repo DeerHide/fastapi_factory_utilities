@@ -1,5 +1,6 @@
 """ODM Plugin Module."""
 
+from .configs import ODMConfig
 from .depends import depends_odm_client, depends_odm_database
 from .documents import BaseDocument
 from .exceptions import (
@@ -18,6 +19,7 @@ __all__ = [
     "AbstractRepository",
     "AbstractRepositoryInMemory",
     "BaseDocument",
+    "ODMConfig",
     "ODMFindQuery",
     "ODMPlugin",
     "ODMPluginBaseException",

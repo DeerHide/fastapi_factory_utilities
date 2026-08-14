@@ -7,7 +7,7 @@ from .config import (
     BaseApplicationConfig,
     RootConfig,
 )
-from .csrf import depends_csrf_protect, register_csrf_protect_exception_handler
+from .csrf import DependsCsrfProtect, depends_csrf_protect, register_csrf_protect_exception_handler
 from .depends import (
     DependsApplicationConfig,
     DependsRootConfig,
@@ -26,6 +26,7 @@ __all__: list[str] = [
     "BaseApplicationConfig",
     "ConfigBuilderError",
     "DependsApplicationConfig",
+    "DependsCsrfProtect",
     "DependsRootConfig",
     "EnvironmentEnum",
     "RootConfig",
