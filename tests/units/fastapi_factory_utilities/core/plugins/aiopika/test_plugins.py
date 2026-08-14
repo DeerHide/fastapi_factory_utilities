@@ -6,8 +6,8 @@ from fastapi import FastAPI
 from pydantic_core import Url
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
+from fastapi_factory_utilities.core.plugins.aiopika.configs import RabbitMQCredentialsConfig
 from fastapi_factory_utilities.core.plugins.aiopika.plugins import AiopikaPlugin
-from fastapi_factory_utilities.core.utils.rabbitmq_configs import RabbitMQCredentialsConfig
 
 
 class TestAiopikaPluginConnectionFactory:

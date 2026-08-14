@@ -1,13 +1,11 @@
 """Provides the exceptions for the OpenTelemetryPlugin."""
 
+from fastapi_factory_utilities.core.exceptions import FastAPIFactoryUtilitiesError
 
-class OpenTelemetryPluginBaseException(BaseException):
+
+class OpenTelemetryPluginBaseException(FastAPIFactoryUtilitiesError):  # noqa: N818
     """Base exception for the OpenTelemetryPlugin."""
-
-    pass
 
 
 class OpenTelemetryPluginConfigError(OpenTelemetryPluginBaseException):
     """Exception for the OpenTelemetryPlugin configuration."""
-
-    pass

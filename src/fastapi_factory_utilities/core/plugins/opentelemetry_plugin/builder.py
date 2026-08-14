@@ -1,6 +1,6 @@
 """Provides a factory function to build a objets for OpenTelemetry."""
 
-from typing import Any, Self
+from typing import Self
 from urllib.parse import ParseResult, urlparse
 
 from opentelemetry.baggage.propagation import W3CBaggagePropagator
@@ -39,11 +39,7 @@ from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import 
     OpenTelemetryTracerConfig,
 )
 from fastapi_factory_utilities.core.protocols import ApplicationAbstractProtocol
-from fastapi_factory_utilities.core.utils.importlib import get_path_file_in_package
-from fastapi_factory_utilities.core.utils.yaml_reader import (
-    UnableToReadYamlFileError,
-    YamlFileReader,
-)
+from fastapi_factory_utilities.core.utils.configs import build_config_from_file_in_package
 
 from .configs import OpenTelemetryConfig, ProtocolEnum
 from .exceptions import OpenTelemetryPluginConfigError
@@ -135,32 +131,16 @@ class OpenTelemetryPluginBuilder:
             Self: The OpenTelemetryPluginFactory object.
 
         Raises:
-            OpenTelemetryPluginConfigError: If the package name is not set in the application.
             OpenTelemetryPluginConfigError: If the application configuration file is not found.
 
         """
-        if self._application.PACKAGE_NAME == "":
-            raise OpenTelemetryPluginConfigError("The package name must be set in the concrete application class.")
-
-        # Read the application configuration file
-        try:
-            yaml_file_content: dict[str, Any] = YamlFileReader(
-                file_path=get_path_file_in_package(
-                    filename="application.yaml",
-                    package=self._application.PACKAGE_NAME,
-                ),
-                yaml_base_key="opentelemetry",
-                use_environment_injection=True,
-            ).read()
-        except (FileNotFoundError, ImportError, UnableToReadYamlFileError) as exception:
-            raise OpenTelemetryPluginConfigError("Unable to read the application configuration file.") from exception
-
-        # Create the application configuration model
-        try:
-            self._config = OpenTelemetryConfig(**yaml_file_content)
-        except ValueError as exception:
-            raise OpenTelemetryPluginConfigError("Unable to create the application configuration model.") from exception
-
+        self._config = build_config_from_file_in_package(
+            package_name=self._application.PACKAGE_NAME,
+            filename="application.yaml",
+            config_class=OpenTelemetryConfig,
+            yaml_base_key="opentelemetry",
+            error_type=OpenTelemetryPluginConfigError,
+        )
         return self
 
     def build_meter_provider(

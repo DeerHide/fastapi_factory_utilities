@@ -161,3 +161,62 @@ class TestBuildConfigFromFileInPackage:
                 )
 
             assert "Invalid configuration values" in str(exc_info.value)
+
+    def test_empty_package_name_raises_uniform_error(self) -> None:
+        """Unset PACKAGE_NAME is one error, regardless of plugin error_type."""
+
+        class PluginConfigError(Exception):
+            """Stand-in for a plugin config error."""
+
+        with pytest.raises(UnableToReadConfigFileError, match="PACKAGE_NAME is unset"):
+            build_config_from_file_in_package(
+                package_name="",
+                filename="application.yaml",
+                config_class=BaseModel,
+                yaml_base_key="odm",
+                error_type=PluginConfigError,
+            )
+
+    def test_error_type_wraps_read_failure_naming_yaml_key(self) -> None:
+        """Read failures become error_type and name the YAML base key."""
+
+        class PluginConfigError(Exception):
+            """Stand-in for a plugin config error."""
+
+        with self.mock_method(
+            mock_value_file_path="file_path",
+            mock_value_file_content={"odm": {}},
+            base_key="odm",
+            side_effects=FileNotFoundError,
+        ) as (_, _, _):
+            with pytest.raises(PluginConfigError, match="Unable to read 'odm' configuration"):
+                build_config_from_file_in_package(
+                    package_name="package_name",
+                    filename="application.yaml",
+                    config_class=BaseModel,
+                    yaml_base_key="odm",
+                    error_type=PluginConfigError,
+                )
+
+    def test_error_type_wraps_validation_naming_yaml_key(self) -> None:
+        """Validation failures become error_type and name the YAML base key."""
+
+        class PluginConfigError(Exception):
+            """Stand-in for a plugin config error."""
+
+        class TestConfigModel(BaseModel):
+            key: str
+
+        with self.mock_method(
+            mock_value_file_path="file_path",
+            mock_value_file_content={"odm": {}},
+            base_key="odm",
+        ) as (_, _, _):
+            with pytest.raises(PluginConfigError, match="Invalid 'odm' configuration"):
+                build_config_from_file_in_package(
+                    package_name="package_name",
+                    filename="application.yaml",
+                    config_class=TestConfigModel,
+                    yaml_base_key="odm",
+                    error_type=PluginConfigError,
+                )

@@ -59,23 +59,35 @@ def build_config_from_file_in_package(
     filename: str,
     config_class: type[GenericConfigBaseModelType],
     yaml_base_key: str | None = None,
+    *,
+    error_type: type[Exception] | None = None,
 ) -> GenericConfigBaseModelType:
     """Build a configuration object from a file in a package.
 
+    Environment injection is always on. Plugins pass ``error_type`` so read and
+    validation failures become that plugin's config error and name the YAML key.
+
     Args:
-        package_name (str): The package name.
-        filename (str): The filename.
-        config_class (type[GenericConfigBaseModelType]): The configuration class.
-        yaml_base_key (str): The base key in the YAML file.
+        package_name: The application package that owns ``application.yaml``.
+        filename: The filename.
+        config_class: The configuration class.
+        yaml_base_key: The base key in the YAML file.
+        error_type: Optional plugin config error to raise instead of the generic
+            config exceptions.
 
     Returns:
-        GenericConfigBaseModelType: The configuration object.
+        The configuration object.
 
     Raises:
-        UnableToReadConfigFileError: If the configuration file cannot be read.
-        ValueErrorConfigError: If the configuration file is invalid.
+        UnableToReadConfigFileError: If ``package_name`` is empty, or the file
+            cannot be read and ``error_type`` is unset.
+        ValueErrorConfigError: If validation fails and ``error_type`` is unset.
+        Exception: ``error_type`` when set.
     """
-    # Read the application configuration file
+    if package_name == "":
+        raise UnableToReadConfigFileError("PACKAGE_NAME is unset.")
+
+    section: str = yaml_base_key or filename
     try:
         yaml_file_content: dict[str, Any] = YamlFileReader(
             file_path=get_path_file_in_package(
@@ -85,17 +97,21 @@ def build_config_from_file_in_package(
             yaml_base_key=yaml_base_key,
             use_environment_injection=True,
         ).read()
-    except (FileNotFoundError, ImportError, UnableToReadYamlFileError) as exception:
+    except (FileNotFoundError, ImportError, UnableToReadYamlFileError, ValueError) as exception:
+        if error_type is not None:
+            raise error_type(f"Unable to read '{section}' configuration.") from exception
         raise UnableToReadConfigFileError("Unable to read the application configuration file.") from exception
 
-    # Create the application configuration model
     try:
         config: GenericConfigBaseModelType = config_class(**yaml_file_content)
     except ValidationError as exception:
-        raise ValueErrorConfigError(
-            f"Invalid configuration values:\n{format_validation_errors(exception)}"
-        ) from exception
+        formatted: str = format_validation_errors(exception)
+        if error_type is not None:
+            raise error_type(f"Invalid '{section}' configuration:\n{formatted}") from exception
+        raise ValueErrorConfigError(f"Invalid configuration values:\n{formatted}") from exception
     except ValueError as exception:
+        if error_type is not None:
+            raise error_type(f"Invalid '{section}' configuration: {exception}") from exception
         raise ValueErrorConfigError(f"Unable to create the configuration model: {exception}") from exception
 
     return config

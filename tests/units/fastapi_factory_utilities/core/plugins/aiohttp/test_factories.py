@@ -46,11 +46,9 @@ class TestBuildHttpDependencyConfig:
             "limit_per_host": CUSTOM_LIMIT_PER_HOST,
         }
 
-        with patch(
-            "fastapi_factory_utilities.core.plugins.aiohttp.factories.get_path_file_in_package"
-        ) as mock_get_path:
+        with patch("fastapi_factory_utilities.core.utils.configs.get_path_file_in_package") as mock_get_path:
             mock_get_path.return_value = Path("application.yaml")
-            with patch("fastapi_factory_utilities.core.plugins.aiohttp.factories.YamlFileReader") as mock_yaml_reader:
+            with patch("fastapi_factory_utilities.core.utils.configs.YamlFileReader") as mock_yaml_reader:
                 mock_reader_instance = MagicMock()
                 mock_reader_instance.read.return_value = mock_yaml_data
                 mock_yaml_reader.return_value = mock_reader_instance
@@ -67,7 +65,9 @@ class TestBuildHttpDependencyConfig:
                 # Verify YamlFileReader was called with correct parameters
                 expected_key_path = f"{DEFAULT_YAML_BASE_KEY}.{key}"
                 mock_yaml_reader.assert_called_once_with(
-                    file_path=Path("application.yaml"), yaml_base_key=expected_key_path
+                    file_path=Path("application.yaml"),
+                    yaml_base_key=expected_key_path,
+                    use_environment_injection=True,
                 )
 
     def test_with_default_values(self) -> None:
@@ -75,11 +75,9 @@ class TestBuildHttpDependencyConfig:
         key = "test_service"
         mock_yaml_data: dict[str, object] = {}
 
-        with patch(
-            "fastapi_factory_utilities.core.plugins.aiohttp.factories.get_path_file_in_package"
-        ) as mock_get_path:
+        with patch("fastapi_factory_utilities.core.utils.configs.get_path_file_in_package") as mock_get_path:
             mock_get_path.return_value = Path("application.yaml")
-            with patch("fastapi_factory_utilities.core.plugins.aiohttp.factories.YamlFileReader") as mock_yaml_reader:
+            with patch("fastapi_factory_utilities.core.utils.configs.YamlFileReader") as mock_yaml_reader:
                 mock_reader_instance = MagicMock()
                 mock_reader_instance.read.return_value = mock_yaml_data
                 mock_yaml_reader.return_value = mock_reader_instance
@@ -95,9 +93,7 @@ class TestBuildHttpDependencyConfig:
         """Test that FileNotFoundError is wrapped in UnableToReadHttpDependencyConfigError."""
         key = "test_service"
 
-        with patch(
-            "fastapi_factory_utilities.core.plugins.aiohttp.factories.get_path_file_in_package"
-        ) as mock_get_path:
+        with patch("fastapi_factory_utilities.core.utils.configs.get_path_file_in_package") as mock_get_path:
             mock_get_path.side_effect = FileNotFoundError("File not found")
 
             mock_logger = Mock()
@@ -114,9 +110,7 @@ class TestBuildHttpDependencyConfig:
         """Test that ImportError is wrapped in UnableToReadHttpDependencyConfigError."""
         key = "test_service"
 
-        with patch(
-            "fastapi_factory_utilities.core.plugins.aiohttp.factories.get_path_file_in_package"
-        ) as mock_get_path:
+        with patch("fastapi_factory_utilities.core.utils.configs.get_path_file_in_package") as mock_get_path:
             mock_get_path.side_effect = ImportError("Import failed")
 
             mock_logger = Mock()
@@ -133,9 +127,7 @@ class TestBuildHttpDependencyConfig:
         """Test that UnableToReadYamlFileError is wrapped in UnableToReadHttpDependencyConfigError."""
         key = "test_service"
 
-        with patch(
-            "fastapi_factory_utilities.core.plugins.aiohttp.factories.get_path_file_in_package"
-        ) as mock_get_path:
+        with patch("fastapi_factory_utilities.core.utils.configs.get_path_file_in_package") as mock_get_path:
             mock_get_path.side_effect = UnableToReadYamlFileError(file_path=Path("test.yaml"), message="YAML error")
 
             mock_logger = Mock()
@@ -152,11 +144,9 @@ class TestBuildHttpDependencyConfig:
         """Test that ValueError from read() is wrapped in UnableToReadHttpDependencyConfigError."""
         key = "test_service"
 
-        with patch(
-            "fastapi_factory_utilities.core.plugins.aiohttp.factories.get_path_file_in_package"
-        ) as mock_get_path:
+        with patch("fastapi_factory_utilities.core.utils.configs.get_path_file_in_package") as mock_get_path:
             mock_get_path.return_value = Path("application.yaml")
-            with patch("fastapi_factory_utilities.core.plugins.aiohttp.factories.YamlFileReader") as mock_yaml_reader:
+            with patch("fastapi_factory_utilities.core.utils.configs.YamlFileReader") as mock_yaml_reader:
                 mock_reader_instance = MagicMock()
                 mock_reader_instance.read.side_effect = ValueError("Invalid YAML")
                 mock_yaml_reader.return_value = mock_reader_instance
@@ -175,11 +165,9 @@ class TestBuildHttpDependencyConfig:
         """Test that key path is correctly formatted."""
         key = "my.nested.service"
 
-        with patch(
-            "fastapi_factory_utilities.core.plugins.aiohttp.factories.get_path_file_in_package"
-        ) as mock_get_path:
+        with patch("fastapi_factory_utilities.core.utils.configs.get_path_file_in_package") as mock_get_path:
             mock_get_path.return_value = Path("application.yaml")
-            with patch("fastapi_factory_utilities.core.plugins.aiohttp.factories.YamlFileReader") as mock_yaml_reader:
+            with patch("fastapi_factory_utilities.core.utils.configs.YamlFileReader") as mock_yaml_reader:
                 mock_reader_instance = MagicMock()
                 mock_reader_instance.read.return_value = {}
                 mock_yaml_reader.return_value = mock_reader_instance
@@ -188,7 +176,9 @@ class TestBuildHttpDependencyConfig:
 
                 expected_key_path = f"{DEFAULT_YAML_BASE_KEY}.{key}"
                 mock_yaml_reader.assert_called_once_with(
-                    file_path=Path("application.yaml"), yaml_base_key=expected_key_path
+                    file_path=Path("application.yaml"),
+                    yaml_base_key=expected_key_path,
+                    use_environment_injection=True,
                 )
 
     @pytest.mark.parametrize(
@@ -202,11 +192,9 @@ class TestBuildHttpDependencyConfig:
     )
     def test_various_key_formats(self, key: str) -> None:
         """Test various key format configurations."""
-        with patch(
-            "fastapi_factory_utilities.core.plugins.aiohttp.factories.get_path_file_in_package"
-        ) as mock_get_path:
+        with patch("fastapi_factory_utilities.core.utils.configs.get_path_file_in_package") as mock_get_path:
             mock_get_path.return_value = Path("application.yaml")
-            with patch("fastapi_factory_utilities.core.plugins.aiohttp.factories.YamlFileReader") as mock_yaml_reader:
+            with patch("fastapi_factory_utilities.core.utils.configs.YamlFileReader") as mock_yaml_reader:
                 mock_reader_instance = MagicMock()
                 mock_reader_instance.read.return_value = {}
                 mock_yaml_reader.return_value = mock_reader_instance

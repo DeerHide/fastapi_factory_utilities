@@ -4,12 +4,12 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
-from fastapi_factory_utilities.core.plugins.taskiq_plugins.exceptions import TaskiqPluginConfigError
-from fastapi_factory_utilities.core.utils.redis_configs import (
+from fastapi_factory_utilities.core.plugins.redis_plugin.configs import (
     RedisCredentialsConfig,
-    RedisCredentialsConfigError,
     build_redis_credentials_config,
 )
+from fastapi_factory_utilities.core.plugins.redis_plugin.exceptions import RedisPluginConfigError
+from fastapi_factory_utilities.core.plugins.taskiq_plugins.exceptions import TaskiqPluginConfigError
 
 from .depends import DEPENDS_SCHEDULER_COMPONENT_KEY
 from .schedulers import SchedulerComponent
@@ -40,7 +40,7 @@ class TaskiqPlugin(PluginAbstract):
         if self._redis_credentials_config is None:
             try:
                 self._redis_credentials_config = build_redis_credentials_config(application=self._application)
-            except RedisCredentialsConfigError as exception:
+            except RedisPluginConfigError as exception:
                 raise TaskiqPluginConfigError("Unable to build the Redis credentials configuration.") from exception
         # Configure the scheduler component
         self._scheduler_component.configure(

@@ -28,7 +28,7 @@ class AioHttpClientPlugin(PluginAbstract):
 
     def on_load(self) -> None:
         """On load."""
-        if self._application is None or self._application.PACKAGE_NAME == "":
+        if self._application is None:
             raise ValueError("The application package name is not set")
 
         self._builder: AioHttpClientBuilder = AioHttpClientBuilder(keys=self._keys, application=self._application)

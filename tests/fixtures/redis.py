@@ -9,9 +9,9 @@ import pytest
 from pydantic import BaseModel, ConfigDict
 from testcontainers.redis import RedisContainer
 
+from fastapi_factory_utilities.core.plugins.redis_plugin.configs import RedisCredentialsConfig
 from fastapi_factory_utilities.core.plugins.taskiq_plugins.plugin import TaskiqPlugin
 from fastapi_factory_utilities.core.plugins.taskiq_plugins.schedulers import SchedulerComponent
-from fastapi_factory_utilities.core.utils.redis_configs import RedisCredentialsConfig
 
 
 class RedisFixture(BaseModel):

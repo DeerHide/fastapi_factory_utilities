@@ -8,6 +8,7 @@ from botocore.config import Config
 from fastapi_factory_utilities.core.plugins.s3_plugin.builder import S3Builder
 from fastapi_factory_utilities.core.plugins.s3_plugin.configs import S3Config
 from fastapi_factory_utilities.core.plugins.s3_plugin.exceptions import S3PluginConfigError
+from fastapi_factory_utilities.core.utils.configs import UnableToReadConfigFileError
 
 
 def _config(**overrides: object) -> S3Config:
@@ -61,7 +62,7 @@ class TestS3Builder:
         """YAML load without PACKAGE_NAME fails."""
         mock_app: MagicMock = MagicMock()
         mock_app.PACKAGE_NAME = ""
-        with pytest.raises(S3PluginConfigError, match="package name"):
+        with pytest.raises(UnableToReadConfigFileError, match="PACKAGE_NAME is unset"):
             S3Builder(application=mock_app).build_all()
 
     def test_botocore_config_production_defaults(self) -> None:

@@ -10,11 +10,13 @@ from opentelemetry.propagators.composite import CompositePropagator
 from opentelemetry.sdk.resources import DEPLOYMENT_ENVIRONMENT, SERVICE_NAME
 
 from fastapi_factory_utilities.core.app.enums import EnvironmentEnum
+from fastapi_factory_utilities.core.exceptions import FastAPIFactoryUtilitiesError
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.builder import OpenTelemetryPluginBuilder
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import (
     OpenTelemetryConfig,
     OpenTelemetryTracerConfig,
 )
+from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.exceptions import OpenTelemetryPluginConfigError
 
 
 class TestBuildResource:
@@ -69,3 +71,17 @@ class TestBuildTracerPropagator:
 
         textmap = get_global_textmap()
         assert isinstance(textmap, CompositePropagator)
+
+
+class TestOpenTelemetryPluginExceptions:
+    """OTel plugin errors must be catchable library errors."""
+
+    def test_config_error_is_caught_by_except_exception(self) -> None:
+        """An OTel config failure is an Exception, not a BaseException-only type."""
+        caught: Exception | None = None
+        try:
+            raise OpenTelemetryPluginConfigError("otel yaml invalid")
+        except Exception as exception:  # pylint: disable=broad-exception-caught
+            caught = exception
+        assert isinstance(caught, OpenTelemetryPluginConfigError)
+        assert isinstance(caught, FastAPIFactoryUtilitiesError)

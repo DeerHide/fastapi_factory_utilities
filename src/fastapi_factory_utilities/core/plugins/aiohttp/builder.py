@@ -25,9 +25,6 @@ class AioHttpClientBuilder:
 
     def build_configs(self) -> Self:
         """Build the HTTP dependency configs."""
-        if self._application.PACKAGE_NAME == "":
-            raise ValueError("The application package name is not set")
-
         for key in self._keys:
             self._configs[key] = build_http_dependency_config(
                 key=key, application_package=self._application.PACKAGE_NAME

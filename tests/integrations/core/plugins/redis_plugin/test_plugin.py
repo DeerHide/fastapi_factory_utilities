@@ -11,9 +11,9 @@ from fastapi_factory_utilities.core.plugins.redis_plugin import (
     RedisPlugin,
     depends_redis,
 )
+from fastapi_factory_utilities.core.plugins.redis_plugin.configs import RedisCredentialsConfig
 from fastapi_factory_utilities.core.protocols import ApplicationAbstractProtocol
 from fastapi_factory_utilities.core.services.status.services import StatusService
-from fastapi_factory_utilities.core.utils.redis_configs import RedisCredentialsConfig
 from tests.fixtures.redis import RedisFixture
 
 

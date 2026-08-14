@@ -2,13 +2,13 @@
 
 from unittest.mock import MagicMock
 
+from fastapi_factory_utilities.core.plugins.redis_plugin.configs import RedisCredentialsConfig
 from fastapi_factory_utilities.core.plugins.redis_plugin.constants import (
     STATE_REDIS_CLIENT_KEY,
     STATE_REDIS_PLUGIN_KEY,
 )
 from fastapi_factory_utilities.core.plugins.redis_plugin.depends import depends_redis, depends_redis_plugin
 from fastapi_factory_utilities.core.plugins.redis_plugin.plugins import RedisPlugin
-from fastapi_factory_utilities.core.utils.redis_configs import RedisCredentialsConfig
 
 
 class TestDependsRedis:

@@ -8,10 +8,12 @@ import pytest
 from fastapi import FastAPI
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
+from fastapi_factory_utilities.core.plugins.redis_plugin.configs import RedisCredentialsConfig
 from fastapi_factory_utilities.core.plugins.redis_plugin.constants import (
     STATE_REDIS_CLIENT_KEY,
     STATE_REDIS_PLUGIN_KEY,
 )
+from fastapi_factory_utilities.core.plugins.redis_plugin.exceptions import RedisPluginNotStartedError
 from fastapi_factory_utilities.core.plugins.redis_plugin.plugins import RedisPlugin
 from fastapi_factory_utilities.core.services.status.enums import (
     ComponentTypeEnum,
@@ -19,7 +21,6 @@ from fastapi_factory_utilities.core.services.status.enums import (
     ReadinessStatusEnum,
 )
 from fastapi_factory_utilities.core.services.status.services import StatusService
-from fastapi_factory_utilities.core.utils.redis_configs import RedisCredentialsConfig
 
 
 class TestRedisPluginBuildKey:
@@ -143,3 +144,12 @@ class TestRedisPluginLifecycle:
         cache_statuses = list(by_type[ComponentTypeEnum.CACHE].values())
         assert cache_statuses[0]["health"] == HealthStatusEnum.UNHEALTHY
         mock_client.aclose.assert_awaited_once()
+
+    def test_client_before_startup_raises_named_error(self) -> None:
+        """Accessing the client before on_startup raises RedisPluginNotStartedError."""
+        plugin: RedisPlugin = RedisPlugin(
+            name_suffix="svc",
+            redis_credentials_config=RedisCredentialsConfig(url="redis://localhost:6379"),
+        )
+        with pytest.raises(RedisPluginNotStartedError, match="call on_startup first"):
+            _ = plugin.client

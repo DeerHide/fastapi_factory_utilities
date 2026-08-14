@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- ``redis_plugin.exceptions``: ``RedisPluginConfigError`` and
+  ``RedisPluginNotStartedError``. Accessing the Redis client before
+  ``on_startup`` raises the latter instead of ``RuntimeError``.
+
+### Changed
+
+- Plugin YAML loading goes through ``build_config_from_file_in_package``
+  (``error_type=``). Unset ``PACKAGE_NAME`` is always
+  ``UnableToReadConfigFileError("PACKAGE_NAME is unset.")``. Malformed
+  plugin config names the YAML base key.
+- aiohttp ``dependencies.http.*`` uses the same helper, so environment
+  injection is explicit (``YamlFileReader`` already defaulted it on;
+  ``${ENV:default}`` placeholders already resolved).
+- ``RedisCredentialsConfig`` lives in ``redis_plugin.configs``;
+  ``RabbitMQCredentialsConfig`` in ``aiopika.configs``.
+  ``core.utils.redis_configs`` and ``core.utils.rabbitmq_configs`` are
+  deleted.
+- ``OpenTelemetryPluginBaseException`` and ``ODMPluginBaseException`` now
+  subclass ``FastAPIFactoryUtilitiesError``. An OTel config failure is
+  catchable with ``except Exception`` and may degrade instead of crashing
+  (it previously inherited ``BaseException`` and escaped startup handlers).
+
 ## [6.0.1] - 2026-08-14
 
 ### Fixed

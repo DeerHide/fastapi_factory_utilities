@@ -5,6 +5,14 @@ from redis.asyncio import Redis
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
+from fastapi_factory_utilities.core.plugins.redis_plugin.configs import (
+    RedisCredentialsConfig,
+    build_redis_credentials_config,
+)
+from fastapi_factory_utilities.core.plugins.redis_plugin.exceptions import (
+    RedisPluginConfigError,
+    RedisPluginNotStartedError,
+)
 from fastapi_factory_utilities.core.services.status.enums import (
     ComponentTypeEnum,
     HealthStatusEnum,
@@ -14,11 +22,6 @@ from fastapi_factory_utilities.core.services.status.services import StatusServic
 from fastapi_factory_utilities.core.services.status.types import (
     ComponentInstanceType,
     Status,
-)
-from fastapi_factory_utilities.core.utils.redis_configs import (
-    RedisCredentialsConfig,
-    RedisCredentialsConfigError,
-    build_redis_credentials_config,
 )
 
 from .constants import STATE_REDIS_CLIENT_KEY, STATE_REDIS_PLUGIN_KEY
@@ -63,10 +66,10 @@ class RedisPlugin(PluginAbstract):
             The started ``redis.asyncio.Redis`` client.
 
         Raises:
-            RuntimeError: If the plugin has not started yet.
+            RedisPluginNotStartedError: If the plugin has not started yet.
         """
         if self._client is None:
-            raise RuntimeError("RedisPlugin client is not available; call on_startup first")
+            raise RedisPluginNotStartedError("RedisPlugin client is not available; call on_startup first")
         return self._client
 
     @property
@@ -99,7 +102,7 @@ class RedisPlugin(PluginAbstract):
         if self._redis_credentials_config is None:
             try:
                 self._redis_credentials_config = build_redis_credentials_config(application=self._application)
-            except RedisCredentialsConfigError:
+            except RedisPluginConfigError:
                 _logger.exception("Unable to build Redis credentials configuration.")
                 raise
         _logger.debug("Redis plugin loaded.", name_suffix=self._name_suffix)

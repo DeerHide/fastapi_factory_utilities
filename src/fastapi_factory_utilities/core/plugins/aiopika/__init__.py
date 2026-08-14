@@ -2,8 +2,8 @@
 
 # ruff: noqa: E402
 # pylint: disable=wrong-import-position
+from fastapi_factory_utilities.core.plugins.aiopika.configs import RabbitMQCredentialsConfig
 from fastapi_factory_utilities.core.plugins.extras import require_extra
-from fastapi_factory_utilities.core.utils.rabbitmq_configs import RabbitMQCredentialsConfig
 
 require_extra("amqp", "aio_pika")
 

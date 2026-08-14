@@ -11,9 +11,8 @@ from opentelemetry.sdk.trace import TracerProvider
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
-from fastapi_factory_utilities.core.utils.rabbitmq_configs import (
+from fastapi_factory_utilities.core.plugins.aiopika.configs import (
     RabbitMQCredentialsConfig,
-    RabbitMQCredentialsConfigError,
     build_rabbitmq_credentials_config,
 )
 
@@ -58,12 +57,9 @@ class AiopikaPlugin(PluginAbstract):
 
         # Build the RabbitMQ credentials configuration if not provided
         if self._rabbitmq_credentials_config is None:
-            try:
-                self._rabbitmq_credentials_config = build_rabbitmq_credentials_config(
-                    package_name=self._application.PACKAGE_NAME
-                )
-            except RabbitMQCredentialsConfigError as exception:
-                raise AiopikaPluginBaseError("Unable to build the RabbitMQ credentials configuration.") from exception
+            self._rabbitmq_credentials_config = build_rabbitmq_credentials_config(
+                package_name=self._application.PACKAGE_NAME
+            )
 
     async def on_startup(self) -> None:
         """On startup."""

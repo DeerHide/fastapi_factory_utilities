@@ -6,11 +6,7 @@ from botocore.config import Config
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.protocols import ApplicationAbstractProtocol
-from fastapi_factory_utilities.core.utils.importlib import get_path_file_in_package
-from fastapi_factory_utilities.core.utils.yaml_reader import (
-    UnableToReadYamlFileError,
-    YamlFileReader,
-)
+from fastapi_factory_utilities.core.utils.configs import build_config_from_file_in_package
 
 from .configs import S3Config
 from .exceptions import S3PluginConfigError
@@ -77,25 +73,13 @@ class S3Builder:
         if self._config is not None:
             return self
 
-        if self._application.PACKAGE_NAME == "":
-            raise S3PluginConfigError("The package name must be set in the concrete application class.")
-
-        try:
-            yaml_file_content: dict[str, Any] = YamlFileReader(
-                file_path=get_path_file_in_package(
-                    filename="application.yaml",
-                    package=self._application.PACKAGE_NAME,
-                ),
-                yaml_base_key="s3",
-                use_environment_injection=True,
-            ).read()
-        except (FileNotFoundError, ImportError, UnableToReadYamlFileError) as exception:
-            raise S3PluginConfigError("Unable to read the application configuration file.") from exception
-
-        try:
-            self._config = S3Config.model_validate(yaml_file_content)
-        except ValueError as exception:
-            raise S3PluginConfigError("Unable to create the application configuration model.") from exception
+        self._config = build_config_from_file_in_package(
+            package_name=self._application.PACKAGE_NAME,
+            filename="application.yaml",
+            config_class=S3Config,
+            yaml_base_key="s3",
+            error_type=S3PluginConfigError,
+        )
         return self
 
     def build_selected_buckets(self) -> Self:
