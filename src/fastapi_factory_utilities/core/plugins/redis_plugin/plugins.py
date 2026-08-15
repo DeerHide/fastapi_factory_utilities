@@ -1,6 +1,5 @@
 """General-purpose async Redis client plugin."""
 
-from reactivex import Subject
 from redis.asyncio import Redis
 from structlog.stdlib import BoundLogger, get_logger
 
@@ -14,21 +13,13 @@ from fastapi_factory_utilities.core.plugins.redis_plugin.exceptions import (
     RedisPluginNotStartedError,
 )
 from fastapi_factory_utilities.core.plugins.state import REDIS_CLIENT, REDIS_PLUGIN
-from fastapi_factory_utilities.core.services.status.enums import (
-    ComponentTypeEnum,
-    HealthStatusEnum,
-    ReadinessStatusEnum,
-)
-from fastapi_factory_utilities.core.services.status.services import StatusService
-from fastapi_factory_utilities.core.services.status.types import (
-    ComponentInstanceType,
-    Status,
-)
+from fastapi_factory_utilities.core.plugins.status import PluginStatusMixin
+from fastapi_factory_utilities.core.services.status.enums import ComponentTypeEnum
 
 _logger: BoundLogger = get_logger()
 
 
-class RedisPlugin(PluginAbstract):
+class RedisPlugin(PluginStatusMixin, PluginAbstract):
     """Async Redis client plugin with a namespaced key builder.
 
     Owns its own connection pool (separate from ``TaskiqPlugin``). Does not set
@@ -54,8 +45,6 @@ class RedisPlugin(PluginAbstract):
         self._name_suffix: str = name_suffix
         self._redis_credentials_config: RedisCredentialsConfig | None = redis_credentials_config
         self._client: Redis | None = None
-        self._component_instance: ComponentInstanceType | None = None
-        self._monitoring_subject: Subject[Status] | None = None
 
     @property
     def client(self) -> Redis:
@@ -106,24 +95,11 @@ class RedisPlugin(PluginAbstract):
                 raise
         _logger.debug("Redis plugin loaded.", name_suffix=self._name_suffix)
 
-    def _setup_status(self) -> None:
-        """Register this plugin with the application status service."""
-        assert self._application is not None
-        status_service: StatusService = self._application.get_status_service()
-        self._component_instance = ComponentInstanceType(
-            component_type=ComponentTypeEnum.CACHE,
-            identifier="Redis",
-        )
-        self._monitoring_subject = status_service.register_component_instance(
-            component_instance=self._component_instance
-        )
-
     async def on_startup(self) -> None:
         """Create the Redis client, ping it, and register health status."""
         assert self._application is not None
         assert self._redis_credentials_config is not None
-        self._setup_status()
-        assert self._monitoring_subject is not None
+        self._setup_status(component_type=ComponentTypeEnum.CACHE, identifier="Redis")
 
         try:
             self._client = Redis.from_url(
@@ -132,9 +108,7 @@ class RedisPlugin(PluginAbstract):
             )
             await self._client.ping()
         except Exception:  # pylint: disable=broad-except
-            self._monitoring_subject.on_next(
-                value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
-            )
+            self._report_unhealthy()
             if self._client is not None:
                 await self._client.aclose()
                 self._client = None
@@ -144,9 +118,7 @@ class RedisPlugin(PluginAbstract):
         self._add_to_state(key=REDIS_CLIENT, value=self._client)
         self._add_to_state(key=REDIS_PLUGIN, value=self)
         _logger.info("Redis plugin started.", name_suffix=self._name_suffix)
-        self._monitoring_subject.on_next(
-            value=Status(health=HealthStatusEnum.HEALTHY, readiness=ReadinessStatusEnum.READY)
-        )
+        self._report_healthy()
 
     async def on_shutdown(self) -> None:
         """Close the Redis client."""

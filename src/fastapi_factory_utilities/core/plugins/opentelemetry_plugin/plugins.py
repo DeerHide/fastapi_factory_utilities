@@ -26,7 +26,11 @@ _logger: BoundLogger = get_logger()
 
 
 class OpenTelemetryPlugin(PluginAbstract):
-    """OpenTelemetry plugin."""
+    """OpenTelemetry plugin.
+
+    Does not register a StatusService component: it is not a data path.
+    A missing collector must not mark the pod not-ready.
+    """
 
     SECONDS_TO_MS_MULTIPLIER: int = 1000
 

@@ -41,3 +41,8 @@ class AioHttpClientBuilder:
     def resources(self) -> dict[str, AioHttpClientResource]:
         """Get the Aiohttp client resources."""
         return self._resources
+
+    @property
+    def configs(self) -> dict[str, HttpServiceDependencyConfig]:
+        """Get the HTTP dependency configs keyed by resource name."""
+        return self._configs

@@ -1,4 +1,10 @@
-"""Aiohttp client plugin."""
+"""Aiohttp client plugin.
+
+Readiness is opt-in per HTTP dependency via ``affects_readiness`` on
+``HttpServiceDependencyConfig`` (default false). A degraded third-party API
+must not fail the pod unless the service explicitly says that dependency is
+on the critical path.
+"""
 
 from __future__ import annotations
 
@@ -10,12 +16,17 @@ from fastapi_factory_utilities.core.plugins.state import (
     METER_PROVIDER,
     TRACER_PROVIDER,
 )
+from fastapi_factory_utilities.core.plugins.status import register_status_component, report_status
+from fastapi_factory_utilities.core.services.status.enums import ComponentTypeEnum
 
 from .builder import AioHttpClientBuilder
 
 if TYPE_CHECKING:
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.trace import TracerProvider
+    from reactivex import Subject
+
+    from fastapi_factory_utilities.core.services.status.types import Status
 
 
 class AioHttpClientPlugin(PluginAbstract):
@@ -51,7 +62,22 @@ class AioHttpClientPlugin(PluginAbstract):
             meter_provider = getattr(app_state, METER_PROVIDER.attr, None)
 
         for key, resource in self._builder.resources.items():
-            await resource.on_startup(tracer_provider=tracer_provider, meter_provider=meter_provider)
+            subject: Subject[Status] | None = None
+            config = self._builder.configs.get(key)
+            if self._application is not None and config is not None and config.affects_readiness is True:
+                subject = register_status_component(
+                    self._application,
+                    component_type=ComponentTypeEnum.SERVICE,
+                    identifier=key,
+                )
+            try:
+                await resource.on_startup(tracer_provider=tracer_provider, meter_provider=meter_provider)
+            except Exception:
+                if subject is not None:
+                    report_status(subject, healthy=False)
+                raise
+            if subject is not None:
+                report_status(subject, healthy=True)
             self._add_to_state(key=AIOHTTP_RESOURCE_PREFIX.resource_attr(key), value=resource)
 
     async def on_shutdown(self) -> None:

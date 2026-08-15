@@ -5,21 +5,12 @@ from typing import Any
 
 from aioboto3.session import Session
 from botocore.exceptions import ClientError
-from reactivex import Subject
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
 from fastapi_factory_utilities.core.plugins.state import S3_BUCKET_PREFIX, S3_CLIENT
-from fastapi_factory_utilities.core.services.status.enums import (
-    ComponentTypeEnum,
-    HealthStatusEnum,
-    ReadinessStatusEnum,
-)
-from fastapi_factory_utilities.core.services.status.services import StatusService
-from fastapi_factory_utilities.core.services.status.types import (
-    ComponentInstanceType,
-    Status,
-)
+from fastapi_factory_utilities.core.plugins.status import PluginStatusMixin
+from fastapi_factory_utilities.core.services.status.enums import ComponentTypeEnum
 
 from .builder import S3Builder
 from .configs import S3Config
@@ -29,7 +20,7 @@ from .resources import S3BucketResource
 _logger: BoundLogger = get_logger()
 
 
-class S3Plugin(PluginAbstract):
+class S3Plugin(PluginStatusMixin, PluginAbstract):
     """S3 / MinIO plugin using a shared long-lived aioboto3 client."""
 
     def __init__(
@@ -47,8 +38,6 @@ class S3Plugin(PluginAbstract):
         self._keys: list[str] | None = keys
         self._s3_config: S3Config | None = s3_config
         self._builder: S3Builder | None = None
-        self._component_instance: ComponentInstanceType | None = None
-        self._monitoring_subject: Subject[Status] | None = None
         self._exit_stack: AsyncExitStack | None = None
         self._s3_client: Any | None = None
         self._presign_client: Any | None = None
@@ -63,18 +52,6 @@ class S3Plugin(PluginAbstract):
             keys=self._keys,
         ).build_all()
         _logger.debug("S3 plugin loaded.", buckets=list((self._builder.selected_buckets or {}).keys()))
-
-    def _setup_status(self) -> None:
-        """Register this plugin with the application status service."""
-        assert self._application is not None
-        status_service: StatusService = self._application.get_status_service()
-        self._component_instance = ComponentInstanceType(
-            component_type=ComponentTypeEnum.STORAGE,
-            identifier="S3",
-        )
-        self._monitoring_subject = status_service.register_component_instance(
-            component_instance=self._component_instance
-        )
 
     async def _warm_client(self, client: Any) -> None:
         """Warm the S3 connection with a list_buckets round-trip.
@@ -122,8 +99,7 @@ class S3Plugin(PluginAbstract):
         assert self._builder.selected_buckets is not None
         assert self._builder.config is not None
 
-        self._setup_status()
-        assert self._monitoring_subject is not None
+        self._setup_status(component_type=ComponentTypeEnum.STORAGE, identifier="S3")
 
         try:
             session: Session = Session()
@@ -142,9 +118,7 @@ class S3Plugin(PluginAbstract):
                     session.client("s3", **self._builder.presign_client_kwargs)
                 )
         except Exception:  # pylint: disable=broad-except
-            self._monitoring_subject.on_next(
-                value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
-            )
+            self._report_unhealthy()
             if self._exit_stack is not None:
                 await self._exit_stack.aclose()
                 self._exit_stack = None
@@ -175,9 +149,7 @@ class S3Plugin(PluginAbstract):
             buckets=list(self._builder.selected_buckets.keys()),
             presign_configured=self._presign_client is not None,
         )
-        self._monitoring_subject.on_next(
-            value=Status(health=HealthStatusEnum.HEALTHY, readiness=ReadinessStatusEnum.READY)
-        )
+        self._report_healthy()
 
     async def on_shutdown(self) -> None:
         """Close the shared S3 client and clear references."""

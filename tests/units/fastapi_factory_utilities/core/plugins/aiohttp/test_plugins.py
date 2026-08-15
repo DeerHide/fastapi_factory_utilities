@@ -7,9 +7,16 @@ import pytest
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
 from fastapi_factory_utilities.core.plugins.aiohttp.builder import AioHttpClientBuilder
+from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
 from fastapi_factory_utilities.core.plugins.aiohttp.constants import STATE_PREFIX_KEY
 from fastapi_factory_utilities.core.plugins.aiohttp.plugins import AioHttpClientPlugin
 from fastapi_factory_utilities.core.plugins.aiohttp.resources import AioHttpClientResource
+from fastapi_factory_utilities.core.services.status.enums import (
+    ComponentTypeEnum,
+    HealthStatusEnum,
+    ReadinessStatusEnum,
+)
+from fastapi_factory_utilities.core.services.status.services import StatusService
 
 
 class TestAioHttpClientPlugin:
@@ -113,6 +120,35 @@ class TestAioHttpClientPlugin:
 
             mock_builder.build_resources.assert_called_once()
             mock_resource.on_startup.assert_called_once_with(tracer_provider=None, meter_provider=None)
+
+    async def test_on_startup_registers_status_when_affects_readiness(self) -> None:
+        """Opt-in ``affects_readiness`` registers a SERVICE component."""
+        with patch("fastapi_factory_utilities.core.plugins.aiohttp.plugins.AioHttpClientBuilder") as mock_builder_class:
+            mock_builder = MagicMock(spec=AioHttpClientBuilder)
+            mock_resource = AsyncMock(spec=AioHttpClientResource)
+            mock_builder.resources = {"payments": mock_resource}
+            mock_builder.configs = {
+                "payments": HttpServiceDependencyConfig(affects_readiness=True),
+            }
+            mock_builder_class.return_value = mock_builder
+
+            plugin = AioHttpClientPlugin(keys=["payments"])
+            status_service = StatusService()
+            mock_app = MagicMock()
+            mock_app.PACKAGE_NAME = "test_package"
+            mock_state = MagicMock(spec=[])
+            mock_state.tracer_provider = None
+            mock_state.meter_provider = None
+            mock_app.get_asgi_app.return_value.state = mock_state
+            mock_app.get_status_service.return_value = status_service
+            plugin._application = mock_app  # pyright: ignore[reportPrivateUsage]
+            plugin.on_load()
+            await plugin.on_startup()
+
+            statuses = list(status_service.get_components_status_by_type()[ComponentTypeEnum.SERVICE].values())
+            assert len(statuses) == 1
+            assert statuses[0]["health"] == HealthStatusEnum.HEALTHY
+            assert statuses[0]["readiness"] == ReadinessStatusEnum.READY
 
     async def test_on_startup_with_application_providers(self) -> None:
         """Test on_startup retrieves OpenTelemetry providers from application state."""

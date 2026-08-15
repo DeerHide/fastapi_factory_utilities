@@ -8,22 +8,13 @@ from beanie import Document, init_beanie  # pyright: ignore[reportUnknownVariabl
 from bson import ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.asynchronous.mongo_client import AsyncMongoClient
-from reactivex import Subject
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
 from fastapi_factory_utilities.core.plugins.state import ODM_CLIENT, ODM_DATABASE
+from fastapi_factory_utilities.core.plugins.status import PluginStatusMixin
 from fastapi_factory_utilities.core.protocols import ApplicationAbstractProtocol
-from fastapi_factory_utilities.core.services.status.enums import (
-    ComponentTypeEnum,
-    HealthStatusEnum,
-    ReadinessStatusEnum,
-)
-from fastapi_factory_utilities.core.services.status.services import StatusService
-from fastapi_factory_utilities.core.services.status.types import (
-    ComponentInstanceType,
-    Status,
-)
+from fastapi_factory_utilities.core.services.status.enums import ComponentTypeEnum
 
 from .builder import ODMBuilder
 from .configs import ODMConfig
@@ -37,7 +28,7 @@ from .repositories import AbstractRepository
 _logger: BoundLogger = get_logger()
 
 
-class ODMPlugin(PluginAbstract):
+class ODMPlugin(PluginStatusMixin, PluginAbstract):
     """ODM plugin."""
 
     def __init__(
@@ -45,8 +36,6 @@ class ODMPlugin(PluginAbstract):
     ) -> None:
         """Initialize the ODM plugin."""
         super().__init__()
-        self._component_instance: ComponentInstanceType | None = None
-        self._monitoring_subject: Subject[Status] | None = None
         self._document_models: list[type[Document]] | None = document_models
         self._odm_config: ODMConfig | None = odm_config
         self._odm_client: AsyncMongoClient[Any] | None = None
@@ -65,21 +54,10 @@ class ODMPlugin(PluginAbstract):
         pymongo_logger.setLevel(INFO)
         _logger.debug("ODM plugin loaded.")
 
-    def _setup_status(self) -> None:
-        assert self._application is not None
-        status_service: StatusService = self._application.get_status_service()
-        self._component_instance = ComponentInstanceType(
-            component_type=ComponentTypeEnum.DATABASE, identifier="MongoDB"
-        )
-        self._monitoring_subject = status_service.register_component_instance(
-            component_instance=self._component_instance
-        )
-
     async def _setup_beanie(self) -> None:
         assert self._application is not None
         assert self._odm_database is not None
         assert self._document_models is not None
-        assert self._monitoring_subject is not None
         # TODO: Find a better way to initialize beanie with the document models of the concrete application
         # through an hook in the application, a dynamis import ?
         try:
@@ -88,9 +66,7 @@ class ODMPlugin(PluginAbstract):
                 document_models=self._document_models,
             )
         except Exception:  # pylint: disable=broad-except
-            self._monitoring_subject.on_next(
-                value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
-            )
+            self._report_unhealthy()
             _logger.exception("ODM plugin failed to start.")
             raise
 
@@ -110,7 +86,6 @@ class ODMPlugin(PluginAbstract):
         """
         assert self._odm_client is not None
         assert self._odm_database is not None
-        assert self._monitoring_subject is not None
 
         collection = self._odm_client[self._odm_database.name][STARTUP_PROBE_COLLECTION]
         probe_id: ObjectId = ObjectId()
@@ -118,9 +93,7 @@ class ODMPlugin(PluginAbstract):
             await collection.insert_one({"_id": probe_id, STARTUP_PROBE_FIELD: "startup-smoke-test"})
             await collection.delete_one({"_id": probe_id})
         except Exception:  # pylint: disable=broad-except
-            self._monitoring_subject.on_next(
-                value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
-            )
+            self._report_unhealthy()
             _logger.exception("CSFLE startup smoke test failed: mongocryptd spawn/connect or Vault unreachable.")
             raise
 
@@ -143,9 +116,7 @@ class ODMPlugin(PluginAbstract):
         host: str
         port: int
         assert self._application is not None
-        self._setup_status()
-        assert self._monitoring_subject is not None
-        assert self._component_instance is not None
+        self._setup_status(component_type=ComponentTypeEnum.DATABASE, identifier="MongoDB")
 
         try:
             odm_factory: ODMBuilder = ODMBuilder(application=self._application, odm_config=self._odm_config)
@@ -163,9 +134,7 @@ class ODMPlugin(PluginAbstract):
             self._odm_database = odm_factory.odm_database
             self._odm_client = odm_factory.odm_client
         except Exception:  # pylint: disable=broad-except
-            self._monitoring_subject.on_next(
-                value=Status(health=HealthStatusEnum.UNHEALTHY, readiness=ReadinessStatusEnum.NOT_READY)
-            )
+            self._report_unhealthy()
             _logger.exception("ODM plugin failed to start.")
             raise
 
@@ -185,9 +154,7 @@ class ODMPlugin(PluginAbstract):
             f"Document models: {self._application.ODM_DOCUMENT_MODELS}"
         )
 
-        self._monitoring_subject.on_next(
-            value=Status(health=HealthStatusEnum.HEALTHY, readiness=ReadinessStatusEnum.READY)
-        )
+        self._report_healthy()
 
     async def on_shutdown(self) -> None:
         """Actions to perform on shutdown for the ODM plugin."""

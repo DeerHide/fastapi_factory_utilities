@@ -22,3 +22,8 @@ class HttpServiceDependencyConfig(BaseModel):
     ssl_keyfile_password: str | None = Field(default=None, description="SSL key file password")
     # Application Graceful shutdown configuration
     graceful_shutdown_timeout: int = Field(default=10, description="Graceful shutdown timeout in seconds")
+    # Opt-in: a downed third-party API should not fail the pod by default.
+    affects_readiness: bool = Field(
+        default=False,
+        description="If true, register a StatusService component for this HTTP dependency.",
+    )

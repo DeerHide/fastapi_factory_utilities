@@ -41,6 +41,7 @@ class TestHttpServiceDependencyConfig:
         assert config.ssl_keyfile is None
         assert config.ssl_keyfile_password is None
         assert config.graceful_shutdown_timeout == DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT
+        assert config.affects_readiness is False
 
     def test_with_valid_url(self) -> None:
         """Test config with valid HTTP URL."""
