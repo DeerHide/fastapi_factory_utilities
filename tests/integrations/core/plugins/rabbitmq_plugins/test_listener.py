@@ -6,7 +6,7 @@ from uuid import uuid4
 from aio_pika import ExchangeType
 from pydantic import BaseModel, Field
 
-from fastapi_factory_utilities.core.plugins.aiopika import (
+from fastapi_factory_utilities.core.plugins.aiopika_plugin import (
     AbstractListener,
     AbstractPublisher,
     AiopikaPlugin,

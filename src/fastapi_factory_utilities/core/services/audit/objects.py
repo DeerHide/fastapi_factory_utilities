@@ -7,7 +7,7 @@ from typing import Annotated, Any, ClassVar, Generic, NewType, TypeVar, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from fastapi_factory_utilities.core.plugins.aiopika.types import PartStr
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.types import PartStr
 from fastapi_factory_utilities.core.utils.api import ApiField, ApiResponseModelAbstract, SearchableEntity
 
 EntityName = NewType("EntityName", PartStr)

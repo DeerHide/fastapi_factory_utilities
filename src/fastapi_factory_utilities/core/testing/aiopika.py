@@ -11,10 +11,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 from aio_pika.abc import AbstractIncomingMessage, HeadersType
 
-from fastapi_factory_utilities.core.plugins.aiopika.abstract import AbstractAiopikaResource
-from fastapi_factory_utilities.core.plugins.aiopika.message import GenericMessage
-from fastapi_factory_utilities.core.plugins.aiopika.publisher.abstract import AbstractPublisher
-from fastapi_factory_utilities.core.plugins.aiopika.types import RoutingKey
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.abstract import AbstractAiopikaResource
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.message import GenericMessage
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.publisher.abstract import AbstractPublisher
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.types import RoutingKey
 
 GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])  # pylint: disable=invalid-name
 

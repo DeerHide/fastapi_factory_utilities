@@ -52,7 +52,7 @@ fastapi_factory_utilities/
 │       │   │   │   ├── 📄 exceptions.py       # OTel exceptions
 │       │   │   │   └── 📁 instruments/        # Auto-instrumentation modules
 │       │   │   │
-│       │   │   ├── 📁 taskiq_plugins/         # Taskiq Task Queue Plugin
+│       │   │   ├── 📁 taskiq_plugin/         # Taskiq Task Queue Plugin
 │       │   │   │   ├── 📄 plugin.py           # TaskiqPlugin implementation
 │       │   │   │   ├── 📄 schedulers.py       # Task scheduling
 │       │   │   │   ├── 📄 depends.py          # FastAPI dependencies

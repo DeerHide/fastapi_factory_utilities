@@ -10,7 +10,7 @@ import aiohttp
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from structlog.stdlib import BoundLogger, get_logger
 
-from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource
+from fastapi_factory_utilities.core.plugins.aiohttp_plugin import AioHttpClientResource
 from fastapi_factory_utilities.core.utils.ory import get_next_page_token_from_link_header
 
 from .enums import AuthenticationMethodEnum, KratosFlowTypeEnum, KratosIdentityPatchOpEnum

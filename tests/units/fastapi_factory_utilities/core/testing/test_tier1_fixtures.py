@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from taskiq import InMemoryBroker
 
 from fastapi_factory_utilities.core.plugins.redis_plugin.constants import STATE_REDIS_CLIENT_KEY
-from fastapi_factory_utilities.core.plugins.taskiq_plugins.depends import DEPENDS_SCHEDULER_COMPONENT_KEY
+from fastapi_factory_utilities.core.plugins.taskiq_plugin.depends import DEPENDS_SCHEDULER_COMPONENT_KEY
 from fastapi_factory_utilities.core.testing.odm import build_mongomock_database
 from fastapi_factory_utilities.core.testing.otel import build_in_memory_otel
 from fastapi_factory_utilities.core.testing.redis import build_fakeredis

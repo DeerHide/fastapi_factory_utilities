@@ -4,7 +4,7 @@ from aio_pika import ExchangeType
 from docker.models.containers import ExecResult
 from testcontainers.rabbitmq import RabbitMqContainer
 
-from fastapi_factory_utilities.core.plugins.aiopika import AiopikaPlugin, Exchange, ExchangeName
+from fastapi_factory_utilities.core.plugins.aiopika_plugin import AiopikaPlugin, Exchange, ExchangeName
 
 
 def extract_exchange_names_from_output(output: bytes) -> list[str]:

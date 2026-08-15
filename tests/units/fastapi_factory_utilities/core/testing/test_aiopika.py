@@ -5,9 +5,9 @@ from unittest.mock import MagicMock
 
 from pydantic import BaseModel, Field
 
-from fastapi_factory_utilities.core.plugins.aiopika.listener.abstract import AbstractListener
-from fastapi_factory_utilities.core.plugins.aiopika.message import GenericMessage
-from fastapi_factory_utilities.core.plugins.aiopika.types import RoutingKey
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.listener.abstract import AbstractListener
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.message import GenericMessage
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.types import RoutingKey
 from fastapi_factory_utilities.core.testing.aiopika import InMemoryPublisher, build_incoming_message
 
 

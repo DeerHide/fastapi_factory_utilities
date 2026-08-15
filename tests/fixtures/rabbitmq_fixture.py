@@ -8,8 +8,8 @@ import pytest
 from pydantic_core import Url
 from testcontainers.rabbitmq import RabbitMqContainer  # pyright: ignore[reportMissingTypeStubs]
 
-from fastapi_factory_utilities.core.plugins.aiopika import AiopikaPlugin
-from fastapi_factory_utilities.core.plugins.aiopika.configs import RabbitMQCredentialsConfig
+from fastapi_factory_utilities.core.plugins.aiopika_plugin import AiopikaPlugin
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.configs import RabbitMQCredentialsConfig
 from fastapi_factory_utilities.core.protocols import ApplicationAbstractProtocol
 
 

@@ -5,8 +5,8 @@ from typing import Any, cast
 from fastapi import FastAPI
 from taskiq import InMemoryBroker
 
-from fastapi_factory_utilities.core.plugins.taskiq_plugins.depends import DEPENDS_SCHEDULER_COMPONENT_KEY
-from fastapi_factory_utilities.core.plugins.taskiq_plugins.schedulers import SchedulerComponent
+from fastapi_factory_utilities.core.plugins.taskiq_plugin.depends import DEPENDS_SCHEDULER_COMPONENT_KEY
+from fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers import SchedulerComponent
 
 
 def build_in_memory_scheduler_component(

@@ -4,10 +4,8 @@ from redis.asyncio import Redis
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
-from fastapi_factory_utilities.core.plugins.redis_plugin.configs import (
-    RedisCredentialsConfig,
-    build_redis_credentials_config,
-)
+from fastapi_factory_utilities.core.plugins.redis_plugin.builder import build_redis_credentials_config
+from fastapi_factory_utilities.core.plugins.redis_plugin.configs import RedisCredentialsConfig
 from fastapi_factory_utilities.core.plugins.redis_plugin.exceptions import (
     RedisPluginConfigError,
     RedisPluginNotStartedError,

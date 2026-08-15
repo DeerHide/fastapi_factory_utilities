@@ -17,8 +17,8 @@ from fastapi_factory_utilities.core.plugins.s3_plugin.constants import (
     STATE_S3_CLIENT_KEY,
 )
 from fastapi_factory_utilities.core.plugins.s3_plugin.resources import S3BucketResource
-from fastapi_factory_utilities.core.plugins.taskiq_plugins.depends import DEPENDS_SCHEDULER_COMPONENT_KEY
-from fastapi_factory_utilities.core.plugins.taskiq_plugins.schedulers import SchedulerComponent
+from fastapi_factory_utilities.core.plugins.taskiq_plugin.depends import DEPENDS_SCHEDULER_COMPONENT_KEY
+from fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers import SchedulerComponent
 from fastapi_factory_utilities.core.testing.contracts.models import ContractDocument, ContractRepository
 from fastapi_factory_utilities.core.testing.odm import build_mongomock_database
 from fastapi_factory_utilities.core.testing.otel import InMemoryOtel, build_in_memory_otel

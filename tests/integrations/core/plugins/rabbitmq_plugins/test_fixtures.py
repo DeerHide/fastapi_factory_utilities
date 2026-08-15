@@ -1,6 +1,6 @@
 """Test the RabbitMQ fixtures."""
 
-from fastapi_factory_utilities.core.plugins.aiopika import AiopikaPlugin
+from fastapi_factory_utilities.core.plugins.aiopika_plugin import AiopikaPlugin
 
 
 class TestFixturesRabbitMQ:

@@ -306,7 +306,7 @@ async def test_with_mongomock_repo() -> None:
 ### Using Mocked HTTP Client
 
 ```python
-from fastapi_factory_utilities.core.plugins.aiohttp.mockers import (
+from fastapi_factory_utilities.core.plugins.aiohttp_plugin.mockers import (
     build_mocked_aiohttp_response,
     build_mocked_aiohttp_resource,
 )

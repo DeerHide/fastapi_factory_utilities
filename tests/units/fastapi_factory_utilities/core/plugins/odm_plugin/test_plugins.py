@@ -13,52 +13,6 @@ from fastapi_factory_utilities.core.plugins.odm_plugin.encryption import (
 from fastapi_factory_utilities.core.plugins.odm_plugin.plugins import ODMPlugin
 from fastapi_factory_utilities.core.services.status.enums import HealthStatusEnum, ReadinessStatusEnum
 
-CUSTOM_TIMEOUT_S = 4.0
-
-
-class TestODMPluginWarmPool:
-    """Tests for ``ODMPlugin._warm_pool``."""
-
-    # pylint: disable=protected-access
-
-    @pytest.mark.asyncio
-    async def test_warm_pool_issues_ping_command(self) -> None:
-        """Pool warm-up issues a single ping round-trip."""
-        plugin: ODMPlugin = ODMPlugin()
-        mock_client: MagicMock = MagicMock()
-        mock_client.admin.command = AsyncMock(return_value={"ok": 1})
-
-        await plugin._warm_pool(client=mock_client, timeout_s=CUSTOM_TIMEOUT_S)
-
-        mock_client.admin.command.assert_awaited_once_with("ping")
-
-    @pytest.mark.asyncio
-    async def test_warm_pool_swallows_failures(self) -> None:
-        """Pool warm-up failures are logged but do not abort startup."""
-        plugin: ODMPlugin = ODMPlugin()
-        mock_client: MagicMock = MagicMock()
-        mock_client.admin.command = AsyncMock(side_effect=ConnectionError("MongoDB unavailable"))
-
-        await plugin._warm_pool(client=mock_client, timeout_s=CUSTOM_TIMEOUT_S)
-
-        mock_client.admin.command.assert_awaited_once_with("ping")
-
-    @pytest.mark.asyncio
-    async def test_warm_pool_swallows_timeout(self) -> None:
-        """Pool warm-up timeout is logged but does not abort startup."""
-
-        async def slow_ping(*_args: object, **_kwargs: object) -> dict[str, int]:
-            await asyncio.sleep(10)
-            return {"ok": 1}
-
-        plugin: ODMPlugin = ODMPlugin()
-        mock_client: MagicMock = MagicMock()
-        mock_client.admin.command = AsyncMock(side_effect=slow_ping)
-
-        await plugin._warm_pool(client=mock_client, timeout_s=0.01)
-
-        mock_client.admin.command.assert_awaited_once_with("ping")
-
 
 class TestODMPluginStartup:
     """Tests for ``ODMPlugin.on_startup`` fail-fast behavior."""

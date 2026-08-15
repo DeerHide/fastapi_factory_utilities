@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Plugin packages follow ``<technology>_plugin``: ``taskiq_plugin`` (was
+  ``taskiq_plugins``), ``aiohttp_plugin``, ``aiopika_plugin``. Old import paths
+  remain as ``DeprecationWarning`` aliases until ``7.0.0``. Every plugin package
+  now has ``plugins.py``, ``configs.py``, ``builder.py``, ``depends.py`` and
+  ``exceptions.py``. Named HTTP/S3 depends share ``NamedResourceDepends``;
+  startup connection warm-up shares ``PluginAbstract._warm_soft``.
+
 ## [6.3.0] - 2026-08-15
 
 ### Added

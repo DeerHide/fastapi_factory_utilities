@@ -8,7 +8,7 @@ import aiohttp
 import jwt
 from pydantic import ValidationError
 
-from fastapi_factory_utilities.core.plugins.aiohttp import (
+from fastapi_factory_utilities.core.plugins.aiohttp_plugin import (
     AioHttpClientResource,
 )
 from fastapi_factory_utilities.core.security.jwt import JWTBearerAuthenticationConfig

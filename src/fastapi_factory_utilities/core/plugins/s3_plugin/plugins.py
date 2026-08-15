@@ -53,19 +53,6 @@ class S3Plugin(PluginStatusMixin, PluginAbstract):
         ).build_all()
         _logger.debug("S3 plugin loaded.", buckets=list((self._builder.selected_buckets or {}).keys()))
 
-    async def _warm_client(self, client: Any) -> None:
-        """Warm the S3 connection with a list_buckets round-trip.
-
-        Args:
-            client: Entered aiobotocore S3 client.
-        """
-        try:
-            await client.list_buckets()
-        except Exception:  # pylint: disable=broad-except
-            _logger.warning(
-                "Failed to warm S3 connection at startup; will retry on first use.",
-            )
-
     async def _ensure_buckets_exist(self, client: Any, buckets: dict[str, str]) -> None:
         """Hard-fail when a configured physical bucket is missing.
 
@@ -109,7 +96,8 @@ class S3Plugin(PluginStatusMixin, PluginAbstract):
             self._s3_client = await self._exit_stack.enter_async_context(
                 session.client("s3", **self._builder.client_kwargs)
             )
-            await self._warm_client(client=self._s3_client)
+            assert self._s3_client is not None
+            await self._warm_soft(self._s3_client.list_buckets, what="S3 connection")
             await self._ensure_buckets_exist(client=self._s3_client, buckets=self._builder.selected_buckets)
 
             if self._builder.presign_client_kwargs is not None:

@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Generic, Self, TypeVar
 
 from aio_pika.abc import AbstractRobustConnection, ExchangeType
 
-from fastapi_factory_utilities.core.plugins.aiopika import (
+from fastapi_factory_utilities.core.plugins.aiopika_plugin import (
     AbstractListener,
     AbstractPublisher,
     AiopikaPluginBaseError,

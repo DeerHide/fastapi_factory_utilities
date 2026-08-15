@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import jwt
 import pytest
 
-from fastapi_factory_utilities.core.plugins.aiohttp.mockers import (
+from fastapi_factory_utilities.core.plugins.aiohttp_plugin.mockers import (
     build_mocked_aiohttp_response,
 )
 from fastapi_factory_utilities.core.plugins.odm_plugin.encryption.vault import (

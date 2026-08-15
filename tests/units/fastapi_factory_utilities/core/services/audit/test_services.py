@@ -8,14 +8,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from fastapi_factory_utilities.core.plugins.aiopika import (
+from fastapi_factory_utilities.core.plugins.aiopika_plugin import (
     AbstractPublisher,
     AiopikaPluginBaseError,
     ExchangeName,
     GenericMessage,
     RoutingKey,
 )
-from fastapi_factory_utilities.core.plugins.aiopika.types import PartStr
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.types import PartStr
 from fastapi_factory_utilities.core.services.audit.exceptions import AuditServiceError
 from fastapi_factory_utilities.core.services.audit.objects import (
     AuditableEntity,

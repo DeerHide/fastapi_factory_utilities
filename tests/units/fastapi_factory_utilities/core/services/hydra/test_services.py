@@ -12,9 +12,9 @@ import jwt
 import pytest
 from pydantic import HttpUrl, ValidationError
 
-from fastapi_factory_utilities.core.plugins.aiohttp import AioHttpClientResource
-from fastapi_factory_utilities.core.plugins.aiohttp.configs import HttpServiceDependencyConfig
-from fastapi_factory_utilities.core.plugins.aiohttp.mockers import (
+from fastapi_factory_utilities.core.plugins.aiohttp_plugin import AioHttpClientResource
+from fastapi_factory_utilities.core.plugins.aiohttp_plugin.configs import HttpServiceDependencyConfig
+from fastapi_factory_utilities.core.plugins.aiohttp_plugin.mockers import (
     build_mocked_aiohttp_resource,
     build_mocked_aiohttp_response,
 )

@@ -305,9 +305,9 @@ Jordan forks the repo, follows the development guide to set up the environment, 
 |--------|-------------|---------|
 | `ODMPlugin` | `fastapi_factory_utilities.core.plugins.odm_plugin` | MongoDB/Beanie |
 | `OpenTelemetryPlugin` | `fastapi_factory_utilities.core.plugins.opentelemetry_plugin` | Tracing/Metrics |
-| `TaskiqPlugin` | `fastapi_factory_utilities.core.plugins.taskiq_plugins` | Background tasks |
-| `AiopikaPlugin` | `fastapi_factory_utilities.core.plugins.aiopika` | RabbitMQ |
-| `AioHttpPlugin` | `fastapi_factory_utilities.core.plugins.aiohttp` | HTTP client |
+| `TaskiqPlugin` | `fastapi_factory_utilities.core.plugins.taskiq_plugin` | Background tasks |
+| `AiopikaPlugin` | `fastapi_factory_utilities.core.plugins.aiopika_plugin` | RabbitMQ |
+| `AioHttpPlugin` | `fastapi_factory_utilities.core.plugins.aiohttp_plugin` | HTTP client |
 
 **Services:**
 

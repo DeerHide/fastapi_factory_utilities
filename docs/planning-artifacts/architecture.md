@@ -593,7 +593,7 @@ fastapi_factory_utilities/
 │       │   │   │   ├── config.py
 │       │   │   │   ├── exceptions.py
 │       │   │   │   └── plugin.py
-│       │   │   └── taskiq_plugins/
+│       │   │   └── taskiq_plugin/
 │       │   │       ├── __init__.py
 │       │   │       └── plugin.py
 │       │   ├── security/             # Security utilities

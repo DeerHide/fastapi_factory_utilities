@@ -5,7 +5,7 @@ from uuid import uuid4
 from aio_pika import ExchangeType
 from pydantic import BaseModel, Field
 
-from fastapi_factory_utilities.core.plugins.aiopika import (
+from fastapi_factory_utilities.core.plugins.aiopika_plugin import (
     AbstractPublisher,
     AiopikaPlugin,
     Exchange,
@@ -14,7 +14,7 @@ from fastapi_factory_utilities.core.plugins.aiopika import (
     QueueName,
     RoutingKey,
 )
-from fastapi_factory_utilities.core.plugins.aiopika.queue import Queue
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.queue import Queue
 
 
 class BodyMessageForTest(BaseModel):

@@ -49,23 +49,6 @@ async def _fake_client_cm(client: MagicMock) -> AsyncIterator[MagicMock]:
     yield client
 
 
-class TestS3PluginWarmClient:
-    """Tests for ``S3Plugin._warm_client``."""
-
-    # pylint: disable=protected-access
-
-    @pytest.mark.asyncio
-    async def test_warm_client_swallows_failures(self) -> None:
-        """Warm failures are logged but do not abort startup."""
-        plugin: S3Plugin = S3Plugin(s3_config=_config())
-        mock_client: MagicMock = MagicMock()
-        mock_client.list_buckets = AsyncMock(side_effect=ConnectionError("unavailable"))
-
-        await plugin._warm_client(client=mock_client)
-
-        mock_client.list_buckets.assert_awaited_once()
-
-
 class TestS3PluginStartup:
     """Tests for ``S3Plugin`` startup / shutdown."""
 

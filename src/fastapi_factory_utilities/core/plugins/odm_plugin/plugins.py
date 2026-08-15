@@ -97,20 +97,6 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
             _logger.exception("CSFLE startup smoke test failed: mongocryptd spawn/connect or Vault unreachable.")
             raise
 
-    async def _warm_pool(self, client: AsyncMongoClient[Any], timeout_s: float) -> None:
-        """Warm the MongoDB connection with a single ping round-trip.
-
-        Args:
-            client: The ODM client whose connection should be warmed.
-            timeout_s: Maximum time to wait for the ping to complete.
-        """
-        try:
-            await asyncio.wait_for(client.admin.command("ping"), timeout=timeout_s)
-        except Exception:  # pylint: disable=broad-except
-            _logger.warning(
-                "Failed to warm MongoDB connection at startup; will retry on first use.",
-            )
-
     async def on_startup(self) -> None:
         """Actions to perform on startup for the ODM plugin."""
         host: str
@@ -127,9 +113,11 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
             host, port = cast(tuple[str, int], await odm_factory.odm_client.address)
             await odm_factory.odm_client.aconnect()
             assert odm_factory.config is not None
-            await self._warm_pool(
-                client=odm_factory.odm_client,
-                timeout_s=odm_factory.config.connection_timeout_ms / ODMBuilder.MS_TO_S,
+            client = odm_factory.odm_client
+            timeout_s: float = odm_factory.config.connection_timeout_ms / ODMBuilder.MS_TO_S
+            await self._warm_soft(
+                lambda: asyncio.wait_for(client.admin.command("ping"), timeout=timeout_s),
+                what="MongoDB connection",
             )
             self._odm_database = odm_factory.odm_database
             self._odm_client = odm_factory.odm_client

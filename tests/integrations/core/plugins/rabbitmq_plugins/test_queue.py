@@ -4,8 +4,8 @@ from aio_pika import ExchangeType
 from docker.models.containers import ExecResult
 from testcontainers.rabbitmq import RabbitMqContainer
 
-from fastapi_factory_utilities.core.plugins.aiopika import Exchange, ExchangeName, Queue, QueueName, RoutingKey
-from fastapi_factory_utilities.core.plugins.aiopika.plugins import AiopikaPlugin
+from fastapi_factory_utilities.core.plugins.aiopika_plugin import Exchange, ExchangeName, Queue, QueueName, RoutingKey
+from fastapi_factory_utilities.core.plugins.aiopika_plugin.plugins import AiopikaPlugin
 
 
 def extract_queue_names_from_output(output: bytes) -> list[str]:
