@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.3.0] - 2026-08-15
+
+### Added
+
+- Shared ``PluginStatusMixin`` for StatusService registration. ``AiopikaPlugin``
+  and ``TaskiqPlugin`` now report readiness (broker / Redis backend). A
+  disconnect arms not-ready after 15s so a single reconnect does not flap.
+  aiohttp ``affects_readiness`` (default false) opts a named HTTP dependency
+  onto the critical path. OpenTelemetry does not register a component (not a
+  data path). AMQP telemetry is optional; if ``OpenTelemetryPlugin`` is
+  registered it must appear before ``AiopikaPlugin``.
+
 ## [6.2.0] - 2026-08-14
 
 ### Added
@@ -968,7 +980,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.2.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.3.0...HEAD
+[6.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.2.0...v6.3.0
 [6.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.1.0...v6.2.0
 [6.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.0.1...v6.1.0
 [6.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.0.0...v6.0.1
