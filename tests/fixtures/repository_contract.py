@@ -1,34 +1,132 @@
-"""Shared repository contract suite.
+"""Repository contract suite — mongomock + real Mongo, FFU tests only.
 
-Subclass and provide fixtures:
-
-* ``repository`` — an :class:`~fastapi_factory_utilities.core.plugins.odm_plugin.repositories.AbstractRepository`
-  instance whose Beanie document models are already initialized.
-* ``new_entity`` — a callable ``(**kwargs) -> entity`` that builds a fresh entity.
-  Recognized kwargs: ``my_field``, ``category``, ``id``.
-
-The library CI runs this suite against both the mongomock-backed fake and a real
-MongoDB testcontainer. Divergence is a build failure.
+Not published. The ``core.testing`` package was deleted after a trial adoption
+in audit_backend failed to collapse service fixtures to configuration.
 """
 
+from __future__ import annotations
+
+import datetime
 from collections.abc import Callable
+from types import MethodType
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from beanie import SortDirection
+from beanie import SortDirection, init_beanie
+from pydantic import BaseModel, Field
+from pymongo.asynchronous.database import AsyncDatabase
 
+from fastapi_factory_utilities.core.plugins.odm_plugin.documents import BaseDocument
 from fastapi_factory_utilities.core.plugins.odm_plugin.exceptions import (
     UnableToCreateEntityDueToDuplicateKeyError,
 )
 from fastapi_factory_utilities.core.plugins.odm_plugin.repositories import AbstractRepository
 
 
+class ContractDocument(BaseDocument):
+    """Document used by the shared repository contract suite."""
+
+    my_field: str = Field(description="Primary string field.")
+    category: str | None = Field(default=None, description="Optional filter field.")
+
+    class Settings:
+        """Beanie settings."""
+
+        name = "ffu_contract_documents"
+        use_revision = True
+
+
+class ContractEntity(BaseModel):
+    """Entity used by the shared repository contract suite."""
+
+    id: UUID
+    my_field: str
+    category: str | None = None
+    revision_id: UUID | None = Field(default=None)
+    created_at: datetime.datetime | None = Field(default=None)
+    updated_at: datetime.datetime | None = Field(default=None)
+
+
+class ContractRepository(AbstractRepository[ContractDocument, ContractEntity]):
+    """Repository under test for the shared contract suite."""
+
+
+def make_contract_entity(**kwargs: Any) -> ContractEntity:
+    """Build a :class:`ContractEntity` for contract tests."""
+    return ContractEntity(
+        id=kwargs.get("id", uuid4()),
+        my_field=kwargs.get("my_field", "field"),
+        category=kwargs.get("category"),
+    )
+
+
+class _FalsyNoOpSession:
+    """Session stand-in that slips past mongomock's truthy ``if session:`` guards."""
+
+    def __bool__(self) -> bool:
+        """Return False so mongomock treats the session as absent."""
+        return False
+
+    async def end_session(self) -> None:
+        """No-op end_session matching pymongo's async API."""
+        return None
+
+
+def _patch_async_mongo_mock_client(client: Any) -> Any:
+    """Add missing ``aconnect`` / ``aclose`` / ``start_session`` to a mock client."""
+
+    async def _aconnect(self: Any) -> Any:
+        return self
+
+    async def _aclose(self: Any) -> None:  # pylint: disable=unused-argument
+        return None
+
+    def _start_session(self: Any, **_kwargs: Any) -> _FalsyNoOpSession:  # pylint: disable=unused-argument
+        return _FalsyNoOpSession()
+
+    client.aconnect = MethodType(_aconnect, client)
+    client.aclose = MethodType(_aclose, client)
+    client.start_session = MethodType(_start_session, client)
+    return client
+
+
+def _patch_async_mongo_mock_database(database: Any) -> Any:
+    """Strip Beanie kwargs mongomock rejects from ``list_collection_names``."""
+    original = database.list_collection_names
+
+    async def _list_collection_names(*args: Any, **kwargs: Any) -> list[str]:
+        kwargs.pop("authorizedCollections", None)
+        kwargs.pop("nameOnly", None)
+        result = original(*args, **kwargs)
+        if hasattr(result, "__await__"):
+            return await result
+        return result
+
+    database.list_collection_names = _list_collection_names
+    return database
+
+
+def build_mongomock_database(database_name: str | None = None) -> AsyncDatabase[Any]:
+    """Build a mongomock-backed ``AsyncDatabase`` for the contract suite."""
+    from pymongo_async_mock import AsyncMongoMockClient  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+
+    client = _patch_async_mongo_mock_client(AsyncMongoMockClient())
+    name = database_name or f"test_{uuid4()!s}"
+    return _patch_async_mongo_mock_database(client[name])
+
+
+async def init_contract_mongomock() -> ContractRepository:
+    """Initialize Beanie on mongomock and return a :class:`ContractRepository`."""
+    database = build_mongomock_database()
+    await init_beanie(database=database, document_models=[ContractDocument])
+    return ContractRepository(database=database)
+
+
 class RepositoryContract:
     """Abstract contract for :class:`AbstractRepository` behavior.
 
-    Subclass in a test module and provide ``repository`` / ``new_entity`` fixtures
-    (do not override methods here — define pytest fixtures on the subclass).
+    Subclass in a test module and provide ``repository`` / ``new_entity`` fixtures.
     """
 
     async def test_insert_then_get_by_id(

@@ -8,13 +8,13 @@ import pytest_asyncio
 from beanie import init_beanie
 from pymongo.asynchronous.database import AsyncDatabase
 
-from fastapi_factory_utilities.core.testing.contracts import (
+from tests.fixtures.repository_contract import (
     ContractDocument,
     ContractEntity,
     ContractRepository,
     RepositoryContract,
+    make_contract_entity,
 )
-from fastapi_factory_utilities.core.testing.odm import make_contract_entity
 
 
 class TestRepositoryContractReal(RepositoryContract):

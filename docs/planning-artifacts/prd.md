@@ -337,18 +337,15 @@ Jordan forks the repo, follows the development guide to set up the environment, 
 
 ### Testing Utilities
 
-**Provided doubles for consumer testing** (prefer `core.testing` driver-seam fakes):
+HTTP mockers stay on the aiohttp plugin. Repository contract tests live in
+FFU's own suite (`tests/fixtures/repository_contract.py`) and run against
+mongomock and a real Mongo container. Consumers own their plugin fixtures.
 
 | Double | Import Path | Purpose |
 |--------|-------------|---------|
-| `build_mongomock_database` | `core.testing` | mongomock-backed Mongo for Beanie / repositories |
-| `build_fakeredis` | `core.testing` | In-memory Redis |
-| `moto_s3_client` / `build_s3_bucket_resource` | `core.testing` | moto-backed S3 |
-| `InMemoryPublisher` / `build_incoming_message` | `core.testing` | Recording AMQP (no broker) |
-| `RepositoryContract` | `core.testing` | Shared suite vs fake + real Mongo |
-| `build_mocked_aiohttp_response` | `core.plugins.aiohttp.mockers` | Mock HTTP responses |
-| `build_mocked_aiohttp_resource` | `core.plugins.aiohttp.mockers` | Mock HTTP resources |
-| `AbstractRepositoryInMemory` | `core.plugins.odm_plugin.mockers` | **Deprecated** — use mongomock |
+| `build_mocked_aiohttp_response` | `core.plugins.aiohttp_plugin.mockers` | Mock HTTP responses |
+| `build_mocked_aiohttp_resource` | `core.plugins.aiohttp_plugin.mockers` | Mock HTTP resources |
+| `AbstractRepositoryInMemory` | `core.plugins.odm_plugin.mockers` | **Deprecated** — use mongomock or a Mongo testcontainer |
 
 ### Migration & Versioning
 

@@ -25,13 +25,13 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
 ]
-version = "0.0.0"
 
 # ponytail: no [tool.poetry.requires-plugins] — Homebrew Poetry sees nmap's
 # ndiff==7.99 on sys.path and pins it into poetry-project-instance, which is
 # not on PyPI. Dynamic versioning still works via the build-system backend;
 # for CLI injection install: poetry self add "poetry-dynamic-versioning[plugin]"
 # (needs a non-brew Poetry, or a Poetry env without brew site-packages).
+version = "0.0.0"
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -48,7 +48,7 @@ url = "https://pypi.velmios.io/simple"
 priority = "explicit"
 
 [tool.poetry.dependencies]
-python = ">=3.12,<4.0"
+python = ">=3.12,<3.13"
 structlog = ">=26.1.0,<27.0"
 typer = "^0"
 pydantic = "^2.8.2"
@@ -96,10 +96,6 @@ opentelemetry-instrumentation-asyncio = { version = "^0", optional = true }
 opentelemetry-instrumentation-system-metrics = { version = "^0", optional = true }
 opentelemetry-instrumentation-httpx = { version = "^0", optional = true }
 psutil = { version = "^7", optional = true }
-# Optional testing doubles (install via `fastapi_factory_utilities[testing]`).
-pymongo-async-mock = {version = "^0.1.3", optional = true}
-fakeredis = {version = "^2.26.0", optional = true}
-moto = {version = "^5.0.0", extras = ["server"], optional = true}
 
 [tool.poetry.group.test]
 optional = true
@@ -128,8 +124,6 @@ types-ujson = "^5.10.0.20240515"
 httpx = "^0.28.1"
 minio = "^7"
 pymongo-async-mock = "^0.1.3"
-fakeredis = "^2.26.0"
-moto = {version = "^5.0.0", extras = ["server"]}
 
 [tool.poetry.extras]
 mongo = ["beanie", "pymongo", "opentelemetry-instrumentation-pymongo"]
@@ -177,10 +171,6 @@ all = [
     "opentelemetry-instrumentation-httpx",
     "psutil",
 ]
-testing = ["pymongo-async-mock", "fakeredis", "moto"]
-
-[tool.poetry.plugins."pytest11"]
-fastapi_factory_utilities = "fastapi_factory_utilities.core.testing.plugin"
 
 [tool.poetry.scripts]
 fastapi_factory_utilities-example = "fastapi_factory_utilities.example.__main__:main"
@@ -202,6 +192,14 @@ filterwarnings = [
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+source = ["src/fastapi_factory_utilities"]
+omit = ["src/fastapi_factory_utilities/example/*"]
+
+[tool.coverage.report]
+fail_under = 89
+show_missing = true
 
 [tool.black]
 line-length = 120

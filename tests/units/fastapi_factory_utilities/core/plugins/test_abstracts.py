@@ -1,11 +1,13 @@
 """Tests for PluginAbstract shared helpers."""
 
 import asyncio
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import FastAPI
 
 from fastapi_factory_utilities.core.plugins.abstracts import PluginAbstract
+from fastapi_factory_utilities.core.plugins.state import ODM_CLIENT
 
 
 class _WarmPlugin(PluginAbstract):
@@ -56,3 +58,27 @@ class TestPluginWarmSoft:
 
         plugin: _WarmPlugin = _WarmPlugin()
         await plugin._warm_soft(lambda: asyncio.wait_for(slow(), timeout=0.01), what="MongoDB connection")
+
+
+class TestPluginAddToState:
+    """Tests for ``PluginAbstract._add_to_state``."""
+
+    def test_add_to_state_writes_registry_key(self) -> None:
+        """A StateKey is published on the ASGI app state."""
+        plugin: _WarmPlugin = _WarmPlugin()
+        app = FastAPI()
+        application = MagicMock()
+        application.get_asgi_app.return_value = app
+        plugin.set_application(application)
+        plugin._add_to_state(key=ODM_CLIENT, value="client")  # pylint: disable=protected-access
+        assert getattr(app.state, ODM_CLIENT.attr) == "client"
+
+    def test_add_to_state_writes_string_key(self) -> None:
+        """A raw string key is published on the ASGI app state."""
+        plugin: _WarmPlugin = _WarmPlugin()
+        app = FastAPI()
+        application = MagicMock()
+        application.get_asgi_app.return_value = app
+        plugin.set_application(application)
+        plugin._add_to_state(key="custom_key", value=1)  # pylint: disable=protected-access
+        assert app.state.custom_key == 1

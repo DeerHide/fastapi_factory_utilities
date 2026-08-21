@@ -5,7 +5,7 @@
 import asyncio
 from collections.abc import Iterator
 from contextlib import contextmanager
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from opentelemetry.trace import Span
@@ -21,7 +21,10 @@ from fastapi_factory_utilities.core.plugins.aiopika_plugin.telemetry import (
     SCOPE_GLOBAL,
     ConsumerTelemetry,
     NoOpConsumerTelemetry,
+    OpenTelemetryConsumerTelemetry,
+    ProcessDurationTracker,
     TracePhase,
+    mark_span_error,
 )
 
 
@@ -216,3 +219,84 @@ class TestRecordingTelemetryIntegration:
         assert telemetry.durations
         assert telemetry.durations[-1][0] == listener._name
         assert telemetry.durations[-1][1] == MessageDeliveryOutcome.ACK
+
+
+class TestOpenTelemetryConsumerTelemetry:
+    """OpenTelemetryConsumerTelemetry writes to module-level instruments."""
+
+    def test_record_settlement_adds_counter(self) -> None:
+        """Settlement increments the settled counter."""
+        telemetry = OpenTelemetryConsumerTelemetry()
+        with patch(
+            "fastapi_factory_utilities.core.plugins.aiopika_plugin.telemetry.CONSUMER_MESSAGE_SETTLED",
+        ) as counter:
+            telemetry.record_settlement(
+                listener="L",
+                outcome=MessageDeliveryOutcome.ACK,
+                phase=PHASE_PROCESS,
+            )
+            counter.add.assert_called_once()
+
+    def test_record_gate_saturated_adds_counter(self) -> None:
+        """Saturation increments the saturated counter."""
+        telemetry = OpenTelemetryConsumerTelemetry()
+        with patch(
+            "fastapi_factory_utilities.core.plugins.aiopika_plugin.telemetry.CONSUMER_GATE_SATURATED",
+        ) as counter:
+            telemetry.record_gate_saturated(listener="L", backend="local", scope=SCOPE_GLOBAL)
+            counter.add.assert_called_once()
+
+    def test_record_gate_acquire_is_noop_when_not_acquired(self) -> None:
+        """A failed acquire does not touch instruments."""
+        telemetry = OpenTelemetryConsumerTelemetry()
+        telemetry.record_gate_acquire(listener="L", backend="local", acquired=False)
+
+    def test_record_gate_acquire_when_acquired(self) -> None:
+        """A successful acquire is currently a no-op (counter reserved)."""
+        telemetry = OpenTelemetryConsumerTelemetry()
+        telemetry.record_gate_acquire(listener="L", backend="local", acquired=True)
+
+    def test_record_in_flight_delta_and_duration(self) -> None:
+        """In-flight gauge and process histogram are written."""
+        telemetry = OpenTelemetryConsumerTelemetry()
+        with (
+            patch(
+                "fastapi_factory_utilities.core.plugins.aiopika_plugin.telemetry.CONSUMER_GATE_IN_FLIGHT",
+            ) as gauge,
+            patch(
+                "fastapi_factory_utilities.core.plugins.aiopika_plugin.telemetry.CONSUMER_PROCESS_DURATION",
+            ) as histogram,
+        ):
+            telemetry.record_in_flight_delta(listener="L", backend="local", delta=1)
+            telemetry.record_process_duration(
+                listener="L",
+                outcome=MessageDeliveryOutcome.ACK,
+                duration_seconds=0.05,
+            )
+            gauge.add.assert_called_once()
+            histogram.record.assert_called_once()
+
+    def test_trace_message_and_phase_yield_spans(self) -> None:
+        """trace_message / trace_phase start spans on the module tracer."""
+        telemetry = OpenTelemetryConsumerTelemetry()
+        span = MagicMock()
+        with patch(
+            "fastapi_factory_utilities.core.plugins.aiopika_plugin.telemetry.TRACER",
+        ) as tracer:
+            tracer.start_as_current_span.return_value.__enter__.return_value = span
+            with telemetry.trace_message(listener="L", queue="q") as yielded:
+                assert yielded is span
+            with telemetry.trace_phase(listener="L", phase="process") as yielded:
+                assert yielded is span
+
+    def test_mark_span_error_records_exception(self) -> None:
+        """mark_span_error sets error status on the span."""
+        span = MagicMock()
+        mark_span_error(span, RuntimeError("boom"))
+        span.record_exception.assert_called_once()
+        span.set_status.assert_called_once()
+
+    def test_process_duration_tracker_elapsed_is_non_negative(self) -> None:
+        """ProcessDurationTracker reports elapsed seconds."""
+        tracker = ProcessDurationTracker()
+        assert tracker.elapsed_seconds() >= 0

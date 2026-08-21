@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- ``fastapi_factory_utilities.core.testing``, the ``testing`` extra, and the
+  ``pytest11`` plugin. A trial adoption in ``audit_backend`` did not collapse
+  that service's plugin+testcontainer fixtures to configuration (the shipped
+  doubles sit at the driver seam on a bare FastAPI app; AMQP broker tests
+  still need a real RabbitMQ). Each consumer keeps its own fixtures.
+  ``RepositoryContract`` remains in FFU's test suite and still runs against
+  both mongomock and a real Mongo container.
+
+### Changed
+
+- Python constraint is ``>=3.12,<3.13``, matching the interpreter CI runs.
+  ``example/`` is excluded from coverage measurement; the floor is 89%.
+
 ## [6.4.0] - 2026-08-15
 
 ### Changed

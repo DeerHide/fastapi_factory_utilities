@@ -179,11 +179,10 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
     """Abstract repository in memory for testing purposes.
 
     .. deprecated::
-        Prefer the mongomock-backed driver fake from
-        ``fastapi_factory_utilities.core.testing``
-        (``build_mongomock_database`` / ``mongomock_database`` fixture) so Beanie
-        and ``AbstractRepository`` run for real. This class hand-rolls a partial
-        query engine and will be removed after one release cycle.
+        Prefer a mongomock-backed ``AsyncMongoClient`` (or a real Mongo
+        testcontainer) so Beanie and ``AbstractRepository`` run for real. This
+        class hand-rolls a partial query engine and will be removed after one
+        release cycle.
     """
 
     def __init__(self, entities: list[EntityGenericType] | None = None) -> None:
@@ -193,10 +192,9 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
             entities: Optional list of entities to pre-populate the repository with.
         """
         warnings.warn(
-            "AbstractRepositoryInMemory is deprecated; use "
-            "fastapi_factory_utilities.core.testing.build_mongomock_database "
-            "(or the mongomock_database fixture) so Beanie/AbstractRepository "
-            "run against mongomock. This class will be removed after one release cycle.",
+            "AbstractRepositoryInMemory is deprecated; use mongomock (or a real "
+            "Mongo testcontainer) so Beanie/AbstractRepository run against a "
+            "driver. This class will be removed after one release cycle.",
             DeprecationWarning,
             stacklevel=2,
         )

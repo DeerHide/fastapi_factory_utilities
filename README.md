@@ -1,6 +1,6 @@
 # FastAPI Factory Utilities
 
-[![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/DeerHide/fastapi_factory_utilities)
 
@@ -366,7 +366,7 @@ Source code: [`src/fastapi_factory_utilities/example/`](src/fastapi_factory_util
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.12
 - Poetry for dependency management
 - Docker (optional, for containerized development)
 
@@ -394,21 +394,16 @@ poetry run pre-commit install
 poetry run pytest --cov=src --cov-report=html --cov-report=term
 
 # Run specific tests
-poetry run pytest tests/units/test_exceptions.py
+poetry run pytest tests/units/fastapi_factory_utilities/core/test_exceptions.py
 
 # Run tests in parallel
 poetry run pytest -n auto
 ```
 
-Downstream services that want the shipped infra doubles (mongomock, fakeredis,
-moto, Taskiq `InMemoryBroker`, OTel in-memory exporters, recording AMQP
-publisher) install the optional extra and get fixtures via the `pytest11` plugin:
+Consumers own their test fixtures (testcontainers / local doubles). FFU no
+longer ships a `testing` extra or pytest plugin.
 
-```bash
-pip install 'fastapi_factory_utilities[testing]'
-```
-
-> 📖 See [Development Guide - Testing](docs/knowledge/development-guide.md#testing-patterns) for the driver-seam strategy, `RepositoryContract`, and container-only boundaries.
+> 📖 See [Development Guide - Testing](docs/knowledge/development-guide.md#testing-patterns) for container fixtures and HTTP mockers.
 
 ### Code Quality
 

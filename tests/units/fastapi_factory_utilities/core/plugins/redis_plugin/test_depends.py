@@ -43,3 +43,12 @@ class TestDependsRedis:
 
         with pytest.raises(PluginNotRegisteredError, match="RedisPlugin"):
             depends_redis(_Req())  # type: ignore[arg-type]
+
+    def test_depends_redis_plugin_names_missing_plugin(self) -> None:
+        """Missing Redis plugin is PluginNotRegisteredError, not AttributeError."""
+
+        class _Req:
+            app = FastAPI()
+
+        with pytest.raises(PluginNotRegisteredError, match="RedisPlugin"):
+            depends_redis_plugin(_Req())  # type: ignore[arg-type]

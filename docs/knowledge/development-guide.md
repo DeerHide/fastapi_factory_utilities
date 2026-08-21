@@ -220,49 +220,24 @@ touch tests/units/fastapi_factory_utilities/core/plugins/my_plugin/test_plugins.
 
 ## Testing Patterns
 
-### Strategy: fake at the driver seam
+### Strategy: containers for plugins, mockers for HTTP
 
-Prefer doubles from `fastapi_factory_utilities.core.testing` (install
-`fastapi_factory_utilities[testing]`). They swap the driver so Beanie /
-`AbstractRepository` / `S3BucketResource` / Depends helpers run for real:
-
-| Resource | Double | Notes |
-|----------|--------|-------|
-| MongoDB | `build_mongomock_database` / `mongomock_database` | mongomock via pymongo-async-mock |
-| Redis | `build_fakeredis` / `fakeredis_client` | Drop onto `app.state.redis_client` |
-| S3 | `moto_s3_bucket` / `moto_s3_client` | Real botocore semantics |
-| Taskiq | `in_memory_scheduler_component` | `taskiq.InMemoryBroker` |
-| OTel | `in_memory_otel` | Assertable spans/metrics |
-| AMQP | `InMemoryPublisher` + `build_incoming_message` | Record only — no routing/confirms/DLX |
-| HTTP | `build_mocked_aiohttp_*` | Unchanged |
+Plugin fixtures (`ODMPlugin`, `RedisPlugin`, `TaskiqPlugin`, `AiopikaPlugin`)
+are wired to testcontainers. That is the shape consumers already use; FFU
+does not ship a shared pytest plugin of driver-seam doubles.
 
 **Container-only (do not fake):** Mongo transactions / multi-doc atomicity; all
 AMQP broker semantics (topic routing, publisher confirms, consumer acks,
-dead-letter / TTL retry). Keep those on the existing testcontainers.
+dead-letter / TTL retry).
 
 `AbstractRepositoryInMemory` is **deprecated** — it hand-rolls a partial query
-engine. Migrate to mongomock so the repository path executes for real.
+engine. Prefer mongomock or a real Mongo testcontainer so the repository path
+executes for real.
 
 ### Repository contract tests
 
-`RepositoryContract` is a shared suite the library CI runs twice (mongomock +
-real Mongo). Divergence fails the build. Downstream services can subclass it:
-
-```python
-from fastapi_factory_utilities.core.testing import RepositoryContract
-from fastapi_factory_utilities.core.testing.odm import make_contract_entity
-
-class TestMyRepoContract(RepositoryContract):
-    @pytest_asyncio.fixture
-    async def repository(self, mongomock_odm_database):
-        # Or init_beanie with your own documents on mongomock_database / async_motor_database
-        ...
-        return MyRepository(database=...)
-
-    @pytest.fixture
-    def new_entity(self):
-        return make_contract_entity  # or your own factory with my_field/category/id
-```
+`RepositoryContract` lives in `tests/fixtures/repository_contract.py`. The
+library CI runs it twice (mongomock + real Mongo). Divergence fails the build.
 
 ### Unit Test Structure
 
@@ -289,20 +264,6 @@ class TestAsyncFeature:
         assert result is not None
 ```
 
-### Using mongomock-backed repositories
-
-```python
-from beanie import init_beanie
-from fastapi_factory_utilities.core.testing import build_mongomock_database
-
-async def test_with_mongomock_repo() -> None:
-    database = build_mongomock_database()
-    await init_beanie(database=database, document_models=[UserDocument])
-    repository = UserRepository(database=database)
-    service = UserService(repository=repository)
-    result = await service.get_user(user_id)
-```
-
 ### Using Mocked HTTP Client
 
 ```python
@@ -320,43 +281,9 @@ async def test_with_mocked_http() -> None:
     service = MyService(http_resource=resource)
 ```
 
-### Recording AMQP publishes / listener decode
-
-```python
-from fastapi_factory_utilities.core.testing import InMemoryPublisher, build_incoming_message
-
-async def test_audit_publish() -> None:
-    publisher = InMemoryPublisher()
-    await service_under_test(publisher)
-    assert publisher.published[0][1] == expected_routing_key
-
-async def test_listener_rejects_bad_json() -> None:
-    incoming = build_incoming_message(b"not-json")
-    await listener._on_message(incoming)
-    incoming.reject.assert_awaited_once_with(requeue=False)
-```
-
 ---
 
 ## Test Fixtures
-
-### Shipped fixtures (`fastapi_factory_utilities.core.testing`, pytest11 plugin)
-
-| Fixture | Scope | Description |
-|---------|-------|-------------|
-| `mongomock_database` | function | Fresh mongomock `AsyncDatabase` |
-| `mongomock_odm_database` | function | Same + `ContractDocument` Beanie init |
-| `contract_repository_mongomock` | function | `ContractRepository` on mongomock |
-| `fakeredis_client` | function | In-memory Redis |
-| `app_with_fakeredis` | function | FastAPI app with `redis_client` on state |
-| `moto_s3_bucket` | function | `S3BucketResource` on moto |
-| `app_with_moto_s3` | function | FastAPI app with S3 state keys |
-| `in_memory_scheduler_component` | function | Taskiq `InMemoryBroker` component |
-| `app_with_in_memory_taskiq` | function | FastAPI app with scheduler on state |
-| `in_memory_otel` | function | In-memory tracer/meter providers |
-| `app_with_in_memory_otel` | function | FastAPI app with OTel on state |
-
-### Available Fixtures (from `tests/conftest.py` — containers)
 
 | Fixture | Scope | Description |
 |---------|-------|-------------|

@@ -9,7 +9,7 @@
 | Property | Value |
 |----------|-------|
 | **Type** | Python Library (Monolith) |
-| **Primary Language** | Python 3.12+ |
+| **Primary Language** | Python 3.12 |
 | **Architecture** | Plugin-Based with Clean Architecture |
 | **Framework** | FastAPI |
 
@@ -104,7 +104,7 @@ When working with this codebase, provide the AI with:
 - **Configuration**: Extend `RootConfig` for custom config
 - **Repositories**: Implement `AbstractRepository` for data access
 - **Exceptions**: Extend `FastAPIFactoryUtilitiesError` with auto-logging
-- **Testing**: Use `core.testing` driver-seam doubles (mongomock, fakeredis, moto, …); see [Development Guide](development-guide.md#testing-patterns)
+- **Testing**: Prefer the HTTP mockers and the container fixtures in `tests/conftest.py`; see [Development Guide](development-guide.md#testing-patterns)
 
 ### Common Extension Points
 
