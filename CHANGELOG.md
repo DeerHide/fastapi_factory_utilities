@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Grype: stop copying the shared node DB. Point `GRYPE_DB_CACHE_DIR` at the
+  RO `/var/cache/grype-db` mount with `GRYPE_DB_AUTO_UPDATE=false` so scans
+  no longer ENOSPC the 2Gi `$HOME/.cache` tmpfs (or waste RAM on `$RUNNER_TEMP`).
+
 ## [6.5.0] - 2026-08-21
 
 ### Removed
