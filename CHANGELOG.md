@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.1] - 2026-08-21
+
 ### Fixed
 
 - Grype: stop copying the shared node DB. Point `GRYPE_DB_CACHE_DIR` at the
@@ -1036,7 +1038,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.1...HEAD
+[6.5.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.0...v6.5.1
 [6.5.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.4.0...v6.5.0
 [6.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.3.0...v6.4.0
 [6.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.2.0...v6.3.0
