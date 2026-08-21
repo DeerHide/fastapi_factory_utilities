@@ -1,7 +1,5 @@
 """Unit tests for the Kratos services."""
 
-# pylint: disable=protected-access
-
 import datetime
 import json
 import uuid
@@ -557,25 +555,33 @@ class TestKratosIdentityGenericService:
         # Type narrowing: captured_json is confirmed to be a list at this point
         patches_list: list[dict[str, Any]] = cast(list[dict[str, Any]], captured_json)
         # Verify all items are dictionaries (not Pydantic models)
-        assert all(isinstance(item, dict) for item in patches_list)  # pylint: disable=not-an-iterable
+        assert all(isinstance(item, dict) for item in patches_list)
 
         # Verify first patch (REPLACE operation)
-        assert patches_list[0]["op"] == "replace"  # pylint: disable=unsubscriptable-object
-        assert patches_list[0]["path"] == "/traits/email"  # pylint: disable=unsubscriptable-object
-        assert patches_list[0]["value"] == "newemail@example.com"  # pylint: disable=unsubscriptable-object
+        assert patches_list[0]["op"] == "replace"
+
+        assert patches_list[0]["path"] == "/traits/email"
+
+        assert patches_list[0]["value"] == "newemail@example.com"
+
         # Should not have "from_" field
-        assert "from_" not in patches_list[0]  # pylint: disable=unsubscriptable-object
+        assert "from_" not in patches_list[0]
 
         # Verify second patch (MOVE operation with "from" alias)
-        assert patches_list[1]["op"] == "move"  # pylint: disable=unsubscriptable-object
-        assert patches_list[1]["path"] == "/traits/new_field"  # pylint: disable=unsubscriptable-object
-        assert patches_list[1]["from"] == "/traits/old_field"  # pylint: disable=unsubscriptable-object  # Alias should be used
-        assert "from_" not in patches_list[1]  # pylint: disable=unsubscriptable-object  # Original field name should not be present
+        assert patches_list[1]["op"] == "move"
+
+        assert patches_list[1]["path"] == "/traits/new_field"
+
+        assert patches_list[1]["from"] == "/traits/old_field"  # Alias should be used
+
+        assert "from_" not in patches_list[1]  # Original field name should not be present
 
         # Verify third patch (ADD operation)
-        assert patches_list[2]["op"] == "add"  # pylint: disable=unsubscriptable-object
-        assert patches_list[2]["path"] == "/traits/phone"  # pylint: disable=unsubscriptable-object
-        assert patches_list[2]["value"] == "+1234567890"  # pylint: disable=unsubscriptable-object
+        assert patches_list[2]["op"] == "add"
+
+        assert patches_list[2]["path"] == "/traits/phone"
+
+        assert patches_list[2]["value"] == "+1234567890"
 
     @pytest.mark.parametrize(
         "credentials_type,identifier",

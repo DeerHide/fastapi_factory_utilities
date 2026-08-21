@@ -7,10 +7,10 @@ default_stages:
 repos:
   - repo: local
     hooks:
-      - id: poetry lock and update
-        name: poetry lock and update
+      - id: poetry lock check
+        name: poetry lock check
         entry: bash
-        args: ["-c", "poetry update --with=test --lock && poetry sync --with test --all-extras"]
+        args: ["-c", "poetry check --lock"]
         language: system
         types: [python]
         pass_filenames: false
@@ -76,22 +76,6 @@ repos:
           - "pre-commit"
           - "manual"
       - id: end-of-file-fixer
-        stages:
-          - "pre-push"
-          - "pre-commit"
-          - "manual"
-  - repo: https://github.com/pylint-dev/pylint
-    rev: v3.2.2
-    hooks:
-      - id: pylint
-        name: pylint
-        entry: "./.venv/bin/pylint"
-        language: system
-        types: [python]
-        # Not that problematic to run in parallel see Pre-commit
-        # integration in the doc for details
-        # require_serial: true
-        args: ["-rn", "-sn", "--rcfile=pylintrc", "--fail-on=I", "-j=4"]
         stages:
           - "pre-push"
           - "pre-commit"

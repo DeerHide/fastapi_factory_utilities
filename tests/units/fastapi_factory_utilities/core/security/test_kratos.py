@@ -69,8 +69,9 @@ class TestKratosSessionAuthenticationService:
             mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
         """
         auth = KratosSessionAuthenticationService(kratos_service=mock_kratos_service)
-        assert auth._cookie_name == "ory_kratos_session"  # pylint: disable=protected-access
-        assert auth._raise_exception is True  # pylint: disable=protected-access
+        assert auth._cookie_name == "ory_kratos_session"
+
+        assert auth._raise_exception is True
 
     def test_init_with_custom_values(self, mock_kratos_service: AsyncMock) -> None:
         """Test initialization with custom values.
@@ -81,8 +82,9 @@ class TestKratosSessionAuthenticationService:
         auth = KratosSessionAuthenticationService(
             kratos_service=mock_kratos_service, cookie_name="custom_cookie", raise_exception=False
         )
-        assert auth._cookie_name == "custom_cookie"  # pylint: disable=protected-access
-        assert auth._raise_exception is False  # pylint: disable=protected-access
+        assert auth._cookie_name == "custom_cookie"
+
+        assert auth._raise_exception is False
 
     def test_extract_cookie_when_cookie_exists(self, mock_request: MagicMock, mock_kratos_service: AsyncMock) -> None:
         """Test cookie extraction when cookie exists.
@@ -93,7 +95,8 @@ class TestKratosSessionAuthenticationService:
         """
         mock_request.cookies = {"ory_kratos_session": "test_cookie"}
         auth = KratosSessionAuthenticationService(kratos_service=mock_kratos_service)
-        cookie = auth._extract_cookie(mock_request)  # pylint: disable=protected-access
+        cookie = auth._extract_cookie(mock_request)
+
         assert cookie == "test_cookie"
 
     def test_extract_cookie_when_cookie_missing(self, mock_request: MagicMock, mock_kratos_service: AsyncMock) -> None:
@@ -104,7 +107,8 @@ class TestKratosSessionAuthenticationService:
             mock_kratos_service (AsyncMock): Mock KratosGenericWhoamiService object.
         """
         auth = KratosSessionAuthenticationService(kratos_service=mock_kratos_service)
-        cookie = auth._extract_cookie(mock_request)  # pylint: disable=protected-access
+        cookie = auth._extract_cookie(mock_request)
+
         assert cookie is None
 
     @pytest.mark.asyncio
@@ -164,10 +168,13 @@ class TestKratosSessionAuthenticationService:
         await auth.authenticate(mock_request)
 
         assert auth.has_errors() is True
-        assert len(auth._errors) == 1  # pylint: disable=protected-access
-        assert isinstance(auth._errors[0], HTTPException)  # pylint: disable=protected-access
-        assert auth._errors[0].status_code == HTTPStatus.UNAUTHORIZED  # pylint: disable=protected-access
-        assert auth._errors[0].detail == "Missing Credentials"  # pylint: disable=protected-access
+        assert len(auth._errors) == 1
+
+        assert isinstance(auth._errors[0], HTTPException)
+
+        assert auth._errors[0].status_code == HTTPStatus.UNAUTHORIZED
+
+        assert auth._errors[0].detail == "Missing Credentials"
 
     @pytest.mark.asyncio
     async def test_authenticate_with_invalid_session_raise_exception(
@@ -211,10 +218,13 @@ class TestKratosSessionAuthenticationService:
         await auth.authenticate(mock_request)
 
         assert auth.has_errors() is True
-        assert len(auth._errors) == 1  # pylint: disable=protected-access
-        assert isinstance(auth._errors[0], HTTPException)  # pylint: disable=protected-access
-        assert auth._errors[0].status_code == HTTPStatus.UNAUTHORIZED  # pylint: disable=protected-access
-        assert auth._errors[0].detail == "Invalid Credentials"  # pylint: disable=protected-access
+        assert len(auth._errors) == 1
+
+        assert isinstance(auth._errors[0], HTTPException)
+
+        assert auth._errors[0].status_code == HTTPStatus.UNAUTHORIZED
+
+        assert auth._errors[0].detail == "Invalid Credentials"
 
     @pytest.mark.asyncio
     async def test_authenticate_with_operation_error_raise_exception(
@@ -258,7 +268,10 @@ class TestKratosSessionAuthenticationService:
         await auth.authenticate(mock_request)
 
         assert auth.has_errors() is True
-        assert len(auth._errors) == 1  # pylint: disable=protected-access
-        assert isinstance(auth._errors[0], HTTPException)  # pylint: disable=protected-access
-        assert auth._errors[0].status_code == HTTPStatus.INTERNAL_SERVER_ERROR  # pylint: disable=protected-access
-        assert auth._errors[0].detail == "Internal Server Error"  # pylint: disable=protected-access
+        assert len(auth._errors) == 1
+
+        assert isinstance(auth._errors[0], HTTPException)
+
+        assert auth._errors[0].status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+        assert auth._errors[0].detail == "Internal Server Error"

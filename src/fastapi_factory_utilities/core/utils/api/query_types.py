@@ -59,7 +59,7 @@ class QueryFieldName(str):
         return super().__new__(cls, cls.validate(value))
 
     @classmethod
-    def __get_pydantic_core_schema__(cls, _source: Any, _handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:  # pylint: disable=invalid-name
+    def __get_pydantic_core_schema__(cls, _source: Any, _handler: GetCoreSchemaHandler) -> core_schema.CoreSchema:
         """Return the pydantic-core schema for ``QueryFieldName``."""
         return core_schema.no_info_after_validator_function(
             cls, core_schema.str_schema(min_length=cls.MIN_LENGTH, max_length=cls.MAX_LENGTH, pattern=cls.REGEX.pattern)
@@ -68,7 +68,7 @@ class QueryFieldName(str):
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        core_schema: core_schema.CoreSchema,  # pylint: disable=redefined-outer-name
+        core_schema: core_schema.CoreSchema,
         handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
         """Return the JSON schema for ``QueryFieldName``."""
@@ -104,8 +104,8 @@ class RawQueryFieldName(str):
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        _source: Any,  # pylint: disable=invalid-name
-        _handler: GetCoreSchemaHandler,  # pylint: disable=invalid-name
+        _source: Any,
+        _handler: GetCoreSchemaHandler,
     ) -> core_schema.CoreSchema:
         """Return the pydantic-core schema for ``RawQueryFieldName``."""
         return core_schema.no_info_after_validator_function(cls, core_schema.str_schema())
@@ -113,8 +113,8 @@ class RawQueryFieldName(str):
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        _core_schema: core_schema.CoreSchema,  # pylint: disable=invalid-name
-        _handler: GetJsonSchemaHandler,  # pylint: disable=invalid-name
+        _core_schema: core_schema.CoreSchema,
+        _handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
         """Return the JSON schema for ``RawQueryFieldName``."""
         return {"type": "string", "description": "Raw query field"}
@@ -194,8 +194,8 @@ class RawQuerySort(str):
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        _source: Any,  # pylint: disable=invalid-name
-        _handler: GetCoreSchemaHandler,  # pylint: disable=invalid-name
+        _source: Any,
+        _handler: GetCoreSchemaHandler,
     ) -> core_schema.CoreSchema:
         """Return the pydantic-core schema for ``RawQuerySort``."""
         return core_schema.no_info_after_validator_function(cls, core_schema.str_schema())
@@ -203,8 +203,8 @@ class RawQuerySort(str):
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        _core_schema: core_schema.CoreSchema,  # pylint: disable=invalid-name
-        _handler: GetJsonSchemaHandler,  # pylint: disable=invalid-name
+        _core_schema: core_schema.CoreSchema,
+        _handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
         """Return the JSON schema for ``RawQuerySort``."""
         return {"type": "string", "description": "Raw query sort"}

@@ -80,7 +80,7 @@ async def fixture_s3_buckets(minio_container: MinioContainer) -> AsyncGenerator[
                 for obj in response.get("Contents") or []:
                     await client.delete_object(Bucket=bucket_name, Key=obj["Key"])
                 await client.delete_bucket(Bucket=bucket_name)
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 pass
 
 

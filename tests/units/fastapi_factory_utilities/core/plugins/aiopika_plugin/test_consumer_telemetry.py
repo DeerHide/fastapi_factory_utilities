@@ -1,7 +1,5 @@
 """Unit tests for ConsumerTelemetry facades."""
 
-# pylint: disable=protected-access
-
 import asyncio
 from collections.abc import Iterator
 from contextlib import contextmanager

@@ -13,7 +13,7 @@ from ..exchange import Exchange
 from ..message import GenericMessage
 from ..types import RoutingKey
 
-GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])  # pylint: disable=invalid-name
+GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])
 
 
 class AbstractPublisher(AbstractAiopikaResource, Generic[GenericMessageType]):

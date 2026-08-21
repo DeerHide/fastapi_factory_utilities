@@ -653,7 +653,6 @@ fastapi_factory_utilities/
 ├── .pre-commit-config.yaml
 ├── docker-compose.yml
 ├── pyproject.toml                    # Poetry configuration
-├── pylintrc
 └── README.md
 ```
 

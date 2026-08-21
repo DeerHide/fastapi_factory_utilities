@@ -1,4 +1,7 @@
-"""Provide utilities for custom exceptions.
+"""Exception-mapping machinery (`ExceptionMapping`, `ExceptionMappingContext`).
+
+This is not the library error base. Import `FastAPIFactoryUtilitiesError`
+from `fastapi_factory_utilities.core.exceptions`.
 
 This module provides utilities for exception mapping and transformation,
 allowing functions to declaratively map raised exceptions to target exception

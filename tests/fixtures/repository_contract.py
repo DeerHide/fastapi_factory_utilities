@@ -79,10 +79,12 @@ def _patch_async_mongo_mock_client(client: Any) -> Any:
     async def _aconnect(self: Any) -> Any:
         return self
 
-    async def _aclose(self: Any) -> None:  # pylint: disable=unused-argument
+    async def _aclose(self: Any) -> None:
+
         return None
 
-    def _start_session(self: Any, **_kwargs: Any) -> _FalsyNoOpSession:  # pylint: disable=unused-argument
+    def _start_session(self: Any, **_kwargs: Any) -> _FalsyNoOpSession:
+
         return _FalsyNoOpSession()
 
     client.aconnect = MethodType(_aconnect, client)
@@ -109,7 +111,7 @@ def _patch_async_mongo_mock_database(database: Any) -> Any:
 
 def build_mongomock_database(database_name: str | None = None) -> AsyncDatabase[Any]:
     """Build a mongomock-backed ``AsyncDatabase`` for the contract suite."""
-    from pymongo_async_mock import AsyncMongoMockClient  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from pymongo_async_mock import AsyncMongoMockClient  # noqa: PLC0415
 
     client = _patch_async_mongo_mock_client(AsyncMongoMockClient())
     name = database_name or f"test_{uuid4()!s}"

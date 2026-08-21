@@ -16,11 +16,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still need a real RabbitMQ). Each consumer keeps its own fixtures.
   ``RepositoryContract`` remains in FFU's test suite and still runs against
   both mongomock and a real Mongo container.
+- pylint (pre-commit hook, test-group dependency, ``pylintrc``). Current ruff
+  (``D,F,E,W,I,UP,PL,N,RUF``) and pylint (rcfile with ``disable=R,`` plus
+  in-source suppressions) both reported zero findings. Candidate extra ruff
+  rules (``ARG``, ``BLE``, ``SLF``, ``TRY``) would add 247 new findings pylint
+  was not enforcing. No ruff rule added.
+- Example console script ``fastapi_factory_utilities-example``. The demo stays
+  in the checkout (``python -m fastapi_factory_utilities.example``); it is not
+  in the wheel.
 
 ### Changed
 
 - Python constraint is ``>=3.12,<3.13``, matching the interpreter CI runs.
   ``example/`` is excluded from coverage measurement; the floor is 89%.
+- ``Development Status`` classifier is ``5 - Production/Stable``.
+- ``AbstractRepositoryInMemory`` is no longer deprecated. ``core.testing`` is
+  gone and consumers still subclass it; the warning would have been
+  indefinite. Prefer mongomock/testcontainer when the test needs a driver.
+- Plugin counts, extras lists, and Python versions in prose point at
+  ``pyproject.toml`` / ``core/plugins/`` instead of restating a number.
+- CI installs from the committed ``poetry.lock``. Pre-push checks the lock
+  (``poetry check --lock``) instead of ``poetry update``. SBOM/Grype read that
+  lock. Weekly ``deps-canary`` workflow re-resolves independently.
+
+### Added
+
+- Distinction in module docs: ``core.exceptions`` is the library error base;
+  ``core.utils.exceptions`` is the mapping machinery.
 
 ## [6.4.0] - 2026-08-15
 

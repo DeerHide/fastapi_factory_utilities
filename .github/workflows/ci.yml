@@ -12,7 +12,8 @@ defaults:
     shell: bash
 
 jobs:
-  # Setup job to generate the poetry.lock file and upload it as an artifact
+  # Install from the committed lock. The lock constrains CI; published ranges
+  # still constrain consumers. Fresh resolution lives in deps-canary.yml.
   setup:
     runs-on: public-actions-runner-scale-set
     permissions:
@@ -28,42 +29,26 @@ jobs:
           python3.12 --version
           poetry --version
           uv --version
-      # Resolve poetry.lock at most once per UTC day per pyproject.toml hash.
-      - name: Compute UTC date for dependency cache keys
-        id: depdate
-        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
-      - name: Cache poetry.lock resolution
-        id: lock-cache
-        uses: actions/cache@v5.0.3
-        with:
-          path: poetry.lock
-          key: poetry-lock-${{ hashFiles('pyproject.toml') }}-${{ steps.depdate.outputs.date }}
       - name: Cache virtual environment
         id: venv-cache
         uses: actions/cache@v5.0.3
         with:
           path: ./.venv
-          key: venv-${{ hashFiles('pyproject.toml') }}-${{ steps.depdate.outputs.date }}
+          key: venv-${{ hashFiles('poetry.lock') }}
       - name: Configure Poetry virtualenvs
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
-      - name: Resolve dependencies
-        if: steps.lock-cache.outputs.cache-hit != 'true'
+      - name: Check lock is current
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
-          poetry lock
+          poetry check --lock
       - name: Install the project dependencies
-        if: steps.lock-cache.outputs.cache-hit != 'true' || steps.venv-cache.outputs.cache-hit != 'true'
+        if: steps.venv-cache.outputs.cache-hit != 'true'
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
-          poetry install --with test --extras all
-      - name: Upload poetry.lock
-        uses: actions/upload-artifact@v7.0.0
-        with:
-          name: poetry-lock
-          path: poetry.lock
+          poetry install --sync --with test --extras all
   mandatory-only:
     runs-on: public-actions-runner-scale-set
     permissions:
@@ -80,7 +65,7 @@ jobs:
           export PATH="/home/runner/.local/bin:$PATH"
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
-          poetry install --only main
+          poetry install --sync --only main
       - name: Assert optional backends are absent
         run: poetry run python scripts/assert_mandatory_only.py
       - name: Seed Grype DB from node cache
@@ -129,10 +114,6 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v6.0.2
-      - name: Download poetry.lock
-        uses: actions/download-artifact@v8.0.1
-        with:
-          name: poetry-lock
       # Green runner nodes keep a warm Grype DB at /var/cache/grype-db (refreshed
       # by the grype-db-refresher DaemonSet). A node-disk copy costs ~4s versus
       # ~150s to pull 139 MB from Anchore's CDN. Cold node falls back to the
@@ -225,10 +206,6 @@ jobs:
           python3.12 --version
           poetry --version
           uv --version
-      - name: Download poetry.lock
-        uses: actions/download-artifact@v8.0.1
-        with:
-          name: poetry-lock
       - name: Restore Cache
         uses: actions/cache/restore@v5.0.3
         with:
@@ -251,7 +228,7 @@ jobs:
       - name: Install the project dependencies
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
-          poetry install --with test --extras all
+          poetry install --sync --with test --extras all
       - name: Run pre-commit (formatting, linting, type checking and tests)
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
@@ -276,10 +253,6 @@ jobs:
       - uses: actions/checkout@v6.0.2
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
-      - name: Download poetry.lock
-        uses: actions/download-artifact@v8.0.1
-        with:
-          name: poetry-lock
       - name: Download SBOM
         uses: actions/download-artifact@v8.0.1
         with:

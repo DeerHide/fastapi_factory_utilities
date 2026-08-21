@@ -17,8 +17,6 @@ from fastapi_factory_utilities.core.services.status.enums import HealthStatusEnu
 class TestODMPluginStartup:
     """Tests for ``ODMPlugin.on_startup`` fail-fast behavior."""
 
-    # pylint: disable=protected-access
-
     @pytest.mark.asyncio
     @patch("fastapi_factory_utilities.core.plugins.odm_plugin.plugins.ODMBuilder")
     async def test_on_startup_marks_unhealthy_and_reraises(self, mock_builder_class: MagicMock) -> None:
@@ -72,7 +70,7 @@ class TestODMPluginStartup:
     async def test_on_startup_runs_csfle_probe_when_auto_encryption_enabled(
         self,
         mock_builder_class: MagicMock,
-        mock_init_beanie: AsyncMock,  # pylint: disable=unused-argument
+        mock_init_beanie: AsyncMock,
     ) -> None:
         """The CSFLE startup probe runs once ``ODMBuilder`` produced ``auto_encryption_opts``."""
         mock_client: MagicMock = MagicMock()
@@ -112,7 +110,7 @@ class TestODMPluginStartup:
     async def test_on_startup_skips_csfle_probe_when_auto_encryption_disabled(
         self,
         mock_builder_class: MagicMock,
-        mock_init_beanie: AsyncMock,  # pylint: disable=unused-argument
+        mock_init_beanie: AsyncMock,
     ) -> None:
         """No probe runs, and no mongocryptd dependency is introduced, when CSFLE is off."""
         mock_client: MagicMock = MagicMock()
@@ -147,8 +145,6 @@ class TestODMPluginStartup:
 
 class TestODMPluginCsfleStartupProbe:
     """Tests for ``ODMPlugin._run_csfle_startup_probe``."""
-
-    # pylint: disable=protected-access
 
     @pytest.mark.asyncio
     async def test_probe_inserts_and_deletes_the_throwaway_document(self) -> None:

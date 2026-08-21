@@ -48,7 +48,7 @@ class TestPruneUnregisteredSchedules:
         )
 
         # Simulate legacy deploy: heartbeat task removed from code but cron remains in Redis.
-        del scheduler_component._schedulers_tasks["heartbeat"]  # pylint: disable=protected-access
+        del scheduler_component._schedulers_tasks["heartbeat"]
 
         removed = await scheduler_component.prune_unregistered_schedules()
 

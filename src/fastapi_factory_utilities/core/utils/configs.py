@@ -10,7 +10,7 @@ from fastapi_factory_utilities.core.utils.yaml_reader import (
     YamlFileReader,
 )
 
-GenericConfigBaseModelType = TypeVar("GenericConfigBaseModelType", bound=BaseModel)  # pylint: disable=invalid-name
+GenericConfigBaseModelType = TypeVar("GenericConfigBaseModelType", bound=BaseModel)
 
 
 class ConfigBaseException(BaseException):

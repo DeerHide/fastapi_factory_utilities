@@ -113,7 +113,7 @@ class JWKStoreMemory(JWKStoreAbstract):
                     jwks.append(jwk)
             return PyJWKSet.from_dict(
                 {
-                    "keys": [jwk._jwk_data for jwk in jwks]  # pylint: disable=protected-access # pyright: ignore[reportPrivateUsage]
+                    "keys": [jwk._jwk_data for jwk in jwks]  # pyright: ignore[reportPrivateUsage]
                 }
             )
 

@@ -47,8 +47,8 @@ class PartStr(str):
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        _source: type[Any],  # pylint: disable=unused-argument, invalid-name
-        _handler: GetCoreSchemaHandler,  # pylint: disable=unused-argument, invalid-name
+        _source: type[Any],
+        _handler: GetCoreSchemaHandler,
     ) -> core_schema.CoreSchema:
         """Get the core schema for the RoutingKeyPartStr type."""
         return core_schema.no_info_after_validator_function(cls, core_schema.str_schema())
@@ -56,7 +56,7 @@ class PartStr(str):
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        core_schema: core_schema.CoreSchema,  # pylint: disable=redefined-outer-name
+        core_schema: core_schema.CoreSchema,
         handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
         """Get the JSON schema for the RoutingKeyPartStr type."""
@@ -123,8 +123,8 @@ class AbstractName(str):
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        _source: type[Any],  # pylint: disable=unused-argument, invalid-name
-        _handler: GetCoreSchemaHandler,  # pylint: disable=unused-argument, invalid-name
+        _source: type[Any],
+        _handler: GetCoreSchemaHandler,
     ) -> core_schema.CoreSchema:
         """Get the core schema for the RoutingKey type."""
         return core_schema.no_info_after_validator_function(cls, core_schema.str_schema())
@@ -132,7 +132,7 @@ class AbstractName(str):
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        core_schema: core_schema.CoreSchema,  # pylint: disable=redefined-outer-name
+        core_schema: core_schema.CoreSchema,
         handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
         """Get the JSON schema for the RoutingKey type."""

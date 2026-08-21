@@ -23,7 +23,8 @@ class TestSchedulerComponentUnits:
         component = SchedulerComponent(name_suffix="svc")
         broker = MagicMock()
         broker.register_task.return_value = MagicMock()
-        component._stream_broker = broker  # pylint: disable=protected-access
+        component._stream_broker = broker
+
         component.register_task(MagicMock(), task_name="heartbeat")
         with pytest.raises(ValueError, match="already registered"):
             component.register_task(MagicMock(), task_name="heartbeat")
@@ -40,7 +41,8 @@ class TestSchedulerComponentUnits:
         decorated = MagicMock()
         broker = MagicMock()
         broker.register_task.return_value = decorated
-        component._stream_broker = broker  # pylint: disable=protected-access
+        component._stream_broker = broker
+
         component.register_task(MagicMock(), task_name="heartbeat")
         assert component.get_task("heartbeat") is decorated
 
@@ -59,8 +61,10 @@ class TestSchedulerComponentUnits:
         stale = MagicMock(task_name="stale", schedule_id="2")
         source = AsyncMock()
         source.get_schedules.return_value = [keep, stale]
-        component._scheduler_source = source  # pylint: disable=protected-access
-        component._schedulers_tasks["keep"] = MagicMock()  # pylint: disable=protected-access
+        component._scheduler_source = source
+
+        component._schedulers_tasks["keep"] = MagicMock()
+
         removed = await component.prune_unregistered_schedules()
         assert removed == 1
         source.delete_schedule.assert_awaited_once_with("2")
@@ -76,10 +80,13 @@ class TestSchedulerComponentUnits:
     async def test_startup_and_shutdown_with_mocks(self) -> None:
         """Startup wires worker/scheduler tasks; shutdown cancels them."""
         component = SchedulerComponent(name_suffix="svc")
-        component._result_backend = AsyncMock()  # pylint: disable=protected-access
-        component._stream_broker = AsyncMock()  # pylint: disable=protected-access
-        component._scheduler = AsyncMock()  # pylint: disable=protected-access
-        component._scheduler_source = AsyncMock()  # pylint: disable=protected-access
+        component._result_backend = AsyncMock()
+
+        component._stream_broker = AsyncMock()
+
+        component._scheduler = AsyncMock()
+
+        component._scheduler_source = AsyncMock()
 
         async def _hang(*_args: object) -> None:
             await asyncio.sleep(60)
@@ -96,7 +103,10 @@ class TestSchedulerComponentUnits:
             patch("taskiq_fastapi.populate_dependency_context"),
         ):
             await component.startup(FastAPI())
-            assert component.broker is component._stream_broker  # pylint: disable=protected-access
-            assert component.scheduler is component._scheduler  # pylint: disable=protected-access
-            assert component.scheduler_source is component._scheduler_source  # pylint: disable=protected-access
+            assert component.broker is component._stream_broker
+
+            assert component.scheduler is component._scheduler
+
+            assert component.scheduler_source is component._scheduler_source
+
             await component.shutdown()

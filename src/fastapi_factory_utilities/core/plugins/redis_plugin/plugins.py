@@ -105,7 +105,7 @@ class RedisPlugin(PluginStatusMixin, PluginAbstract):
                 decode_responses=True,
             )
             await self._client.ping()
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             self._report_unhealthy()
             if self._client is not None:
                 await self._client.aclose()

@@ -1,7 +1,5 @@
 """Tests for the OpenTelemetry plugin auto-instrumentation registry."""
 
-# pylint: disable=protected-access
-
 from unittest.mock import MagicMock, patch
 
 import pytest

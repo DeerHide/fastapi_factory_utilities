@@ -31,14 +31,14 @@ def depends_scheduler_component(
 
 
 if find_spec("beanie") is not None:
-    from fastapi_factory_utilities.core.plugins.odm_plugin.depends import (  # noqa: F401  # pylint: disable=unused-import
+    from fastapi_factory_utilities.core.plugins.odm_plugin.depends import (  # noqa: F401
         depends_odm_database,
     )
 
     __all__.append("depends_odm_database")
 
 if find_spec("aio_pika") is not None:
-    from fastapi_factory_utilities.core.plugins.aiopika_plugin.depends import (  # noqa: F401  # pylint: disable=unused-import
+    from fastapi_factory_utilities.core.plugins.aiopika_plugin.depends import (  # noqa: F401
         depends_aiopika_robust_connection,
     )
 

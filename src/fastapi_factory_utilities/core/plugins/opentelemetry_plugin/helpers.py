@@ -10,7 +10,7 @@ from opentelemetry.trace import SpanKind
 from opentelemetry.util import types
 
 Param = ParamSpec("Param")
-RetType = TypeVar("RetType")  # pylint: disable=invalid-name
+RetType = TypeVar("RetType")
 
 
 def trace_span(

@@ -1,7 +1,5 @@
 """Unit tests for the Hydra services."""
 
-# pylint: disable=protected-access
-
 import json
 from base64 import b64encode
 from http import HTTPStatus
@@ -211,7 +209,8 @@ class TestHydraIntrospectGenericService:
             hydra_public_http_resource=http_resource_public,
         )
 
-        assert service._config is hydra_jwt_config  # pylint: disable=protected-access
+        assert service._config is hydra_jwt_config
+
         assert service._hydra_admin_http_resource == http_resource_admin
         assert service._hydra_public_http_resource == http_resource_public
         assert service._concreate_introspect_object_class == MockIntrospectObject
@@ -479,7 +478,8 @@ class TestHydraIntrospectService:
             hydra_public_http_resource=http_resource_public,
         )
 
-        assert service._config is hydra_jwt_config  # pylint: disable=protected-access
+        assert service._config is hydra_jwt_config
+
         assert service._hydra_admin_http_resource == http_resource_admin
         assert service._hydra_public_http_resource == http_resource_public
         assert service._concreate_introspect_object_class == HydraTokenIntrospectObject

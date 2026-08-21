@@ -30,7 +30,7 @@ from .abstract import AbstractListener
 
 _logger: BoundLogger = get_logger(__package__)
 
-GenericManagedMessageType = TypeVar("GenericManagedMessageType", bound=GenericMessage[Any])  # pylint: disable=invalid-name
+GenericManagedMessageType = TypeVar("GenericManagedMessageType", bound=GenericMessage[Any])
 
 
 class AbstractManagedListener(AbstractListener[GenericManagedMessageType], Generic[GenericManagedMessageType]):
@@ -106,7 +106,7 @@ class AbstractManagedListener(AbstractListener[GenericManagedMessageType], Gener
             )
             await incoming_message.reject(requeue=requeue_poison)
             return
-        except Exception as error:  # pylint: disable=broad-exception-caught
+        except Exception as error:
             _logger.error("Failed to decode message", error=error, body=incoming_message.body)
             self._telemetry.record_settlement(
                 listener=self._name,

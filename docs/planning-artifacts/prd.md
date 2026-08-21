@@ -140,12 +140,7 @@ Each of these requires significant boilerplate code and expertise to implement c
 - `ApplicationGenericBuilder` - Builder pattern for app construction
 - `RootConfig` - Type-safe YAML configuration with Pydantic
 
-**Plugins (5 available):**
-- `ODMPlugin` - MongoDB/Beanie integration
-- `OpenTelemetryPlugin` - Distributed tracing and metrics
-- `TaskiqPlugin` - Background task processing (Redis)
-- `AiopikaPlugin` - RabbitMQ messaging
-- `AioHttpPlugin` - Instrumented HTTP client
+**Plugins:** see `src/fastapi_factory_utilities/core/plugins/` (one `*_plugin` package per backing technology). Do not restate a count here.
 
 **Services:**
 - `StatusService` - Reactive health and readiness monitoring
@@ -345,7 +340,7 @@ mongomock and a real Mongo container. Consumers own their plugin fixtures.
 |--------|-------------|---------|
 | `build_mocked_aiohttp_response` | `core.plugins.aiohttp_plugin.mockers` | Mock HTTP responses |
 | `build_mocked_aiohttp_resource` | `core.plugins.aiohttp_plugin.mockers` | Mock HTTP resources |
-| `AbstractRepositoryInMemory` | `core.plugins.odm_plugin.mockers` | **Deprecated** — use mongomock or a Mongo testcontainer |
+| `AbstractRepositoryInMemory` | `core.plugins.odm_plugin.mockers` | In-memory unit-test helper |
 
 ### Migration & Versioning
 
@@ -355,7 +350,7 @@ mongomock and a real Mongo container. Consumers own their plugin fixtures.
 | **Dynamic Versioning** | `poetry-dynamic-versioning` plugin |
 | **Breaking Changes** | Documented in release notes |
 | **Migration Guide** | To be created as API stabilizes |
-| **Current Status** | Alpha - API may change |
+| **Current Status** | Production/Stable |
 
 ### IDE Support
 
@@ -399,12 +394,7 @@ mongomock and a real Mongo container. Consumers own their plugin fixtures.
 - ✅ `RootConfig` - Type-safe YAML configuration
 - ✅ `StatusService` - Reactive health monitoring
 
-**Plugins (5):**
-- ✅ `ODMPlugin` - MongoDB/Beanie
-- ✅ `OpenTelemetryPlugin` - Distributed tracing
-- ✅ `TaskiqPlugin` - Background tasks (Redis)
-- ✅ `AiopikaPlugin` - RabbitMQ messaging
-- ✅ `AioHttpPlugin` - Instrumented HTTP client
+**Plugins:** see `src/fastapi_factory_utilities/core/plugins/`.
 
 **Security:**
 - ✅ JWT authentication with JWK store

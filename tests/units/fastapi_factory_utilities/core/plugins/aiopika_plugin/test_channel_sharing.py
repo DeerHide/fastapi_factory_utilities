@@ -1,7 +1,5 @@
 """Unit tests for AMQP channel sharing and lifecycle."""
 
-# pylint: disable=protected-access
-
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

@@ -359,7 +359,7 @@ class TestJWTBearerTokenDecoderAbstract:
     def test_abstract_class_cannot_be_instantiated(self) -> None:
         """Test that the abstract class cannot be instantiated directly."""
         with pytest.raises(TypeError):
-            JWTBearerTokenDecoderAbstract()  # type: ignore[abstract] # pylint: disable=abstract-class-instantiated
+            JWTBearerTokenDecoderAbstract()  # type: ignore[abstract]
 
     def test_get_kid_from_jwt_unsafe_header_success(self) -> None:
         """Test that get_kid_from_jwt_unsafe_header returns the kid from the JWT header."""
@@ -494,7 +494,8 @@ class TestGenericJWTBearerTokenDecoder:
             jwks_store=mock_jwks_store,
         )
         # __orig_bases__ resolves to TypeVar at runtime for parameterized generics; set payload model for tests
-        decoder_instance._payload_model = JWTPayload  # pylint: disable=protected-access
+        decoder_instance._payload_model = JWTPayload
+
         return decoder_instance
 
     @pytest.fixture
@@ -552,7 +553,7 @@ class TestGenericJWTBearerTokenDecoder:
                 mock_decode.assert_called_once_with(
                     jwt_token=jwt_token,
                     public_key=mock_jwk,
-                    jwt_bearer_authentication_config=decoder._jwt_bearer_authentication_config,  # pylint: disable=protected-access
+                    jwt_bearer_authentication_config=decoder._jwt_bearer_authentication_config,
                     issuer=OAuth2Issuer("https://example.com"),
                 )
 
@@ -729,7 +730,7 @@ class TestGenericJWTBearerTokenDecoder:
             jwt_bearer_authentication_config=jwt_config,
             jwks_store=mock_jwks_store,
         )
-        decoder._payload_model = CustomJWTPayload  # pylint: disable=protected-access
+        decoder._payload_model = CustomJWTPayload
 
         mock_jwk = MagicMock(spec=PyJWK)
         mock_jwks_store.get_jwk = AsyncMock(return_value=mock_jwk)

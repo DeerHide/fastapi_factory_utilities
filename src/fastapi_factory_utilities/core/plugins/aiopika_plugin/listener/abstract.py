@@ -15,7 +15,7 @@ from ..queue import Queue
 
 _logger: BoundLogger = get_logger(__package__)
 
-GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])  # pylint: disable=invalid-name
+GenericMessageType = TypeVar("GenericMessageType", bound=GenericMessage[Any])
 
 
 class AbstractListener(AbstractAiopikaResource, Generic[GenericMessageType]):
@@ -60,7 +60,7 @@ class AbstractListener(AbstractAiopikaResource, Generic[GenericMessageType]):
             # Poison: invalid JSON never becomes valid by requeue.
             await incoming_message.reject(requeue=False)
             return
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except Exception as e:
             _logger.error("Failed to decode message", error=e, body=incoming_message.body)
             await incoming_message.reject(requeue=False)
             return

@@ -17,8 +17,9 @@ from pymongo.results import DeleteResult
 from .documents import BaseDocument
 from .exceptions import OperationError, UnableToCreateEntityDueToDuplicateKeyError
 
-DocumentGenericType = TypeVar("DocumentGenericType", bound=BaseDocument)  # pylint: disable=invalid-name
-EntityGenericType = TypeVar("EntityGenericType", bound=BaseModel)  # pylint: disable=invalid-name
+DocumentGenericType = TypeVar("DocumentGenericType", bound=BaseDocument)
+
+EntityGenericType = TypeVar("EntityGenericType", bound=BaseModel)
 
 
 def managed_session() -> Callable[[Callable[..., Any]], Callable[..., Any]]:

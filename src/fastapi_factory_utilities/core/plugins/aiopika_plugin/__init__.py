@@ -1,7 +1,6 @@
 """Aiopika Plugin Module."""
 
 # ruff: noqa: E402
-# pylint: disable=wrong-import-position
 from fastapi_factory_utilities.core.plugins.aiopika_plugin.configs import RabbitMQCredentialsConfig
 from fastapi_factory_utilities.core.plugins.extras import require_extra
 

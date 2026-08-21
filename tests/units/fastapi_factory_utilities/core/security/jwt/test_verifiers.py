@@ -25,7 +25,7 @@ class TestJWTVerifierAbstract:
     def test_abstract_class_cannot_be_instantiated(self) -> None:
         """Test that the abstract class cannot be instantiated directly."""
         with pytest.raises(TypeError):
-            JWTVerifierAbstract()  # type: ignore[abstract] # pylint: disable=abstract-class-instantiated
+            JWTVerifierAbstract()  # type: ignore[abstract]
 
     def test_subclass_must_implement_verify(self) -> None:
         """Test that subclasses must implement the verify method."""
@@ -38,7 +38,7 @@ class TestJWTVerifierAbstract:
 
         # Attempting to instantiate should raise TypeError
         with pytest.raises(TypeError):
-            IncompleteVerifier()  # type: ignore[abstract] # pylint: disable=abstract-class-instantiated
+            IncompleteVerifier()  # type: ignore[abstract]
 
     def test_subclass_with_verify_can_be_instantiated(self) -> None:
         """Test that subclasses implementing verify can be instantiated."""

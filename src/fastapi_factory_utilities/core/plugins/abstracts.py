@@ -50,7 +50,7 @@ class PluginAbstract(ABC):
         """
         try:
             await operation()
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             _logger.warning(
                 "Failed to warm %s at startup; will retry on first use.",
                 what,

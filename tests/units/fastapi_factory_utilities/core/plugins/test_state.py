@@ -45,7 +45,7 @@ class TestPluginNotBound:
         """A plugin used before set_application raises PluginNotBoundError."""
         plugin: _UnboundPlugin = _UnboundPlugin()
         with pytest.raises(PluginNotBoundError, match="set_application"):
-            plugin._add_to_state(key=ODM_CLIENT, value=object())  # pylint: disable=protected-access
+            plugin._add_to_state(key=ODM_CLIENT, value=object())
 
 
 class TestPluginNotRegistered:

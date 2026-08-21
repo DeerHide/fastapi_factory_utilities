@@ -86,3 +86,25 @@ It already takes `yaml_base_key` and always sets `use_environment_injection=True
 | Redis | `Redis.from_url` | `redis_credentials_config` | no (FFU unit tests patch `from_url`) | none |
 | S3 | aioboto3 Session | `s3_config` | no | none |
 | Taskiq | Redis broker via `SchedulerComponent` | `redis_credentials_config` | no | none |
+
+## 11.1 pylint vs ruff (2026-08-21)
+
+Both clean on the live rule sets:
+
+| Tool | Config | Findings |
+| --- | --- | --- |
+| pylint 4.0.7 | `pylintrc` (`disable=R,` plus in-source suppressions) | 0 |
+| ruff 0.16.4 | `select = ["D","F","E","W","I","UP","PL","N","RUF"]` | 0 |
+
+Candidate extra ruff rules that map to leftover pylint checks, run without enabling them:
+
+| Rule | Findings | Notes |
+| --- | --- | --- |
+| TRY003 | 183 | long exception messages; pylint was not enforcing this |
+| ARG001/ARG002 | 39 | unused args; all previously `pylint: disable=unused-argument` |
+| TRY400 | 12 | `logging.exception` vs `logging.error`; not a pylint live check here |
+| BLE001 | 5 | `except Exception`; previously `pylint: disable=broad-except` |
+| SLF001 | 4 | protected access; previously `pylint: disable=protected-access` |
+| TRY004 | 4 | type of raise; not a pylint live check here |
+
+Nothing only pylint caught. No new ruff rule. Pylint removed.

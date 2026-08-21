@@ -9,7 +9,7 @@ from typing import Any
 _NEW = "fastapi_factory_utilities.core.plugins.taskiq_plugin"
 
 
-def __getattr__(name: str) -> Any:  # pylint: disable=invalid-name
+def __getattr__(name: str) -> Any:
     """Re-export public names and submodules from ``taskiq_plugin``."""
     warnings.warn(
         f"fastapi_factory_utilities.core.plugins.taskiq_plugins is renamed to {_NEW} and will be removed in 7.0.0.",

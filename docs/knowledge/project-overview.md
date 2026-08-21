@@ -23,8 +23,8 @@
 | **Name** | fastapi_factory_utilities |
 | **Type** | Python Library |
 | **License** | MIT |
-| **Status** | Alpha |
-| **Python Version** | >= 3.12 |
+| **Status** | Production/Stable |
+| **Python Version** | See `pyproject.toml` |
 | **Repository** | https://github.com/DeerHide/fastapi_factory_utilities |
 | **PyPI** | https://pypi.org/project/fastapi-factory-utilities/ |
 

@@ -116,7 +116,7 @@ class AioHttpClientResource:
         if tracer_provider is None or meter_provider is None:
             return None
         if find_spec(name="opentelemetry.instrumentation.aiohttp_client"):
-            from opentelemetry.instrumentation.aiohttp_client import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415 # pyright: ignore
+            from opentelemetry.instrumentation.aiohttp_client import (  # noqa: PLC0415 # pyright: ignore
                 create_trace_config,
             )
 

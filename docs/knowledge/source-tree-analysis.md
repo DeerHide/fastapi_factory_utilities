@@ -192,10 +192,9 @@ fastapi_factory_utilities/
 │       └── 📄 ci.yml                          # CI/CD pipeline
 │
 ├── 📄 pyproject.toml                          # Poetry configuration
-├── 📄 poetry.lock                             # Dependency lock file
+├── 📄 poetry.lock                             # CI lock (does not pin consumers)
 ├── 📄 docker-compose.yml                      # Local development services
 ├── 📄 skaffold.yaml                           # Kubernetes development
-├── 📄 pylintrc                                # Pylint configuration
 ├── 📄 README.md                               # Project documentation
 ├── 📄 SECURITY.md                             # Security policy
 └── 📄 LICENSE                                 # MIT License
@@ -242,7 +241,7 @@ Demonstrates how to:
 |-------------|----------|-------------|
 | **CLI** | `src/fastapi_factory_utilities/__main__.py` | Package CLI entry |
 | **Example App** | `src/fastapi_factory_utilities/example/__main__.py` | Run example app |
-| **Script Command** | `pyproject.toml` → `fastapi_factory_utilities-example` | Poetry script |
+| **Example app** | `python -m fastapi_factory_utilities.example` from a checkout | Not in the published wheel |
 
 ---
 
@@ -251,7 +250,6 @@ Demonstrates how to:
 | File | Purpose |
 |------|---------|
 | `pyproject.toml` | Poetry config, mypy, ruff, pytest settings |
-| `pylintrc` | Pylint configuration |
 | `.pre-commit-config.yaml` | Pre-commit hooks |
 | `docker-compose.yml` | Local services (MongoDB, OTel Collector) |
 | `skaffold.yaml` | Kubernetes development |

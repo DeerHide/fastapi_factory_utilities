@@ -1,4 +1,8 @@
-"""FastAPI Factory Utilities exceptions."""
+"""Library error base (`FastAPIFactoryUtilitiesError`) and shared recording.
+
+Exception-mapping (`ExceptionMapping`, the mapper decorator) lives in
+`fastapi_factory_utilities.core.utils.exceptions`, not here.
+"""
 
 import logging
 import traceback
@@ -148,7 +152,7 @@ class FastAPIFactoryUtilitiesError(Exception):
                 span.set_attribute(EXCEPTION_MESSAGE, self.message)
                 span.set_attribute(EXCEPTION_STACKTRACE, traceback.format_exc())
                 span.set_attribute(EXCEPTION_TYPE, self.__class__.__name__)
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except Exception as e:
             # Suppress any errors that occur while propagating the exception
             logger.error("An error occurred while recording the exception as trace", exc_info=e)
 

@@ -92,7 +92,8 @@ class S3Plugin(PluginStatusMixin, PluginAbstract):
             session: Session = Session()
             self._exit_stack = AsyncExitStack()
             # Long-lived stack: enter once here, close in on_shutdown.
-            await self._exit_stack.__aenter__()  # pylint: disable=unnecessary-dunder-call
+            await self._exit_stack.__aenter__()
+
             self._s3_client = await self._exit_stack.enter_async_context(
                 session.client("s3", **self._builder.client_kwargs)
             )
@@ -105,7 +106,7 @@ class S3Plugin(PluginStatusMixin, PluginAbstract):
                 self._presign_client = await self._exit_stack.enter_async_context(
                     session.client("s3", **self._builder.presign_client_kwargs)
                 )
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             self._report_unhealthy()
             if self._exit_stack is not None:
                 await self._exit_stack.aclose()

@@ -1,7 +1,5 @@
 """Unit tests for message delivery outcomes and settlement."""
 
-# pylint: disable=protected-access
-
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

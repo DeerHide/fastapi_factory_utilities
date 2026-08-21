@@ -112,13 +112,15 @@ poetry add fastapi-factory-utilities
 poetry add fastapi-factory-utilities --extras mongo --extras otel
 ```
 
-Extras: `mongo`, `amqp`, `s3`, `redis`, `taskiq`, `otel`, `all`, `testing`. Importing a plugin without its extra raises `MissingExtraError` naming the extra to install. The bundled ASGI server is Uvicorn.
+Extras: `mongo`, `amqp`, `s3`, `redis`, `taskiq`, `otel`, `all` — declared in `pyproject.toml`. Importing a plugin without its extra raises `MissingExtraError` naming the extra to install. The bundled ASGI server is Uvicorn.
 
 ---
 
 ## Public API and deprecation
 
 A symbol is **public** if and only if it is listed in a package `__init__.__all__`. Import it from that package, not from the defining submodule. Everything else — module paths, module names, class internals — is private and may move in a minor release without a shim.
+
+**Which exceptions module.** `fastapi_factory_utilities.core.exceptions` is the library error base (`FastAPIFactoryUtilitiesError`). `fastapi_factory_utilities.core.utils.exceptions` is the mapping decorator (`ExceptionMapping`, `ExceptionMappingContext`).
 
 **SemVer**
 
@@ -345,8 +347,8 @@ class MyAppConfig(RootConfig):
 This library includes a complete example application demonstrating key features:
 
 ```bash
-# Run the example application
-fastapi_factory_utilities-example
+# Run the example application from a checkout (not shipped in the wheel)
+python -m fastapi_factory_utilities.example
 ```
 
 The example shows:
@@ -381,7 +383,7 @@ cd fastapi_factory_utilities
 ./scripts/setup_dev_env.sh
 
 # Or manually:
-poetry install --with test
+poetry install --with test --extras all
 poetry run pre-commit install
 ```
 
@@ -504,6 +506,8 @@ Please ensure:
 - Code is properly formatted (`poetry run ruff format`)
 - Type checking passes (`poetry run mypy`)
 - Pre-commit hooks pass (`poetry run pre-commit run --all-files`)
+
+`poetry.lock` constrains CI. Published version ranges constrain consumers. The two are allowed to differ; bump the lock on purpose (and let the weekly canary tell you when upstream broke).
 
 > 📖 See [Development Guide](docs/knowledge/development-guide.md) for complete contribution workflow.
 

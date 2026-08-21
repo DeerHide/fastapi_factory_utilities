@@ -1,7 +1,5 @@
 """Unit tests for OpenTelemetryPluginBuilder resource and propagator setup."""
 
-# pylint: disable=protected-access
-
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -81,7 +79,7 @@ class TestOpenTelemetryPluginExceptions:
         caught: Exception | None = None
         try:
             raise OpenTelemetryPluginConfigError("otel yaml invalid")
-        except Exception as exception:  # pylint: disable=broad-exception-caught
+        except Exception as exception:
             caught = exception
         assert isinstance(caught, OpenTelemetryPluginConfigError)
         assert isinstance(caught, FastAPIFactoryUtilitiesError)

@@ -1,5 +1,5 @@
 """Unit tests for ODM plugin mockers."""
-# pylint: disable=protected-access  # Testing internal implementation
+# Testing internal implementation
 
 import asyncio
 import datetime

@@ -1,6 +1,6 @@
 """Unit tests for AbstractListener."""
 
-# pylint: disable=protected-access  # white-box tests for AbstractListener lifecycle and parsing
+# white-box tests for AbstractListener lifecycle and parsing
 
 import json
 from unittest.mock import AsyncMock, MagicMock

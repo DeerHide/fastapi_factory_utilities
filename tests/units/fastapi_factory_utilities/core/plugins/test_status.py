@@ -1,7 +1,5 @@
 """Tests for plugin StatusService registration helpers."""
 
-# pylint: disable=protected-access
-
 import asyncio
 
 import pytest

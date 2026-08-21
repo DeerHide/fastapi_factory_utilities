@@ -1,5 +1,4 @@
 """Tests for aiohttp plugin resources."""
-# pylint: disable=protected-access
 
 import ssl
 from typing import Any
@@ -27,11 +26,15 @@ class TestAioHttpClientResourceInit:
         config = HttpServiceDependencyConfig()
         resource = AioHttpClientResource(dependency_config=config)
 
-        assert resource._dependency_config == config  # pylint: disable=protected-access
-        assert resource._tcp_connector is None  # pylint: disable=protected-access
-        assert not resource._client_sessions  # pylint: disable=protected-access
-        assert resource._tracer_provider is None  # pylint: disable=protected-access
-        assert resource._meter_provider is None  # pylint: disable=protected-access
+        assert resource._dependency_config == config
+
+        assert resource._tcp_connector is None
+
+        assert not resource._client_sessions
+
+        assert resource._tracer_provider is None
+
+        assert resource._meter_provider is None
 
     def test_init_with_custom_config(self) -> None:
         """Test initialization with custom configuration."""

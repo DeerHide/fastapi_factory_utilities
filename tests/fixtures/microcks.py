@@ -15,7 +15,6 @@ from pydantic import BaseModel, ConfigDict
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
-# pylint: disable=invalid-name
 microcks_image: str = "quay.io/microcks/microcks-uber:1.10.1"
 microcks_http_port: int = 8080
 microcks_grpc_port: int = 9090

@@ -9,7 +9,6 @@ Objectives:
 
 import datetime
 import re
-import warnings
 from abc import ABC
 from collections.abc import AsyncGenerator, Callable, Mapping
 from contextlib import asynccontextmanager
@@ -27,8 +26,9 @@ from fastapi_factory_utilities.core.plugins.odm_plugin.exceptions import (
 )
 from fastapi_factory_utilities.core.plugins.odm_plugin.helpers import PersistedEntity
 
-DocumentGenericType = TypeVar("DocumentGenericType", bound=BaseDocument)  # pylint: disable=invalid-name
-EntityGenericType = TypeVar("EntityGenericType", bound=PersistedEntity[UUID])  # pylint: disable=invalid-name
+DocumentGenericType = TypeVar("DocumentGenericType", bound=BaseDocument)
+
+EntityGenericType = TypeVar("EntityGenericType", bound=PersistedEntity[UUID])
 
 
 class MockQueryField(str):
@@ -176,13 +176,12 @@ def managed_session() -> Callable[[Callable[..., Any]], Callable[..., Any]]:
 
 
 class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGenericType]):
-    """Abstract repository in memory for testing purposes.
+    """In-memory repository for unit tests that do not need a Mongo driver.
 
-    .. deprecated::
-        Prefer a mongomock-backed ``AsyncMongoClient`` (or a real Mongo
-        testcontainer) so Beanie and ``AbstractRepository`` run for real. This
-        class hand-rolls a partial query engine and will be removed after one
-        release cycle.
+    Hand-rolls a partial query engine. Prefer mongomock or a real Mongo
+    testcontainer when the test needs Beanie/`AbstractRepository` to run
+    against a driver. Kept as a public testing helper: `core.testing` was
+    removed, and consumers still subclass this.
     """
 
     def __init__(self, entities: list[EntityGenericType] | None = None) -> None:
@@ -191,13 +190,6 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
         Args:
             entities: Optional list of entities to pre-populate the repository with.
         """
-        warnings.warn(
-            "AbstractRepositoryInMemory is deprecated; use mongomock (or a real "
-            "Mongo testcontainer) so Beanie/AbstractRepository run against a "
-            "driver. This class will be removed after one release cycle.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
         self._entities: dict[UUID, EntityGenericType] = {}
         if entities is not None:
             for entity in entities:
@@ -309,7 +301,7 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
         yield
 
     @managed_session()
-    async def insert(self, entity: EntityGenericType, session: None = None) -> EntityGenericType:  # pylint: disable=unused-argument
+    async def insert(self, entity: EntityGenericType, session: None = None) -> EntityGenericType:
         """Insert an entity into the repository.
 
         Args:
@@ -335,7 +327,7 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
         return entity_created
 
     @managed_session()
-    async def update(self, entity: EntityGenericType, session: None = None) -> EntityGenericType:  # pylint: disable=unused-argument
+    async def update(self, entity: EntityGenericType, session: None = None) -> EntityGenericType:
         """Update an entity in the repository.
 
         Args:
@@ -360,7 +352,7 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
         return entity_updated
 
     @managed_session()
-    async def get_one_by_id(self, entity_id: UUID, session: None = None) -> EntityGenericType | None:  # pylint: disable=unused-argument
+    async def get_one_by_id(self, entity_id: UUID, session: None = None) -> EntityGenericType | None:
         """Get an entity by its ID.
 
         Args:
@@ -373,7 +365,7 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
         return self._entities.get(entity_id, None)
 
     @managed_session()
-    async def delete_one_by_id(self, entity_id: UUID, raise_if_not_found: bool = False, session: None = None) -> None:  # pylint: disable=unused-argument
+    async def delete_one_by_id(self, entity_id: UUID, raise_if_not_found: bool = False, session: None = None) -> None:
         """Delete an entity by its ID.
 
         Args:
@@ -391,7 +383,7 @@ class AbstractRepositoryInMemory(ABC, Generic[DocumentGenericType, EntityGeneric
         self._entities.pop(entity_id)
 
     @managed_session()
-    async def find(  # noqa: PLR0913  # pylint: disable=unused-argument
+    async def find(  # noqa: PLR0913
         self,
         *args: Any,
         projection_model: None = None,

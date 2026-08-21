@@ -149,7 +149,7 @@ class ApplicationAbstract(ABC):
         raise NotImplementedError
 
     @asynccontextmanager
-    async def fastapi_lifespan(self, fastapi: FastAPI) -> AsyncGenerator[None, None]:  # pylint: disable=unused-argument
+    async def fastapi_lifespan(self, fastapi: FastAPI) -> AsyncGenerator[None, None]:
         """FastAPI lifespan context manager."""
         await self.startup_plugins()
         await self.on_startup()

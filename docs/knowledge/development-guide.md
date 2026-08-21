@@ -8,7 +8,7 @@
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| **Python** | >= 3.12 | Required |
+| **Python** | 3.12 | See `pyproject.toml` (`>=3.12,<3.13`) |
 | **Poetry** | Latest | Package management |
 | **Docker** | Latest | Optional, for local services |
 | **Git** | Latest | Version control |
@@ -80,7 +80,7 @@ Use the provided setup script:
 ### Option 1: Direct Run
 
 ```bash
-poetry run fastapi_factory_utilities-example
+poetry run python -m fastapi_factory_utilities.example
 ```
 
 ### Option 2: With Local Services (Docker Compose)
@@ -90,7 +90,7 @@ poetry run fastapi_factory_utilities-example
 docker-compose up -d mongo otel_collector
 
 # Run the application
-poetry run fastapi_factory_utilities-example
+poetry run python -m fastapi_factory_utilities.example
 ```
 
 The example app will be available at: `http://localhost:8000`
@@ -230,9 +230,9 @@ does not ship a shared pytest plugin of driver-seam doubles.
 AMQP broker semantics (topic routing, publisher confirms, consumer acks,
 dead-letter / TTL retry).
 
-`AbstractRepositoryInMemory` is **deprecated** — it hand-rolls a partial query
-engine. Prefer mongomock or a real Mongo testcontainer so the repository path
-executes for real.
+`AbstractRepositoryInMemory` is a public testing helper for unit tests that
+do not need a Mongo driver. Prefer mongomock or a real Mongo testcontainer
+when the test needs Beanie/`AbstractRepository` to run against a driver.
 
 ### Repository contract tests
 
@@ -438,11 +438,17 @@ def my_function(param1: str, param2: int) -> bool:
 
 ## Troubleshooting
 
-### Poetry Lock Issues
+### Poetry lock (CI vs consumers)
+
+`poetry.lock` is committed. It pins what CI installs. The version ranges in
+`pyproject.toml` are what consumers resolve against, and they are allowed to
+differ. Do not run `poetry update` as a side effect of pushing — pre-push
+only checks that the lock still matches `pyproject.toml`. Fresh resolution
+runs on a weekly canary (`.github/workflows/deps-canary.yml`).
 
 ```bash
-poetry lock --no-update
-poetry install --with test --extras all
+poetry check --lock
+poetry install --sync --with test --extras all
 ```
 
 ### Pre-commit Cache Issues
@@ -482,8 +488,8 @@ export PYTHONPATH=./src:./tests:$PYTHONPATH
 | Lint code | `poetry run ruff check --fix src tests` |
 | Type check | `poetry run mypy` |
 | Pre-commit | `poetry run pre-commit run --all-files` |
-| Run example | `poetry run fastapi_factory_utilities-example` |
-| Update deps | `poetry update --with test` |
+| Run example | `poetry run python -m fastapi_factory_utilities.example` |
+| Check lock | `poetry check --lock` |
 
 ---
 

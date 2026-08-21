@@ -438,7 +438,7 @@ class TestFastAPIFactoryUtilitiesError:
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = INVALID_SPAN
 
-                FastAPIFactoryUtilitiesError(message=message)  # pylint: disable=pointless-exception-statement
+                FastAPIFactoryUtilitiesError(message=message)
 
                 # Should not raise any errors and should not call span methods
 
@@ -455,7 +455,7 @@ class TestFastAPIFactoryUtilitiesError:
                 mock_get_span.return_value = mock_span
 
                 # Test with various attribute types
-                FastAPIFactoryUtilitiesError(  # pylint: disable=pointless-exception-statement
+                FastAPIFactoryUtilitiesError(
                     message=message,
                     **{  # type: ignore[arg-type]
                         "str_attr": "string_value",
@@ -538,7 +538,7 @@ class TestFastAPIFactoryUtilitiesError:
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = mock_span
 
-                FastAPIFactoryUtilitiesError(  # pylint: disable=pointless-exception-statement
+                FastAPIFactoryUtilitiesError(
                     message=message,
                     **{"user_id": 123, "request_id": "req-456", "error_code": "E001"},  # type: ignore[arg-type]
                 )
@@ -742,7 +742,7 @@ class TestFastAPIFactoryUtilitiesError:
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = mock_span
 
-                FilteredError(  # pylint: disable=pointless-exception-statement
+                FilteredError(
                     message=message,
                     filtered_attr=filtered_attr,  # type: ignore[call-arg]
                     normal_attr=normal_attr,  # type: ignore[call-arg]
@@ -972,7 +972,7 @@ class TestExceptionForTestError:
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = INVALID_SPAN
 
-                ExceptionForTestError(message=message)  # pylint: disable=pointless-exception-statement
+                ExceptionForTestError(message=message)
 
                 # Should not raise any errors and should not call span methods
 
@@ -988,7 +988,7 @@ class TestExceptionForTestError:
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_get_span:
                 mock_get_span.return_value = mock_span
 
-                ExceptionForTestError(  # pylint: disable=pointless-exception-statement
+                ExceptionForTestError(
                     message=message,
                     **{"user_id": 123, "request_id": "req-456", "error_code": "E001"},  # type: ignore[arg-type]
                 )

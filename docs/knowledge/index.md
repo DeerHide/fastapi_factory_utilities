@@ -9,7 +9,7 @@
 | Property | Value |
 |----------|-------|
 | **Type** | Python Library (Monolith) |
-| **Primary Language** | Python 3.12 |
+| **Primary Language** | Python (see `pyproject.toml`) |
 | **Architecture** | Plugin-Based with Clean Architecture |
 | **Framework** | FastAPI |
 

@@ -95,7 +95,8 @@ class TestAiopikaPluginConnectionFactory:
             connection_factory=factory,
         )
         _bind(plugin, plugins=[OpenTelemetryPlugin()])
-        app: FastAPI = plugin._application.get_asgi_app()  # pylint: disable=protected-access
+        app: FastAPI = plugin._application.get_asgi_app()
+
         app.state.tracer_provider = object()
         app.state.meter_provider = object()
         with patch(

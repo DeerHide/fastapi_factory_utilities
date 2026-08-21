@@ -1,5 +1,4 @@
 """Tests for aiohttp plugin builder."""
-# pylint: disable=protected-access
 
 from unittest.mock import MagicMock, patch
 
@@ -28,18 +27,22 @@ class TestAioHttpClientBuilder:
         mock_app = self._create_mock_application()
         builder = AioHttpClientBuilder(keys=keys, application=mock_app)
 
-        assert builder._keys == keys  # pylint: disable=protected-access
-        assert not builder._configs  # pylint: disable=protected-access
-        assert not builder._resources  # pylint: disable=protected-access
+        assert builder._keys == keys
+
+        assert not builder._configs
+
+        assert not builder._resources
 
     def test_init_with_empty_keys(self) -> None:
         """Test AioHttpClientBuilder initialization with empty keys list."""
         mock_app = self._create_mock_application()
         builder = AioHttpClientBuilder(keys=[], application=mock_app)
 
-        assert builder._keys == []  # pylint: disable=protected-access
-        assert not builder._configs  # pylint: disable=protected-access
-        assert not builder._resources  # pylint: disable=protected-access
+        assert builder._keys == []
+
+        assert not builder._configs
+
+        assert not builder._resources
 
     def test_build_configs(self) -> None:
         """Test build_configs method creates configs for each key."""
@@ -75,7 +78,8 @@ class TestAioHttpClientBuilder:
             result = builder.build_configs()
 
             assert result is builder
-            assert not builder._configs  # pylint: disable=protected-access
+            assert not builder._configs
+
             mock_factory.assert_not_called()
 
     def test_build_resources(self) -> None:
@@ -106,7 +110,7 @@ class TestAioHttpClientBuilder:
         result = builder.build_resources()
 
         assert result is builder
-        assert not builder._resources  # pylint: disable=protected-access
+        assert not builder._resources
 
     def test_resources_property(self) -> None:
         """Test resources property returns the resources dictionary."""

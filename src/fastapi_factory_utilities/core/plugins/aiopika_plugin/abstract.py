@@ -47,7 +47,6 @@ class AbstractAiopikaResource(ABC):
         Returns:
             The shared channel instance.
         """
-        # pylint: disable=protected-access
         if self._is_channel_usable(other._channel):
             self.set_channel(other._channel)  # type: ignore[arg-type]
             return other._channel  # type: ignore[return-value]

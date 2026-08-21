@@ -1,0 +1,40 @@
+# Fresh-resolve canary. Pull-request CI installs from the committed lock;
+# this job re-resolves and runs the unit suite independently so upstream
+# breakage arrives on a schedule, not inside a review.
+name: Dependency canary
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  canary:
+    runs-on: public-actions-runner-scale-set
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - name: Ensure Poetry and uv are on PATH
+        run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
+      - name: Configure Poetry virtualenvs
+        run: |
+          export PATH="/home/runner/.local/bin:$PATH"
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+      - name: Resolve dependencies fresh
+        run: |
+          export PATH="/home/runner/.local/bin:$PATH"
+          rm -f poetry.lock
+          poetry lock
+          poetry install --with test --extras all
+      - name: Run unit suite
+        run: |
+          export PATH="/home/runner/.local/bin:$PATH"
+          export PYTHONPATH=./src:./tests:$PYTHONPATH
+          poetry run pytest tests/units

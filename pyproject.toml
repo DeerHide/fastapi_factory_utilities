@@ -11,13 +11,15 @@ authors = ["miragecentury <victorien.vanroye@gmail.com>"]
 maintainers = ["miragecentury <victorien.vanroye@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+# example/ and __main__.py stay in the checkout; they are not in the wheel.
 packages = [
-    { include = "fastapi_factory_utilities", from = "src" },
+    { include = "fastapi_factory_utilities/core", from = "src" },
+    { include = "fastapi_factory_utilities/__init__.py", from = "src" },
     { include = "fastapi_factory_utilities/py.typed", from = "src" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3.12",
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Intended Audience :: Developers",
@@ -104,7 +106,6 @@ optional = true
 mypy = "^1.10.0"
 types-requests = "^2.32.0.20240712"
 types-pyyaml = "^6.0.12.20240311"
-pylint = {version=">=3.2.2,<5.0.0", extras=["spelling"]}
 pre-commit = "^4.6.0"
 pyupgrade = "^3.21.2"
 pytest = "^9.0.1"
@@ -171,9 +172,6 @@ all = [
     "opentelemetry-instrumentation-httpx",
     "psutil",
 ]
-
-[tool.poetry.scripts]
-fastapi_factory_utilities-example = "fastapi_factory_utilities.example.__main__:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]

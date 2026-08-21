@@ -34,7 +34,6 @@ class TestJWKStoreAbstract:
     def test_abstract_class_cannot_be_instantiated(self) -> None:
         """Test that the abstract class cannot be instantiated directly."""
         with pytest.raises(TypeError):
-            # pylint: disable=abstract-class-instantiated,no-value-for-parameter
             JWKStoreAbstract()  # type: ignore[abstract]
 
     @pytest.mark.asyncio
@@ -54,7 +53,7 @@ class TestJWKStoreAbstract:
             async def get_jwks(self, issuer: OAuth2Issuer) -> PyJWKSet:
                 jwks = [jwk for kid, jwk in self._jwk_by_kid.items() if self._issuer_by_kid[kid] == issuer]
                 return PyJWKSet.from_dict(
-                    {"keys": [jwk._jwk_data for jwk in jwks]}  # pylint: disable=protected-access # pyright: ignore[reportPrivateUsage]
+                    {"keys": [jwk._jwk_data for jwk in jwks]}  # pyright: ignore[reportPrivateUsage]
                 )
 
             async def add_jwk(self, issuer: str, jwk: PyJWK) -> None:
@@ -86,7 +85,7 @@ class TestJWKStoreAbstract:
             async def get_jwks(self, issuer: str) -> PyJWKSet:
                 jwks = [jwk for kid, jwk in self._jwk_by_kid.items() if self._issuer_by_kid[kid] == issuer]
                 return PyJWKSet.from_dict(
-                    {"keys": [jwk._jwk_data for jwk in jwks]}  # pylint: disable=protected-access # pyright: ignore[reportPrivateUsage]
+                    {"keys": [jwk._jwk_data for jwk in jwks]}  # pyright: ignore[reportPrivateUsage]
                 )
 
             async def add_jwk(self, issuer: str, jwk: PyJWK) -> None:
@@ -177,7 +176,7 @@ class TestJWKStoreMemory:
         Args:
             store (JWKStoreMemory): The store instance.
         """
-        assert isinstance(store._lock, asyncio.Lock)  # pyright: ignore[reportPrivateUsage] # pylint: disable=protected-access
+        assert isinstance(store._lock, asyncio.Lock)  # pyright: ignore[reportPrivateUsage]
 
     @pytest.mark.asyncio
     async def test_add_jwk_then_get_jwk_returns_same_jwk(self, store: JWKStoreMemory, sample_jwk: PyJWK) -> None:

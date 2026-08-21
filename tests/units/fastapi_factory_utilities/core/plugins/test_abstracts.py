@@ -26,8 +26,6 @@ class _WarmPlugin(PluginAbstract):
 class TestPluginWarmSoft:
     """Tests for ``PluginAbstract._warm_soft``."""
 
-    # pylint: disable=protected-access
-
     @pytest.mark.asyncio
     async def test_warm_soft_awaits_probe(self) -> None:
         """Startup probe is awaited."""
@@ -70,7 +68,8 @@ class TestPluginAddToState:
         application = MagicMock()
         application.get_asgi_app.return_value = app
         plugin.set_application(application)
-        plugin._add_to_state(key=ODM_CLIENT, value="client")  # pylint: disable=protected-access
+        plugin._add_to_state(key=ODM_CLIENT, value="client")
+
         assert getattr(app.state, ODM_CLIENT.attr) == "client"
 
     def test_add_to_state_writes_string_key(self) -> None:
@@ -80,5 +79,6 @@ class TestPluginAddToState:
         application = MagicMock()
         application.get_asgi_app.return_value = app
         plugin.set_application(application)
-        plugin._add_to_state(key="custom_key", value=1)  # pylint: disable=protected-access
+        plugin._add_to_state(key="custom_key", value=1)
+
         assert app.state.custom_key == 1

@@ -36,7 +36,7 @@ def instrument_fastapi(
 ) -> None:
     """Instrument the FastAPI application."""
     if _available("fastapi", "fastapi", "opentelemetry.instrumentation.fastapi"):
-        from opentelemetry.instrumentation.fastapi import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.fastapi import (  # noqa: PLC0415
             FastAPIInstrumentor,
         )
 
@@ -50,8 +50,8 @@ def instrument_fastapi(
 
 
 def instrument_aiohttp(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
     meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
@@ -67,7 +67,7 @@ def instrument_aiohttp(
         None
     """
     if _available("aiohttp", "aiohttp", "opentelemetry.instrumentation.aiohttp_client"):
-        from opentelemetry.instrumentation.aiohttp_client import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.aiohttp_client import (  # noqa: PLC0415
             AioHttpClientInstrumentor,
         )
 
@@ -78,14 +78,14 @@ def instrument_aiohttp(
 
 
 def instrument_aio_pika(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
     meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
     """Instrument the AioPika application."""
     if _available("aio_pika", "aio_pika", "opentelemetry.instrumentation.aio_pika"):
-        from opentelemetry.instrumentation.aio_pika import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.aio_pika import (  # noqa: PLC0415
             AioPikaInstrumentor,
         )
 
@@ -96,9 +96,9 @@ def instrument_aio_pika(
 
 
 def instrument_pymongo(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
-    meter_provider: MeterProvider,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
+    meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
     """Instrument the PyMongo client (covers Beanie via the async pymongo driver).
@@ -119,7 +119,7 @@ def instrument_pymongo(
         None
     """
     if _available("pymongo", "pymongo", "opentelemetry.instrumentation.pymongo"):
-        from opentelemetry.instrumentation.pymongo import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.pymongo import (  # noqa: PLC0415
             PymongoInstrumentor,
         )
 
@@ -136,8 +136,8 @@ def instrument_pymongo(
 
 
 def instrument_requests(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
     meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
@@ -153,7 +153,7 @@ def instrument_requests(
         None
     """
     if _available("requests", "requests", "opentelemetry.instrumentation.requests"):
-        from opentelemetry.instrumentation.requests import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.requests import (  # noqa: PLC0415
             RequestsInstrumentor,
         )
 
@@ -164,8 +164,8 @@ def instrument_requests(
 
 
 def instrument_urllib3(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
     meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
@@ -181,7 +181,7 @@ def instrument_urllib3(
         None
     """
     if _available("urllib3", "urllib3", "opentelemetry.instrumentation.urllib3"):
-        from opentelemetry.instrumentation.urllib3 import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.urllib3 import (  # noqa: PLC0415
             URLLib3Instrumentor,
         )
 
@@ -192,9 +192,9 @@ def instrument_urllib3(
 
 
 def instrument_asyncio(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
-    meter_provider: MeterProvider,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
+    meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
     """Instrument asyncio task scheduling.
@@ -210,7 +210,7 @@ def instrument_asyncio(
         None
     """
     if _available("asyncio", "opentelemetry.instrumentation.asyncio"):
-        from opentelemetry.instrumentation.asyncio import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.asyncio import (  # noqa: PLC0415
             AsyncioInstrumentor,
         )
 
@@ -220,10 +220,10 @@ def instrument_asyncio(
 
 
 def instrument_system_metrics(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
     meter_provider: MeterProvider,
-    tracer_provider: TracerProvider,  # pylint: disable=unused-argument
+    tracer_provider: TracerProvider,
 ) -> None:
     """Instrument process and runtime system metrics (CPU, memory, GC, ...).
 
@@ -238,7 +238,7 @@ def instrument_system_metrics(
         None
     """
     if _available("system_metrics", "psutil", "opentelemetry.instrumentation.system_metrics"):
-        from opentelemetry.instrumentation.system_metrics import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.system_metrics import (  # noqa: PLC0415
             SystemMetricsInstrumentor,
         )
 
@@ -248,8 +248,8 @@ def instrument_system_metrics(
 
 
 def instrument_httpx(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
     meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
@@ -265,7 +265,7 @@ def instrument_httpx(
         None
     """
     if _available("httpx", "httpx", "opentelemetry.instrumentation.httpx"):
-        from opentelemetry.instrumentation.httpx import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.httpx import (  # noqa: PLC0415
             HTTPXClientInstrumentor,
         )
 
@@ -276,9 +276,9 @@ def instrument_httpx(
 
 
 def instrument_redis(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
-    meter_provider: MeterProvider,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
+    meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
     """Instrument the ``redis`` client (Valkey / Taskiq-redis).
@@ -294,7 +294,7 @@ def instrument_redis(
         None
     """
     if _available("redis", "redis", "opentelemetry.instrumentation.redis"):
-        from opentelemetry.instrumentation.redis import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.redis import (  # noqa: PLC0415
             RedisInstrumentor,
         )
 
@@ -304,9 +304,9 @@ def instrument_redis(
 
 
 def instrument_aiobotocore(
-    application: ApplicationAbstractProtocol,  # pylint: disable=unused-argument
-    config: OpenTelemetryConfig,  # pylint: disable=unused-argument
-    meter_provider: MeterProvider,  # pylint: disable=unused-argument
+    application: ApplicationAbstractProtocol,
+    config: OpenTelemetryConfig,
+    meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
     """Instrument ``aiobotocore`` (async S3 / MinIO via the S3 plugin).
@@ -321,7 +321,7 @@ def instrument_aiobotocore(
         None
     """
     if _available("aiobotocore", "aiobotocore", "opentelemetry.instrumentation.botocore"):
-        from opentelemetry.instrumentation.botocore import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
+        from opentelemetry.instrumentation.botocore import (  # noqa: PLC0415
             AiobotocoreInstrumentor,
         )
 

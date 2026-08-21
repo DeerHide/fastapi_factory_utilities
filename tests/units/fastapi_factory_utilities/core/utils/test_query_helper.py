@@ -1,7 +1,5 @@
 """Unit tests for query_helper module."""
 
-# pylint: disable=protected-access
-
 from unittest.mock import MagicMock
 
 import pytest

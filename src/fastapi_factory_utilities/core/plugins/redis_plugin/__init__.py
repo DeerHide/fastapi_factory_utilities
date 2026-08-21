@@ -1,7 +1,6 @@
 """Redis plugin — general-purpose async Redis client."""
 
 # ruff: noqa: E402
-# pylint: disable=wrong-import-position
 from fastapi_factory_utilities.core.plugins.extras import require_extra
 from fastapi_factory_utilities.core.plugins.redis_plugin.configs import RedisCredentialsConfig
 

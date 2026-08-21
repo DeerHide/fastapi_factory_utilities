@@ -1,7 +1,6 @@
 """S3 / MinIO Plugin Module."""
 
 # ruff: noqa: E402
-# pylint: disable=wrong-import-position
 from fastapi_factory_utilities.core.plugins.extras import require_extra
 
 require_extra("s3", "aioboto3")

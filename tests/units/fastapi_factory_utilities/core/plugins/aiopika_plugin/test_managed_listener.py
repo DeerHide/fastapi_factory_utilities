@@ -1,7 +1,5 @@
 """Unit tests for AbstractManagedListener pipeline."""
 
-# pylint: disable=protected-access
-
 import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock

@@ -34,7 +34,6 @@ from typing import Any
 
 # Public marker singletons intentionally use PascalCase names for ergonomic
 # Annotated metadata usage: Annotated[..., ApiField(...)] (see module docstring).
-# pylint: disable=invalid-name
 
 
 class ApiField:

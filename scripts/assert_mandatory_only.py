@@ -35,11 +35,11 @@ def main() -> int:
             failures.append(f"mandatory package missing: {name}")
 
     try:
-        from fastapi_factory_utilities.core.app import (  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        from fastapi_factory_utilities.core.app import (  # noqa: PLC0415
             ApplicationAbstract,
             ApplicationGenericBuilder,
         )
-    except Exception as exc:  # pylint: disable=broad-exception-caught
+    except Exception as exc:
         failures.append(f"core.app import failed: {exc}")
     else:
         _ = (ApplicationAbstract, ApplicationGenericBuilder)

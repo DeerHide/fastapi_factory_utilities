@@ -1,5 +1,4 @@
 """Tests for fastapi_factory_utilities.core.utils.exceptions."""
-# pylint: disable=unused-argument
 
 import asyncio
 from typing import Any
@@ -1111,7 +1110,7 @@ class TestInstanceMethods:
         """Test ExceptionMapper class with instance methods."""
 
         # Arrange
-        class Repository:  # pylint: disable=missing-class-docstring
+        class Repository:
             def save(self, data: str) -> None:
                 raise _SourceError("save failed")
 

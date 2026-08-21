@@ -1,5 +1,4 @@
 """Tests for aiohttp plugin."""
-# pylint: disable=protected-access
 
 from unittest.mock import AsyncMock, MagicMock, patch
 

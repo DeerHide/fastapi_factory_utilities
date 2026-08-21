@@ -1,7 +1,5 @@
 """Unit tests for AbstractPublisher.publish."""
 
-# pylint: disable=protected-access
-
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

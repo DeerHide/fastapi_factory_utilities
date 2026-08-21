@@ -24,9 +24,12 @@ class TestTaskiqPluginStatus:
         mock_app: MagicMock = MagicMock()
         mock_app.get_asgi_app.return_value = fastapi_app
         mock_app.get_status_service.return_value = status_service
-        plugin._application = mock_app  # pylint: disable=protected-access
-        plugin._scheduler_component.startup = AsyncMock()  # pylint: disable=protected-access
-        plugin._scheduler_component.shutdown = AsyncMock()  # pylint: disable=protected-access
+        plugin._application = mock_app
+
+        plugin._scheduler_component.startup = AsyncMock()
+
+        plugin._scheduler_component.shutdown = AsyncMock()
+
         return status_service
 
     async def test_startup_marks_task_queue_ready(self) -> None:
@@ -49,7 +52,8 @@ class TestTaskiqPluginStatus:
             redis_credentials_config=RedisCredentialsConfig(url="redis://localhost:6379"),
         )
         status_service: StatusService = self._bind(plugin)
-        plugin._scheduler_component.startup = AsyncMock(side_effect=ConnectionError("down"))  # pylint: disable=protected-access
+        plugin._scheduler_component.startup = AsyncMock(side_effect=ConnectionError("down"))
+
         with pytest.raises(ConnectionError):
             await plugin.on_startup()
         statuses = list(status_service.get_components_status_by_type()[ComponentTypeEnum.TASK_QUEUE].values())

@@ -52,8 +52,6 @@ async def _fake_client_cm(client: MagicMock) -> AsyncIterator[MagicMock]:
 class TestS3PluginStartup:
     """Tests for ``S3Plugin`` startup / shutdown."""
 
-    # pylint: disable=protected-access
-
     @pytest.mark.asyncio
     async def test_startup_registers_shared_client_and_bucket_resources(self) -> None:
         """Startup enters the client once and registers per-bucket resources."""

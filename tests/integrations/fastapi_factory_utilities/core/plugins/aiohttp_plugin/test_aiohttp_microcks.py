@@ -3,7 +3,6 @@
 This module contains integration tests for the AioHttpClientResource class
 using Microcks as an API mocking service.
 """
-# pylint: disable=redefined-outer-name,protected-access
 
 import asyncio
 from collections.abc import AsyncGenerator

@@ -1,7 +1,5 @@
 """Unit tests for RedisPlugin."""
 
-# pylint: disable=protected-access
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

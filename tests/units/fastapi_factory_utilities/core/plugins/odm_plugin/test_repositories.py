@@ -29,6 +29,5 @@ class TestUnitRepositories:
 
         # Then
 
-        # pylint: disable=protected-access
         assert repository._document_type == ConcreteDocument  # pyright: ignore[reportPrivateUsage]
         assert repository._entity_type == ConcreteEntity  # pyright: ignore[reportPrivateUsage]

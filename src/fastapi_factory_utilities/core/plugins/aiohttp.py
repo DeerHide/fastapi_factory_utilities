@@ -9,7 +9,7 @@ from typing import Any
 _NEW = "fastapi_factory_utilities.core.plugins.aiohttp_plugin"
 
 
-def __getattr__(name: str) -> Any:  # pylint: disable=invalid-name
+def __getattr__(name: str) -> Any:
     """Re-export public names and submodules from ``aiohttp_plugin``."""
     warnings.warn(
         f"fastapi_factory_utilities.core.plugins.aiohttp is renamed to {_NEW} and will be removed in 7.0.0.",

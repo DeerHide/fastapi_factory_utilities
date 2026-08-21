@@ -65,7 +65,7 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
                 database=self._odm_database,
                 document_models=self._document_models,
             )
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             self._report_unhealthy()
             _logger.exception("ODM plugin failed to start.")
             raise
@@ -92,7 +92,7 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
         try:
             await collection.insert_one({"_id": probe_id, STARTUP_PROBE_FIELD: "startup-smoke-test"})
             await collection.delete_one({"_id": probe_id})
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             self._report_unhealthy()
             _logger.exception("CSFLE startup smoke test failed: mongocryptd spawn/connect or Vault unreachable.")
             raise
@@ -121,7 +121,7 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
             )
             self._odm_database = odm_factory.odm_database
             self._odm_client = odm_factory.odm_client
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             self._report_unhealthy()
             _logger.exception("ODM plugin failed to start.")
             raise

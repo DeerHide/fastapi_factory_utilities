@@ -34,9 +34,7 @@ def fixture_mongodb_server_as_container() -> Generator[MongoDbContainer, None, N
         port=27017,
     )
     if not mongodb_container:
-        raise Exception(  # pylint: disable=broad-exception-raised
-            "Could not find a random port for the mongodb server."
-        )
+        raise Exception("Could not find a random port for the mongodb server.")
 
     mongodb_container.start()
     yield mongodb_container
@@ -51,7 +49,7 @@ def fixture_mongodb_database_name() -> str:
 
 @pytest_asyncio.fixture(scope="function", name="async_motor_database")  # pyright: ignore
 async def fixture_async_motor_database(
-    mongodb_server_as_container: MongoDbContainer,  # pylint: disable=redefined-outer-name
+    mongodb_server_as_container: MongoDbContainer,
     mongodb_database_name: str,
 ) -> AsyncGenerator[AsyncDatabase[Any], None]:
     """Create an async motor database."""
@@ -118,9 +116,9 @@ def fixture_csfle_fake_local_key() -> bytes:
 
 @pytest_asyncio.fixture(scope="function", name="encrypting_odm_factory")  # pyright: ignore
 async def fixture_encrypting_odm_factory(
-    mongodb_enterprise_server_as_container: MongoDbContainer,  # pylint: disable=redefined-outer-name
+    mongodb_enterprise_server_as_container: MongoDbContainer,
     mongodb_database_name: str,
-    csfle_fake_local_key: bytes,  # pylint: disable=redefined-outer-name
+    csfle_fake_local_key: bytes,
 ) -> AsyncGenerator[
     Callable[[list[type[Document]]], Awaitable[tuple[AsyncMongoClient[Any], AsyncDatabase[Any], AsyncDatabase[Any]]]],
     None,

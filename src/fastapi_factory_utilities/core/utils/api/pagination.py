@@ -35,7 +35,7 @@ class PaginationSize(int):
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        source_type: Any,  # pylint: disable=unused-argument
+        source_type: Any,
         handler: GetCoreSchemaHandler,
     ) -> CoreSchema:
         """Return the core schema for the ``PaginationSize`` type."""
@@ -44,8 +44,8 @@ class PaginationSize(int):
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        core_schema: core_schema.CoreSchema,  # pylint: disable=redefined-outer-name,unused-argument
-        handler: GetJsonSchemaHandler,  # pylint: disable=unused-argument
+        core_schema: core_schema.CoreSchema,
+        handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
         """Return the JSON schema for the ``PaginationSize`` type."""
         return {
@@ -82,7 +82,7 @@ class PaginationPageOffset(int):
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        source_type: Any,  # pylint: disable=unused-argument
+        source_type: Any,
         handler: GetCoreSchemaHandler,
     ) -> CoreSchema:
         """Return the core schema for the ``PaginationPageOffset`` type."""
@@ -91,8 +91,8 @@ class PaginationPageOffset(int):
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
-        core_schema: core_schema.CoreSchema,  # pylint: disable=redefined-outer-name,unused-argument
-        handler: GetJsonSchemaHandler,  # pylint: disable=unused-argument
+        core_schema: core_schema.CoreSchema,
+        handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
         """Return the JSON schema for the ``PaginationPageOffset`` type."""
         return {

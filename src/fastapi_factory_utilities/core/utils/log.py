@@ -50,7 +50,7 @@ class LogModeEnum(StrEnum):
 
 
 # https://github.com/hynek/structlog/issues/35#issuecomment-591321744
-def _rename_event_key(_: Any, __: Any, event_dict: EventDict) -> EventDict:  # pylint: disable=invalid-name
+def _rename_event_key(_: Any, __: Any, event_dict: EventDict) -> EventDict:
     """Renames the `event` key to `message` in the event dictionary.
 
     Log entries keep the text message in the `event` field, but Datadog
@@ -62,7 +62,7 @@ def _rename_event_key(_: Any, __: Any, event_dict: EventDict) -> EventDict:  # p
     return event_dict
 
 
-def _add_otel_trace_context(_: Any, __: Any, event_dict: EventDict) -> EventDict:  # pylint: disable=invalid-name
+def _add_otel_trace_context(_: Any, __: Any, event_dict: EventDict) -> EventDict:
     """Inject active trace/span ids so log lines link back to Tempo.
 
     Uses lowercase 32/16-char hex, which Grafana derived fields expect.
@@ -106,7 +106,7 @@ class ProbeAccessLogFilter(logging.Filter):
         return _PROBE_ACCESS_200.search(record.getMessage()) is None
 
 
-def _drop_color_message_key(_: Any, __: Any, event_dict: EventDict) -> EventDict:  # pylint: disable=invalid-name
+def _drop_color_message_key(_: Any, __: Any, event_dict: EventDict) -> EventDict:
     """Cleans the `color_message` key from the event dictionary.
 
     Uvicorn logs the message a second time in the extra `color_message`, but we don't

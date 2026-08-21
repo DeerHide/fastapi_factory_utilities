@@ -293,7 +293,8 @@ class TestBuildMockedAiohttpResource:
         """Test callable response for dynamic responses."""
         call_count = 0
 
-        def dynamic_get_response(**kwargs: Any) -> aiohttp.ClientResponse:  # pylint: disable=unused-argument
+        def dynamic_get_response(**kwargs: Any) -> aiohttp.ClientResponse:
+
             nonlocal call_count
             call_count += 1
             return build_mocked_aiohttp_response(status=HTTPStatus.OK, json={"call": call_count})
@@ -310,7 +311,8 @@ class TestBuildMockedAiohttpResource:
     async def test_callable_response_with_url_based_logic(self) -> None:
         """Test callable response with URL-based logic."""
 
-        def url_based_response(url: str = "", **kwargs: Any) -> aiohttp.ClientResponse:  # pylint: disable=unused-argument
+        def url_based_response(url: str = "", **kwargs: Any) -> aiohttp.ClientResponse:
+
             if "page=1" in url:
                 return build_mocked_aiohttp_response(status=HTTPStatus.OK, json={"page": 1, "items": [1, 2, 3]})
             elif "page=2" in url:
