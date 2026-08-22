@@ -21,11 +21,13 @@ class TaskiqPlugin(PluginStatusMixin, PluginAbstract):
         name_suffix: str,
         redis_credentials_config: RedisCredentialsConfig | None = None,
         register_hook: Callable[[SchedulerComponent], None] | None = None,
+        stream_maxlen: int = 10_000,
     ) -> None:
         """Initialize the Taskiq plugin."""
         super().__init__()
         self._redis_credentials_config: RedisCredentialsConfig | None = redis_credentials_config
         self._register_hook: Callable[[SchedulerComponent], None] | None = register_hook
+        self._stream_maxlen: int = stream_maxlen
         self._scheduler_component: SchedulerComponent = SchedulerComponent(name_suffix=name_suffix)
 
     def on_load(self) -> None:
@@ -36,7 +38,9 @@ class TaskiqPlugin(PluginStatusMixin, PluginAbstract):
             self._redis_credentials_config = build_taskiq_redis_config(application=self._application)
         # Configure the scheduler component
         self._scheduler_component.configure(
-            redis_connection_string=self._redis_credentials_config.url, app=self._application.get_asgi_app()
+            redis_connection_string=self._redis_credentials_config.url,
+            app=self._application.get_asgi_app(),
+            stream_maxlen=self._stream_maxlen,
         )
         self._add_to_state(key=SCHEDULER_COMPONENT, value=self._scheduler_component)
         # Register the hook if provided
