@@ -74,7 +74,13 @@ class SchedulerComponent:
             raise ValueError(f"Task {task_name} not registered")
         return self._schedulers_tasks[task_name]
 
-    def configure(self, redis_connection_string: str, app: FastAPI) -> Self:
+    def configure(
+        self,
+        redis_connection_string: str,
+        app: FastAPI,
+        *,
+        stream_maxlen: int = 10_000,
+    ) -> Self:
         """Configure the scheduler component."""
         # ponytail: keys must start with ``<name_suffix>:`` so per-service Valkey ACL
         # grants (~<svc>:*) cover stream, result, and schedule prefixes.
@@ -88,6 +94,8 @@ class SchedulerComponent:
             url=redis_connection_string,
             queue_name=f"{key_prefix}:taskiq:stream",
             consumer_group_name=f"{key_prefix}:taskiq:consumers",
+            maxlen=stream_maxlen,
+            approximate=True,
         ).with_result_backend(self._result_backend)
 
         taskiq_fastapi.populate_dependency_context(self._stream_broker, app)

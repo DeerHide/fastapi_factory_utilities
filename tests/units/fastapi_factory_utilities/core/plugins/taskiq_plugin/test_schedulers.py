@@ -76,6 +76,22 @@ class TestSchedulerComponentUnits:
         with pytest.raises(ValueError, match="Result backend"):
             await component.startup(FastAPI())
 
+    def test_configure_passes_stream_maxlen_to_broker(self) -> None:
+        """Configure wires RedisStreamBroker with maxlen to cap stream growth."""
+        component = SchedulerComponent(name_suffix="review")
+        with patch(
+            "fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers.RedisStreamBroker",
+        ) as broker_cls:
+            broker_cls.return_value.with_result_backend.return_value = MagicMock()
+            component.configure("redis://localhost:6379/0", FastAPI(), stream_maxlen=10_000)
+        broker_cls.assert_called_once_with(
+            url="redis://localhost:6379/0",
+            queue_name="review:taskiq:stream",
+            consumer_group_name="review:taskiq:consumers",
+            maxlen=10_000,
+            approximate=True,
+        )
+
     @pytest.mark.asyncio
     async def test_startup_and_shutdown_with_mocks(self) -> None:
         """Startup wires worker/scheduler tasks; shutdown cancels them."""
