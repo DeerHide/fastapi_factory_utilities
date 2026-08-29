@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.3] - 2026-08-29
+
+### Fixed
+
+- TaskiqPlugin: watch ``_scheduler_task`` the same way as ``_worker_task`` so a
+  dead cron loop marks TASK_QUEUE not-ready and Kubernetes restarts the pod
+  (receiver-only watch left readiness green while periodic jobs silently stopped).
+
 ## [6.5.2] - 2026-08-22
 
 ### Fixed
@@ -1045,7 +1053,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.3...HEAD
+[6.5.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.2...v6.5.3
+[6.5.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.1...v6.5.2
 [6.5.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.0...v6.5.1
 [6.5.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.4.0...v6.5.0
 [6.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.3.0...v6.4.0
