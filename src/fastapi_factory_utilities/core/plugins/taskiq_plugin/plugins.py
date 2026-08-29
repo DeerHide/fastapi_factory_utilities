@@ -58,11 +58,14 @@ class TaskiqPlugin(PluginStatusMixin, PluginAbstract):
             raise
         worker_task = getattr(self._scheduler_component, "_worker_task", None)
         if isinstance(worker_task, asyncio.Task):
-            worker_task.add_done_callback(self._on_worker_done)
+            worker_task.add_done_callback(self._on_background_task_done)
+        scheduler_task = getattr(self._scheduler_component, "_scheduler_task", None)
+        if isinstance(scheduler_task, asyncio.Task):
+            scheduler_task.add_done_callback(self._on_background_task_done)
         self._report_healthy()
 
-    def _on_worker_done(self, task: asyncio.Task[None]) -> None:
-        """Arm not-ready if the worker dies for a reason other than shutdown."""
+    def _on_background_task_done(self, task: asyncio.Task[None]) -> None:
+        """Arm not-ready if the worker or scheduler loop dies outside shutdown."""
         if self._shutting_down or task.cancelled():
             return
         self._arm_unhealthy()
