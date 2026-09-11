@@ -12,6 +12,7 @@ from fastapi_factory_utilities.core.security.jwt.verifiers import (
     GenericHydraJWTVerifier,
     JWTNoneVerifier,
     JWTVerifierAbstract,
+    build_introspect_cache_key,
     clear_introspect_cache,
 )
 from fastapi_factory_utilities.core.security.types import JWTToken
@@ -640,8 +641,6 @@ class TestGenericHydraJWTVerifierIntrospectCache:
 
     def test_build_introspect_cache_key_namespaces_by_issuer(self) -> None:
         """Cache keys include the issuer namespace, not jti alone."""
-        from fastapi_factory_utilities.core.security.jwt.verifiers import build_introspect_cache_key
-
         key_a = build_introspect_cache_key(issuer="https://a.example", jti="same-jti")
         key_b = build_introspect_cache_key(issuer="https://b.example", jti="same-jti")
         assert key_a != key_b
