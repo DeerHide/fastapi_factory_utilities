@@ -133,7 +133,6 @@ class TestJWTNoneVerifier:
 
         assert "JWTNoneVerifier" not in jwt_pkg.__all__
         assert "JWTNoOpIntrospectionVerifier" in jwt_pkg.__all__
-        assert isinstance(verifier, JWTVerifierAbstract)
 
     def test_inherits_from_abstract_class(self, verifier: JWTNoneVerifier) -> None:
         """Test that JWTNoneVerifier inherits from JWTVerifierAbstract.
