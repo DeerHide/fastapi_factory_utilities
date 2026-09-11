@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Hydra JWT introspection cache keys are namespaced by configured issuer
+  (``issuer\\0jti``), not ``jti`` alone, preventing cross-issuer cache
+  confusion in a shared process. Cache hits also re-check ``exp`` and
+  ``active``.
+
 ## [6.5.3] - 2026-08-29
 
 ### Fixed
