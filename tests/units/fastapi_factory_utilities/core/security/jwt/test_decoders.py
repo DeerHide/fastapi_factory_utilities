@@ -50,6 +50,7 @@ class TestDecodeJWTTokenPayload:
             JWTBearerAuthenticationConfig: A minimal config.
         """
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer("https://example.com"),
         )
@@ -62,6 +63,7 @@ class TestDecodeJWTTokenPayload:
             JWTBearerAuthenticationConfig: A config with issuer.
         """
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer("https://example.com"),
         )
@@ -142,6 +144,7 @@ class TestDecodeJWTTokenPayload:
                 algorithms=minimal_config.authorized_algorithms,
                 options={"verify_signature": True},
                 issuer=minimal_config.issuer,
+                audience=minimal_config.authorized_audiences,
             )
 
     @pytest.mark.asyncio
@@ -176,6 +179,7 @@ class TestDecodeJWTTokenPayload:
                 algorithms=config_with_issuer.authorized_algorithms,
                 options={"verify_signature": True},
                 issuer=config_with_issuer.issuer,
+                audience=config_with_issuer.authorized_audiences,
             )
 
     @pytest.mark.asyncio
@@ -247,6 +251,7 @@ class TestDecodeJWTTokenPayload:
                 algorithms=minimal_config.authorized_algorithms,
                 options={"verify_signature": True},
                 issuer=minimal_config.issuer,
+                audience=minimal_config.authorized_audiences,
                 subject=subject,
             )
 
@@ -322,6 +327,7 @@ class TestDecodeJWTTokenPayload:
                 algorithms=minimal_config.authorized_algorithms,
                 options={"verify_signature": True},
                 issuer=explicit_issuer,
+                audience=minimal_config.authorized_audiences,
             )
 
     @pytest.mark.asyncio
@@ -461,6 +467,7 @@ class TestGenericJWTBearerTokenDecoder:
             JWTBearerAuthenticationConfig: A JWT bearer authentication config.
         """
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer("https://example.com"),
         )
