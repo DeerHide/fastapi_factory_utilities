@@ -495,6 +495,7 @@ class TestGenericHydraJWTVerifierIntrospectCache:
     def cache_config(self) -> JWTBearerAuthenticationConfig:
         """Create a JWT config with introspection caching enabled."""
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             issuer="https://example.com",
             cache_enabled=True,
             cache_ttl_seconds=300,
@@ -655,7 +656,9 @@ class TestGenericHydraJWTVerifierIntrospectCache:
         """Test that caching disabled keeps introspecting on every verify call."""
         verifier = GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject](
             hydra_introspect_service=mock_introspect_service,
-            config=JWTBearerAuthenticationConfig(issuer="https://example.com", cache_enabled=False),
+            config=JWTBearerAuthenticationConfig(
+                authorized_audiences=["test-api"], issuer="https://example.com", cache_enabled=False
+            ),
         )
         jwt_token = JWTToken("test.jwt.token")
         jwt_payload = _make_jwt_payload(jti="disabled-cache-jti")

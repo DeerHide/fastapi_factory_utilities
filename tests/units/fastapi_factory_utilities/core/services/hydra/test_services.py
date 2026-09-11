@@ -103,6 +103,7 @@ def fixture_hydra_jwt_config() -> JWTBearerAuthenticationConfig:
         JWTBearerAuthenticationConfig: A test JWT bearer authentication config.
     """
     return JWTBearerAuthenticationConfig(
+        authorized_audiences=["test-api"],
         authorized_algorithms=["RS256"],
         issuer=OAuth2Issuer("https://hydra.example.com"),
     )

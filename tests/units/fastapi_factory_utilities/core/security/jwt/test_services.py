@@ -47,6 +47,7 @@ class TestJWTAuthenticationServiceAbstract:
             JWTBearerAuthenticationConfig: A JWT bearer authentication config.
         """
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer(_DEFAULT_ISSUER),
         )
@@ -623,6 +624,7 @@ class TestConcreteJWTAuthService:
             JWTBearerAuthenticationConfig: A JWT bearer authentication config.
         """
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer(_DEFAULT_ISSUER),
         )
