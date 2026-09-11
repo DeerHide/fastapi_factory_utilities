@@ -276,10 +276,10 @@ from fastapi_factory_utilities.core.security.jwt import (
     JWTBearerAuthenticationConfig,
 )
 
-# Configure JWT authentication
+# Configure JWT authentication (authorized_audiences is required and enforced)
 jwt_config = JWTBearerAuthenticationConfig(
     issuer="https://your-auth-server.com",
-    audience="your-api",
+    authorized_audiences=["your-api"],
 )
 
 # Use in FastAPI dependencies
