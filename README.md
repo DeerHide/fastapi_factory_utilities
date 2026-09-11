@@ -114,6 +114,20 @@ poetry add fastapi-factory-utilities --extras mongo --extras otel
 
 Extras: `mongo`, `amqp`, `s3`, `redis`, `taskiq`, `otel`, `all` — declared in `pyproject.toml`. Importing a plugin without its extra raises `MissingExtraError` naming the extra to install. The bundled ASGI server is Uvicorn.
 
+### Supply-chain note: `taskiq` extra and the Velmios index
+
+The optional `taskiq` extra pulls `taskiq-dependencies` from the **private**
+Poetry source `velmios` (`https://pypi.velmios.io/simple`,
+`priority = "explicit"`). That index is an intentional trust boundary:
+
+- PyPI-only installs (no `taskiq` extra) never contact Velmios.
+- Enabling `[taskiq]` trusts package integrity and availability of
+  `pypi.velmios.io` and its operators.
+- Prefer hash-checked / attested installs in CI when you enable the extra;
+  publish to PyPI later if you need a public-only path.
+
+See also [SECURITY.md](SECURITY.md#supply-chain-trust-boundaries).
+
 ---
 
 ## Public API and deprecation
