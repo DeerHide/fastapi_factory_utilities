@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- CI PR-path jobs drop unused ``packages: write`` / ``contents: write``.
+  Dependency-graph snapshot submit moves to a ``main``/tag-only
+  ``dependency-snapshot`` job.
+
 ## [6.5.3] - 2026-08-29
 
 ### Fixed
