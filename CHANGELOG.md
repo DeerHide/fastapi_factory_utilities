@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Pin GitHub Actions to full commit SHAs (with version comments) and add
+  Dependabot ``github-actions`` updates.
+
 ## [6.5.3] - 2026-08-29
 
 ### Fixed
