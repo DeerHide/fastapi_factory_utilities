@@ -110,10 +110,25 @@ class TestJWTNoneVerifier:
             sub="user123",
         )
 
-    def test_can_be_instantiated(self) -> None:
-        """Test that JWTNoneVerifier can be instantiated."""
-        verifier = JWTNoneVerifier()
-        assert isinstance(verifier, JWTNoneVerifier)
+    def test_instantiation_emits_test_only_warning(self) -> None:
+        """Instantiating the no-op verifier must warn that it is test-only."""
+        with pytest.warns(UserWarning, match="tests only"):
+            JWTNoneVerifier()
+
+    def test_preferred_name_is_noop_introspection_verifier(self) -> None:
+        """JWTNoneVerifier is an alias of JWTNoOpIntrospectionVerifier."""
+        from fastapi_factory_utilities.core.security.jwt.verifiers import (
+            JWTNoOpIntrospectionVerifier,
+        )
+
+        assert JWTNoneVerifier is JWTNoOpIntrospectionVerifier
+
+    def test_none_verifier_not_in_package_all(self) -> None:
+        """JWTNoneVerifier must not be advertised in the package __all__."""
+        from fastapi_factory_utilities.core.security import jwt as jwt_pkg
+
+        assert "JWTNoneVerifier" not in jwt_pkg.__all__
+        assert "JWTNoOpIntrospectionVerifier" in jwt_pkg.__all__
         assert isinstance(verifier, JWTVerifierAbstract)
 
     def test_inherits_from_abstract_class(self, verifier: JWTNoneVerifier) -> None:

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Mark ``JWTNoneVerifier`` as a test-only no-op: renamed conceptually to
+  ``JWTNoOpIntrospectionVerifier``, removed from package ``__all__``, and
+  warn on instantiation. Alias ``JWTNoneVerifier`` kept for compatibility.
+
 ## [6.5.3] - 2026-08-29
 
 ### Fixed

@@ -1,5 +1,6 @@
 """Provides the JWT bearer token validator."""
 
+import warnings
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from time import perf_counter
@@ -210,17 +211,36 @@ class GenericHydraJWTVerifier(
             )
 
 
-class JWTNoneVerifier(JWTVerifierAbstract[JWTPayload]):
-    """JWT none verifier."""
+class JWTNoOpIntrospectionVerifier(JWTVerifierAbstract[JWTPayload]):
+    """No-op JWT verifier for tests only — skips Hydra introspection/revocation.
+
+    .. warning::
+        **Not for production.** After signature decode, tokens are accepted until
+        expiry with no server-side ``active`` / revocation check. Prefer
+        ``GenericHydraJWTVerifier`` (or equivalent) in real services.
+
+    Instantiation emits a :class:`UserWarning`. The historical name
+    ``JWTNoneVerifier`` remains as a deprecated alias.
+    """
+
+    def __init__(self) -> None:
+        """Warn that this verifier skips introspection."""
+        warnings.warn(
+            "JWTNoOpIntrospectionVerifier (aka JWTNoneVerifier) skips Hydra "
+            "introspection/revocation and is intended for tests only",
+            UserWarning,
+            stacklevel=2,
+        )
 
     async def verify(self, jwt_token: JWTToken, jwt_payload: JWTPayload) -> None:
-        """Verify the JWT bearer token.
+        """Accept the token without introspection (test helper).
 
         Args:
-            jwt_token (JWTToken): The JWT bearer token.
-            jwt_payload (JWTBearerPayload): The JWT bearer payload.
-
-        Raises:
-            NotVerifiedJWTError: If the JWT bearer token is not verified.
+            jwt_token: The JWT bearer token.
+            jwt_payload: The JWT bearer payload.
         """
         return
+
+
+# Deprecated public alias — prefer JWTNoOpIntrospectionVerifier in new code.
+JWTNoneVerifier = JWTNoOpIntrospectionVerifier
