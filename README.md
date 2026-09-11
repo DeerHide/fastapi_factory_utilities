@@ -214,8 +214,10 @@ server:
   host: "0.0.0.0"
   port: 8000
 
+# CORS is opt-in: omit this block (or leave allow_origins empty) to disable it.
+# Never combine allow_origins: ["*"] with allow_credentials: true.
 cors:
-  allow_origins: ["*"]
+  allow_origins: ["https://app.example"]
   allow_credentials: true
   allow_methods: ["*"]
   allow_headers: ["*"]

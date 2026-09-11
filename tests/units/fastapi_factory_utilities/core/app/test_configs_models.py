@@ -17,12 +17,32 @@ class TestAppConfigsModels:
     def test_cors_can_be_initialized_with_default_values(self) -> None:
         """Test that the CorsConfig can be initialized with default values."""
         cors = CorsConfig()
-        assert cors.allow_origins is not None
-        assert cors.allow_methods is not None
-        assert cors.allow_headers is not None
-        assert cors.expose_headers is not None
-        assert cors.allow_credentials is not None
-        assert cors.max_age is not None
+        assert cors.allow_origins == []
+        assert cors.allow_credentials is False
+        assert cors.allow_methods == ["*"]
+        assert cors.allow_headers == ["*"]
+        assert cors.expose_headers == []
+        assert cors.max_age == 600  # noqa: PLR2004
+
+    def test_cors_rejects_wildcard_origins_with_credentials(self) -> None:
+        """Wildcard origins with credentials is the Starlette Origin-reflect footgun."""
+        with pytest.raises(ValidationError, match="allow_origins cannot include"):
+            CorsConfig(allow_origins=["*"], allow_credentials=True)
+
+    def test_cors_allows_wildcard_origins_without_credentials(self) -> None:
+        """Wildcard origins remain valid when credentials are disabled."""
+        cors = CorsConfig(allow_origins=["*"], allow_credentials=False)
+        assert cors.allow_origins == ["*"]
+        assert cors.allow_credentials is False
+
+    def test_cors_allows_explicit_origins_with_credentials(self) -> None:
+        """Explicit origins may enable credentials."""
+        cors = CorsConfig(
+            allow_origins=["https://app.example"],
+            allow_credentials=True,
+        )
+        assert cors.allow_origins == ["https://app.example"]
+        assert cors.allow_credentials is True
 
     def test_server_can_be_initialized_with_default_values(self) -> None:
         """Test that the ServerConfig can be initialized with default values."""
