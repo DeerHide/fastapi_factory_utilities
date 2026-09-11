@@ -1,8 +1,8 @@
 """Provide the configuration for the app server."""
 
-from typing import Any, ClassVar, Generic, Literal, TypeVar, get_args
+from typing import Any, ClassVar, Generic, Literal, Self, TypeVar, get_args
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from fastapi_factory_utilities.core.app.exceptions import ConfigBuilderError
 from fastapi_factory_utilities.core.utils.configs import (
@@ -16,7 +16,7 @@ from .enums import EnvironmentEnum
 
 
 def default_allow_all() -> list[str]:
-    """Default allow all."""
+    """Default allow all (methods/headers only; never use for origins with credentials)."""
     return ["*"]
 
 
@@ -31,14 +31,43 @@ class AppCsrfConfig(BaseModel):
 
 
 class CorsConfig(BaseModel):
-    """CORS configuration."""
+    """CORS configuration.
 
-    allow_origins: list[str] = Field(default_factory=default_allow_all, description="Allowed origins")
-    allow_credentials: bool = Field(default=True, description="Allow credentials")
+    Deny-by-default: empty ``allow_origins`` and ``allow_credentials=False``.
+    ``FastAPIBuilder`` only installs CORS middleware when ``allow_origins`` is
+    non-empty. Combining ``"*"`` with ``allow_credentials=True`` is rejected —
+    that pair makes Starlette reflect arbitrary ``Origin`` values.
+    """
+
+    allow_origins: list[str] = Field(
+        default_factory=list,
+        description="Allowed origins (empty = CORS middleware not installed)",
+    )
+    allow_credentials: bool = Field(default=False, description="Allow credentials")
     allow_methods: list[str] = Field(default_factory=default_allow_all, description="Allowed methods")
     allow_headers: list[str] = Field(default_factory=default_allow_all, description="Allowed headers")
     expose_headers: list[str] = Field(default_factory=list, description="Exposed headers")
     max_age: int = Field(default=600, description="Max age")
+
+    @model_validator(mode="after")
+    def reject_wildcard_origins_with_credentials(self) -> Self:
+        """Reject credentialed CORS with a wildcard origin.
+
+        Browsers forbid ``Access-Control-Allow-Origin: *`` with credentials;
+        Starlette instead reflects the request ``Origin``, which is unsafe.
+
+        Returns:
+            The validated configuration.
+
+        Raises:
+            ValueError: If ``allow_origins`` contains ``*`` and credentials are enabled.
+        """
+        if self.allow_credentials and "*" in self.allow_origins:
+            raise ValueError(
+                "CORS allow_origins cannot include '*' when allow_credentials is True; "
+                "list explicit origins instead"
+            )
+        return self
 
 
 class ServerConfig(BaseModel):

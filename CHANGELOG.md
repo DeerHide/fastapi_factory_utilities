@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- CORS defaults are deny-by-default: ``allow_origins=[]``,
+  ``allow_credentials=False``. ``FastAPIBuilder`` only installs
+  ``CORSMiddleware`` when ``allow_origins`` is non-empty. Config validation
+  rejects ``"*"`` combined with ``allow_credentials=True`` (closes the
+  Starlette Origin-reflection footgun). **Breaking for consumers that relied
+  on the previous ``["*"]`` + credentials defaults** — set explicit origins
+  (and credentials if needed) in ``application.yaml``.
+
 ## [6.5.3] - 2026-08-29
 
 ### Fixed
