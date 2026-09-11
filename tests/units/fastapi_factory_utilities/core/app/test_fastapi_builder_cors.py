@@ -61,7 +61,7 @@ class TestFastAPIBuilderCors:
 
         client = TestClient(app)
         response = client.get("/ping", headers={"Origin": "https://evil.example"})
-        assert response.status_code == 200
+        assert response.status_code == 200  # noqa: PLR2004
         assert "access-control-allow-origin" not in response.headers
         assert "access-control-allow-credentials" not in response.headers
 
