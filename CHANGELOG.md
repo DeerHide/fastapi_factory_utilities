@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Starlette Origin-reflection footgun). **Breaking for consumers that relied
   on the previous ``["*"]`` + credentials defaults** — set explicit origins
   (and credentials if needed) in ``application.yaml``.
+- Hydra JWT introspection cache keys are namespaced by configured issuer
+  (``issuer`` + NUL + ``jti``), not ``jti`` alone, preventing cross-issuer
+  cache confusion in a shared process. Cache hits also re-check ``exp``.
 
 ## [6.5.3] - 2026-08-29
 
