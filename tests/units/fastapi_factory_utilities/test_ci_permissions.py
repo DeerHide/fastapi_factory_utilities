@@ -32,9 +32,7 @@ def test_pr_path_jobs_are_contents_read_only(job_name: str) -> None:
     permissions = jobs[job_name].get("permissions") or {}
     assert permissions.get("contents") == "read"
     for key, write_value in _WRITE_PERMISSIONS.items():
-        assert permissions.get(key) != write_value, (
-            f"{job_name} must not set {key}: {write_value} (got {permissions})"
-        )
+        assert permissions.get(key) != write_value, f"{job_name} must not set {key}: {write_value} (got {permissions})"
 
 
 def test_dependency_snapshot_is_main_or_tag_only_with_contents_write() -> None:
