@@ -59,6 +59,22 @@ def clear_introspect_cache() -> None:
     _INTROSPECT_CACHE = None
 
 
+def build_introspect_cache_key(*, issuer: str, jti: str) -> str:
+    """Build a namespaced introspection cache key.
+
+    Keys must never be ``jti`` alone: the process-global cache is shared across
+    verifiers/issuers, so collisions would reuse another tenant's introspection.
+
+    Args:
+        issuer: Configured token issuer (namespace).
+        jti: JWT ID claim.
+
+    Returns:
+        str: Cache key scoped to the issuer.
+    """
+    return f"{issuer}\0{jti}"
+
+
 def _compute_introspect_cache_ttl_seconds(
     jwt_payload: JWTPayload,
     cache_ttl_seconds: int,
@@ -155,11 +171,19 @@ class GenericHydraJWTVerifier(
         ) as span:
             cache_key: str | None = None
             if self._config is not None and self._config.cache_enabled and jwt_payload.jti is not None:
-                cache_key = jwt_payload.jti
+                cache_key = build_introspect_cache_key(
+                    issuer=str(self._config.issuer),
+                    jti=jwt_payload.jti,
+                )
                 cached_introspect_object: HydraIntrospectObjectGeneric | None = _get_introspect_cache(
                     maxsize=self._config.cache_max_entries
                 ).get(cache_key)
                 if cached_introspect_object is not None:
+                    # Re-check lifetime on hit: TTL may still leave a briefly stale entry.
+                    if jwt_payload.exp <= datetime.now(tz=UTC):
+                        raise InvalidJWTError("JWT token is expired")
+                    if cached_introspect_object.active is False:
+                        raise InvalidJWTError("JWT token is not active")
                     self._introspect_object = cached_introspect_object
                     self._record_verify_success(
                         span=span,
