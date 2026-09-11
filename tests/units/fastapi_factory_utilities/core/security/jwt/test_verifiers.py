@@ -608,3 +608,42 @@ class TestGenericHydraJWTVerifierIntrospectCache:
         await verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
 
         assert mock_introspect_service.introspect.await_count == self.EXPECTED_TWO_INTROSPECT_CALLS
+
+    @pytest.mark.asyncio
+    async def test_verify_same_jti_different_issuers_misses_cache(
+        self,
+        mock_introspect_service: AsyncMock,
+    ) -> None:
+        """Same jti under different issuers must not share a cache entry."""
+        jwt_token = JWTToken("test.jwt.token")
+        jwt_payload = _make_jwt_payload(jti="shared-across-issuers")
+
+        verifier_a = GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject](
+            hydra_introspect_service=mock_introspect_service,
+            config=JWTBearerAuthenticationConfig(
+                issuer="https://issuer-a.example",
+                cache_enabled=True,
+            ),
+        )
+        verifier_b = GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject](
+            hydra_introspect_service=mock_introspect_service,
+            config=JWTBearerAuthenticationConfig(
+                issuer="https://issuer-b.example",
+                cache_enabled=True,
+            ),
+        )
+
+        await verifier_a.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+        await verifier_b.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
+
+        assert mock_introspect_service.introspect.await_count == self.EXPECTED_TWO_INTROSPECT_CALLS
+
+    def test_build_introspect_cache_key_namespaces_by_issuer(self) -> None:
+        """Cache keys include the issuer namespace, not jti alone."""
+        from fastapi_factory_utilities.core.security.jwt.verifiers import build_introspect_cache_key
+
+        key_a = build_introspect_cache_key(issuer="https://a.example", jti="same-jti")
+        key_b = build_introspect_cache_key(issuer="https://b.example", jti="same-jti")
+        assert key_a != key_b
+        assert "same-jti" in key_a
+        assert key_a != "same-jti"
