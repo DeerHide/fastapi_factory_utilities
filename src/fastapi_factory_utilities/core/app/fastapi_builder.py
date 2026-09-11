@@ -67,13 +67,15 @@ class FastAPIBuilder:
             lifespan=lifespan,
         )
 
-        fastapi.add_middleware(
-            middleware_class=CORSMiddleware,
-            allow_origins=self._root_config.cors.allow_origins,
-            allow_credentials=self._root_config.cors.allow_credentials,
-            allow_methods=self._root_config.cors.allow_methods,
-            allow_headers=self._root_config.cors.allow_headers,
-        )
+        # Opt-in CORS: empty allow_origins (the default) skips middleware entirely.
+        if self._root_config.cors.allow_origins:
+            fastapi.add_middleware(
+                middleware_class=CORSMiddleware,
+                allow_origins=self._root_config.cors.allow_origins,
+                allow_credentials=self._root_config.cors.allow_credentials,
+                allow_methods=self._root_config.cors.allow_methods,
+                allow_headers=self._root_config.cors.allow_headers,
+            )
 
         for middleware_args in self._middleware_list:
             fastapi.add_middleware(

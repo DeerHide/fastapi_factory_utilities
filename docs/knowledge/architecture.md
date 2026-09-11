@@ -200,7 +200,8 @@ RootConfig (root)
 │   ├── port: int (default: 8000)
 │   └── workers: int (default: 1)
 ├── cors: CorsConfig
-│   ├── allow_origins: list[str]
+│   ├── allow_origins: list[str] (default: [] — CORS middleware opt-in)
+│   ├── allow_credentials: bool (default: false; forbids "*" with true)
 │   ├── allow_methods: list[str]
 │   └── allow_headers: list[str]
 ├── development: DevelopmentConfig
