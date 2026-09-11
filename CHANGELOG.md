@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- OpenAPI / Swagger / ReDoc are disabled by default outside ``development``.
+  Set ``docs.enabled: true`` to opt in (or ``false`` to force off).
+
 ## [6.5.3] - 2026-08-29
 
 ### Fixed
