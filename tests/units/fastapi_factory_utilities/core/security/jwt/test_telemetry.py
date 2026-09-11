@@ -173,6 +173,7 @@ def _points_with_attrs(
 def jwt_config() -> JWTBearerAuthenticationConfig:
     """Default config that authorizes the ``Authorization: Bearer`` header."""
     return JWTBearerAuthenticationConfig(
+        authorized_audiences=["test-api"],
         authorized_algorithms=["RS256"],
         issuer=OAuth2Issuer(_DEFAULT_ISSUER),
     )
