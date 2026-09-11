@@ -5,12 +5,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from fastapi_factory_utilities.core.security import jwt as jwt_pkg
 from fastapi_factory_utilities.core.security.jwt.configs import JWTBearerAuthenticationConfig
 from fastapi_factory_utilities.core.security.jwt.exceptions import InvalidJWTError
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
 from fastapi_factory_utilities.core.security.jwt.verifiers import (
     GenericHydraJWTVerifier,
     JWTNoneVerifier,
+    JWTNoOpIntrospectionVerifier,
     JWTVerifierAbstract,
     clear_introspect_cache,
 )
@@ -117,16 +119,10 @@ class TestJWTNoneVerifier:
 
     def test_preferred_name_is_noop_introspection_verifier(self) -> None:
         """JWTNoneVerifier is an alias of JWTNoOpIntrospectionVerifier."""
-        from fastapi_factory_utilities.core.security.jwt.verifiers import (
-            JWTNoOpIntrospectionVerifier,
-        )
-
         assert JWTNoneVerifier is JWTNoOpIntrospectionVerifier
 
     def test_none_verifier_not_in_package_all(self) -> None:
         """JWTNoneVerifier must not be advertised in the package __all__."""
-        from fastapi_factory_utilities.core.security import jwt as jwt_pkg
-
         assert "JWTNoneVerifier" not in jwt_pkg.__all__
         assert "JWTNoOpIntrospectionVerifier" in jwt_pkg.__all__
 
