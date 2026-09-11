@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-<<<<<<< HEAD
 - CORS defaults are deny-by-default: ``allow_origins=[]``,
   ``allow_credentials=False``. ``FastAPIBuilder`` only installs
   ``CORSMiddleware`` when ``allow_origins`` is non-empty. Config validation
@@ -17,17 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Starlette Origin-reflection footgun). **Breaking for consumers that relied
   on the previous ``["*"]`` + credentials defaults** — set explicit origins
   (and credentials if needed) in ``application.yaml``.
-<<<<<<< HEAD
 - Hydra JWT introspection cache keys are namespaced by configured issuer
   (``issuer`` + NUL + ``jti``), not ``jti`` alone, preventing cross-issuer
   cache confusion in a shared process. Cache hits also re-check ``exp``.
-=======
-=======
 - Mark ``JWTNoneVerifier`` as a test-only no-op: renamed conceptually to
   ``JWTNoOpIntrospectionVerifier``, removed from package ``__all__``, and
   warn on instantiation. Alias ``JWTNoneVerifier`` kept for compatibility.
->>>>>>> 1c00543 (fix(jwt): demote JWTNoneVerifier to test-only no-op)
->>>>>>> 20cad99 (fix(jwt): demote JWTNoneVerifier to test-only no-op)
 
 ## [6.5.3] - 2026-08-29
 
