@@ -22,7 +22,7 @@ class TestAppConfigsModels:
         assert cors.allow_methods == ["*"]
         assert cors.allow_headers == ["*"]
         assert cors.expose_headers == []
-        assert cors.max_age == 600
+        assert cors.max_age == 600  # noqa: PLR2004
 
     def test_cors_rejects_wildcard_origins_with_credentials(self) -> None:
         """Wildcard origins with credentials is the Starlette Origin-reflect footgun."""

@@ -64,8 +64,7 @@ class CorsConfig(BaseModel):
         """
         if self.allow_credentials and "*" in self.allow_origins:
             raise ValueError(
-                "CORS allow_origins cannot include '*' when allow_credentials is True; "
-                "list explicit origins instead"
+                "CORS allow_origins cannot include '*' when allow_credentials is True; list explicit origins instead"
             )
         return self
 
