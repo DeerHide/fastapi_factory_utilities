@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -47,9 +48,9 @@ class TestFastAPIBuilderDocsExposure:
             lifespan=_noop_lifespan
         )
         client = TestClient(app)
-        assert client.get("/docs").status_code == 404
-        assert client.get("/redoc").status_code == 404
-        assert client.get("/openapi.json").status_code == 404
+        assert client.get("/docs").status_code == HTTPStatus.NOT_FOUND
+        assert client.get("/redoc").status_code == HTTPStatus.NOT_FOUND
+        assert client.get("/openapi.json").status_code == HTTPStatus.NOT_FOUND
 
     def test_development_defaults_enable_docs(self) -> None:
         """Development still gets interactive docs when docs.enabled is unset."""
@@ -57,8 +58,8 @@ class TestFastAPIBuilderDocsExposure:
             lifespan=_noop_lifespan
         )
         client = TestClient(app)
-        assert client.get("/docs").status_code == 200
-        assert client.get("/openapi.json").status_code == 200
+        assert client.get("/docs").status_code == HTTPStatus.OK
+        assert client.get("/openapi.json").status_code == HTTPStatus.OK
 
     def test_explicit_enabled_overrides_production(self) -> None:
         """docs.enabled=True force-enables docs in production."""
@@ -68,7 +69,7 @@ class TestFastAPIBuilderDocsExposure:
                 docs=DocsConfig(enabled=True),
             )
         ).build(lifespan=_noop_lifespan)
-        assert TestClient(app).get("/openapi.json").status_code == 200
+        assert TestClient(app).get("/openapi.json").status_code == HTTPStatus.OK
 
     def test_explicit_disabled_overrides_development(self) -> None:
         """docs.enabled=False force-disables docs in development."""
@@ -78,4 +79,4 @@ class TestFastAPIBuilderDocsExposure:
                 docs=DocsConfig(enabled=False),
             )
         ).build(lifespan=_noop_lifespan)
-        assert TestClient(app).get("/docs").status_code == 404
+        assert TestClient(app).get("/docs").status_code == HTTPStatus.NOT_FOUND
