@@ -283,6 +283,17 @@ class TestJWTBearerAuthenticationConfig:
         errors = exc_info.value.errors()
         assert any(e["loc"] == ("authorized_audiences",) for e in errors)
 
+    def test_deprecated_audience_warns_when_both_fields_provided(self) -> None:
+        """audience= with authorized_audiences still warns; authorized_audiences wins."""
+        with pytest.warns(DeprecationWarning, match="audience is deprecated"):
+            config = JWTBearerAuthenticationConfig(
+                issuer=_DEFAULT_ISSUER,
+                audience="legacy-ignored",
+                authorized_audiences=["canonical-api"],
+            )
+        assert config.authorized_audiences == ["canonical-api"]
+        assert config.audience == "legacy-ignored"
+
     def test_model_validate_json(self) -> None:
         """Test creating config using model_validate_json."""
         json_data = (
@@ -310,9 +321,7 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences="aud1,aud2,aud3",  # type: ignore[arg-type]
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
-        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2", "aud3"]
 
     def test_validate_authorized_audiences_strips_whitespace(self) -> None:
         """Test that whitespace is stripped from comma-separated values."""
@@ -320,9 +329,7 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences=" aud1 , aud2 , aud3 ",  # type: ignore[arg-type]
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
-        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2", "aud3"]
 
     def test_validate_authorized_audiences_strips_whitespace_from_single_value(self) -> None:
         """Test that whitespace is stripped from single value."""
@@ -338,19 +345,23 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences="aud1,aud2,aud1",  # type: ignore[arg-type]
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2"}
-        assert len(config.authorized_audiences) == 2  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2"]
 
     def test_validate_authorized_audiences_removes_duplicates_from_list(self) -> None:
-        """Test that duplicate values are removed from list."""
+        """Test that duplicate values are removed from list, preserving first-seen order."""
         config = JWTBearerAuthenticationConfig(
             authorized_audiences=["aud1", "aud2", "aud1"],
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2"}
-        assert len(config.authorized_audiences) == 2  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2"]
+
+    def test_validate_authorized_audiences_preserves_first_seen_order(self) -> None:
+        """Dedup preserves first-seen order (not hash-set order)."""
+        config = JWTBearerAuthenticationConfig(
+            authorized_audiences=["aud3", "aud1", "aud2", "aud1", "aud3"],
+            issuer=_DEFAULT_ISSUER,
+        )
+        assert config.authorized_audiences == ["aud3", "aud1", "aud2"]
 
     def test_validate_authorized_audiences_filters_empty_strings_from_comma_separated(
         self,
@@ -360,9 +371,7 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences="aud1,,aud2, ,aud3",  # type: ignore[arg-type]
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
-        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2", "aud3"]
 
     def test_validate_authorized_audiences_filters_empty_strings_from_list(self) -> None:
         """Test that empty strings are filtered from list."""
@@ -370,9 +379,7 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences=["aud1", "", "aud2", " ", "aud3"],
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
-        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2", "aud3"]
 
     def test_validate_authorized_audiences_raises_error_for_empty_string(self) -> None:
         """Test that empty string raises ValueError."""
