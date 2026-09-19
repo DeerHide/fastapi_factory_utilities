@@ -22,6 +22,7 @@ from .objects import JWTPayload
 from .telemetry import (
     ATTR_OUTCOME,
     JWT_VERIFY_DURATION,
+    OUTCOME_EXPIRED,
     OUTCOME_INVALID_JWT,
     OUTCOME_NOT_VERIFIED,
     OUTCOME_SUCCESS,
@@ -180,10 +181,16 @@ class GenericHydraJWTVerifier(
                 ).get(cache_key)
                 if cached_introspect_object is not None:
                     # Re-check lifetime on hit: TTL may still leave a briefly stale entry.
+                    # Inactive results are never written to the cache, so no active re-check.
                     if jwt_payload.exp <= datetime.now(tz=UTC):
+                        outcome = OUTCOME_EXPIRED
+                        span.set_attribute(ATTR_OUTCOME, outcome)
+                        span.set_status(Status(StatusCode.ERROR, "JWT token is expired"))
+                        JWT_VERIFY_DURATION.record(
+                            amount=perf_counter() - start_ts,
+                            attributes={ATTR_OUTCOME: outcome, **identifier_attributes},
+                        )
                         raise InvalidJWTError("JWT token is expired")
-                    if cached_introspect_object.active is False:
-                        raise InvalidJWTError("JWT token is not active")
                     self._introspect_object = cached_introspect_object
                     self._record_verify_success(
                         span=span,
