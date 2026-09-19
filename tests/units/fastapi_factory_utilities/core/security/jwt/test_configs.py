@@ -262,6 +262,27 @@ class TestJWTBearerAuthenticationConfig:
             )
         assert config.authorized_audiences == ["legacy-api"]
 
+    def test_deprecated_audience_alias_keeps_commas_as_single_audience(self) -> None:
+        """Legacy audience= is wrapped as a list; commas are not split into multiple audiences."""
+        with pytest.warns(DeprecationWarning, match="audience is deprecated"):
+            config = JWTBearerAuthenticationConfig(
+                issuer=_DEFAULT_ISSUER,
+                audience="api-one,api-two",
+            )
+        assert config.authorized_audiences == ["api-one,api-two"]
+
+    def test_deprecated_audience_alias_rejects_empty_string(self) -> None:
+        """Empty legacy audience= still fails closed after parse."""
+        with pytest.warns(DeprecationWarning, match="audience is deprecated"):
+            with pytest.raises(ValidationError) as exc_info:
+                JWTBearerAuthenticationConfig(
+                    issuer=_DEFAULT_ISSUER,
+                    audience="",
+                )
+
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("authorized_audiences",) for e in errors)
+
     def test_model_validate_json(self) -> None:
         """Test creating config using model_validate_json."""
         json_data = (

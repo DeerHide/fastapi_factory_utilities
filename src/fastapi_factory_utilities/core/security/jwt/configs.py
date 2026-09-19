@@ -41,7 +41,10 @@ class JWTBearerAuthenticationConfig(BaseModel):
         default_factory=lambda: list(get_default_algorithms().keys()), description="The authorized algorithms."
     )
 
-    authorized_audiences: list[str] = Field(description="The authorized audiences (required; enforced on decode).")
+    authorized_audiences: list[str] = Field(
+        min_length=1,
+        description="The authorized audiences (required, non-empty; enforced on decode).",
+    )
     issuer: OAuth2Issuer = Field(description="The authorized issuers.")
     audience: str | None = Field(
         default=None,
@@ -71,7 +74,8 @@ class JWTBearerAuthenticationConfig(BaseModel):
                 DeprecationWarning,
                 stacklevel=2,
             )
-            return {**data, "authorized_audiences": data["audience"]}
+            # Wrap as a one-element list so commas in the legacy value stay one audience.
+            return {**data, "authorized_audiences": [data["audience"]]}
         return data
 
     @field_validator("authorized_audiences", mode="before")
