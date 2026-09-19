@@ -680,6 +680,7 @@ class TestGenericHydraJWTVerifierIntrospectCache:
         verifier_a = GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject](
             hydra_introspect_service=mock_introspect_service,
             config=JWTBearerAuthenticationConfig(
+                authorized_audiences=["test-api"],
                 issuer="https://issuer-a.example",
                 cache_enabled=True,
             ),
@@ -687,6 +688,7 @@ class TestGenericHydraJWTVerifierIntrospectCache:
         verifier_b = GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject](
             hydra_introspect_service=mock_introspect_service,
             config=JWTBearerAuthenticationConfig(
+                authorized_audiences=["test-api"],
                 issuer="https://issuer-b.example",
                 cache_enabled=True,
             ),
