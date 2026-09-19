@@ -1,13 +1,16 @@
 """Unit tests for the JWT verifiers."""
 
 import datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from opentelemetry.trace import StatusCode
 
+from fastapi_factory_utilities.core.security.jwt import verifiers as verifiers_module
 from fastapi_factory_utilities.core.security.jwt.configs import JWTBearerAuthenticationConfig
 from fastapi_factory_utilities.core.security.jwt.exceptions import InvalidJWTError
 from fastapi_factory_utilities.core.security.jwt.objects import JWTPayload
+from fastapi_factory_utilities.core.security.jwt.telemetry import ATTR_OUTCOME, OUTCOME_EXPIRED
 from fastapi_factory_utilities.core.security.jwt.verifiers import (
     GenericHydraJWTVerifier,
     JWTNoneVerifier,
@@ -457,10 +460,14 @@ class TestGenericHydraJWTVerifier:
         mock_introspect_service.introspect.assert_awaited_once_with(token=token)
 
 
-def _make_jwt_payload(*, jti: str | None = "test-jti-123") -> JWTPayload:
+def _make_jwt_payload(
+    *,
+    jti: str | None = "test-jti-123",
+    exp_delta: datetime.timedelta | None = None,
+) -> JWTPayload:
     """Build a JWT payload for cache tests."""
     now = datetime.datetime.now(tz=datetime.UTC)
-    exp = now + datetime.timedelta(hours=1)
+    exp = now + (exp_delta if exp_delta is not None else datetime.timedelta(hours=1))
     nbf = now - datetime.timedelta(minutes=5)
     return JWTPayload(
         scp="read write",
@@ -526,6 +533,54 @@ class TestGenericHydraJWTVerifierIntrospectCache:
         await cached_verifier.verify(jwt_token=jwt_token, jwt_payload=jwt_payload)
 
         mock_introspect_service.introspect.assert_awaited_once_with(token=jwt_token)
+
+    @pytest.mark.asyncio
+    async def test_verify_cache_hit_rejects_expired_payload(
+        self,
+        cached_verifier: GenericHydraJWTVerifier[JWTPayload, HydraTokenIntrospectObject],
+        mock_introspect_service: AsyncMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Expired payload on cache hit raises without re-introspecting, with verify telemetry."""
+        jwt_token = JWTToken("test.jwt.token")
+        await cached_verifier.verify(
+            jwt_token=jwt_token,
+            jwt_payload=_make_jwt_payload(jti="expire-on-hit"),
+        )
+
+        mock_span = MagicMock()
+        span_cm = MagicMock()
+        span_cm.__enter__.return_value = mock_span
+        span_cm.__exit__.return_value = None
+        monkeypatch.setattr(
+            verifiers_module.TRACER,
+            "start_as_current_span",
+            MagicMock(return_value=span_cm),
+        )
+        record_calls: list[dict[str, object]] = []
+
+        def _capture_record(*, amount: float, attributes: dict[str, str]) -> None:
+            record_calls.append({"amount": amount, "attributes": attributes})
+
+        monkeypatch.setattr(verifiers_module.JWT_VERIFY_DURATION, "record", _capture_record)
+
+        with pytest.raises(InvalidJWTError) as exc_info:
+            await cached_verifier.verify(
+                jwt_token=jwt_token,
+                jwt_payload=_make_jwt_payload(
+                    jti="expire-on-hit",
+                    exp_delta=datetime.timedelta(hours=-1),
+                ),
+            )
+
+        assert exc_info.value.args[0] == "JWT token is expired"
+        mock_introspect_service.introspect.assert_awaited_once_with(token=jwt_token)
+        mock_span.set_attribute.assert_any_call(ATTR_OUTCOME, OUTCOME_EXPIRED)
+        assert mock_span.set_status.call_count == 1
+        status = mock_span.set_status.call_args.args[0]
+        assert status.status_code is StatusCode.ERROR
+        assert len(record_calls) == 1
+        assert record_calls[0]["attributes"] == {ATTR_OUTCOME: OUTCOME_EXPIRED}
 
     @pytest.mark.asyncio
     async def test_verify_different_jti_misses_cache(
