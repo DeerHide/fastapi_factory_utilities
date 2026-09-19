@@ -251,7 +251,7 @@ class JWTNoOpIntrospectionVerifier(JWTVerifierAbstract[JWTPayload]):
         ``GenericHydraJWTVerifier`` (or equivalent) in real services.
 
     Instantiation emits a :class:`UserWarning`. The historical name
-    ``JWTNoneVerifier`` remains as a deprecated alias.
+    ``JWTNoneVerifier`` remains as a compatibility alias.
     """
 
     def __init__(self) -> None:
@@ -273,5 +273,5 @@ class JWTNoOpIntrospectionVerifier(JWTVerifierAbstract[JWTPayload]):
         return
 
 
-# Deprecated public alias — prefer JWTNoOpIntrospectionVerifier in new code.
+# Compatibility alias — prefer JWTNoOpIntrospectionVerifier in new code.
 JWTNoneVerifier = JWTNoOpIntrospectionVerifier
