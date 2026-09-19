@@ -5,7 +5,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-_WORKFLOWS_DIR = Path(__file__).resolve().parents[3] / ".github" / "workflows"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_WORKFLOWS_DIR = _REPO_ROOT / ".github" / "workflows"
+_DEPENDABOT_PATH = _REPO_ROOT / ".github" / "dependabot.yml"
 _SHA_LENGTH = 40
 
 
@@ -25,6 +27,11 @@ def _collect_uses(node: object) -> list[str]:
         for item in node:
             found.extend(_collect_uses(item))
     return found
+
+
+def test_at_least_one_workflow_file_exists() -> None:
+    """Empty/missing workflows dir must fail loudly, not skip the pin checks."""
+    assert _workflow_files(), f"expected workflow files under {_WORKFLOWS_DIR}"
 
 
 @pytest.mark.parametrize("workflow_path", _workflow_files(), ids=lambda p: p.name)
@@ -47,6 +54,6 @@ def test_actions_are_pinned_to_full_commit_shas(workflow_path: Path) -> None:
 
 def test_dependabot_tracks_github_actions_ecosystem() -> None:
     """Dependabot must refresh Action pins, not only pip."""
-    dependabot = yaml.safe_load(Path(".github/dependabot.yml").read_text())
+    dependabot = yaml.safe_load(_DEPENDABOT_PATH.read_text())
     ecosystems = {entry["package-ecosystem"] for entry in dependabot["updates"]}
     assert "github-actions" in ecosystems
