@@ -48,8 +48,7 @@ class TestJWTBearerAuthenticationConfig:
             issuer=OAuth2Issuer("https://issuer.example"),
         )
         assert config.authorized_algorithms == ["RS256", "ES256"]
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2"}
+        assert config.authorized_audiences == ["aud1", "aud2"]
         assert config.issuer == OAuth2Issuer("https://issuer.example")
 
     def test_can_be_initialized_with_optional_fields(self) -> None:
@@ -228,8 +227,7 @@ class TestJWTBearerAuthenticationConfig:
         config = JWTBearerAuthenticationConfig.model_validate(data)
 
         assert config.authorized_algorithms == ["RS256", "ES256"]
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2"}
+        assert config.authorized_audiences == ["aud1", "aud2"]
         assert config.issuer == OAuth2Issuer("https://issuer.example")
 
     def test_model_validate_with_minimal_fields(self) -> None:
