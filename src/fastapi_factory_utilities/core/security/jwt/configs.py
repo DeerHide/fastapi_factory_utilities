@@ -65,17 +65,22 @@ class JWTBearerAuthenticationConfig(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def migrate_deprecated_audience_alias(cls, data: Any) -> Any:
-        """Map deprecated ``audience`` into ``authorized_audiences`` when needed."""
+        """Warn on deprecated ``audience``; map it into ``authorized_audiences`` when needed.
+
+        When both fields are set, ``authorized_audiences`` remains the source of truth
+        (``audience`` is not merged in), but a DeprecationWarning is still emitted.
+        """
         if not isinstance(data, dict):
             return data
-        if data.get("authorized_audiences") is None and data.get("audience") is not None:
+        if data.get("audience") is not None:
             warnings.warn(
                 "JWTBearerAuthenticationConfig.audience is deprecated; use authorized_audiences=[...] instead",
                 DeprecationWarning,
                 stacklevel=2,
             )
-            # Wrap as a one-element list so commas in the legacy value stay one audience.
-            return {**data, "authorized_audiences": [data["audience"]]}
+            if data.get("authorized_audiences") is None:
+                # Wrap as a one-element list so commas in the legacy value stay one audience.
+                return {**data, "authorized_audiences": [data["audience"]]}
         return data
 
     @field_validator("authorized_audiences", mode="before")
@@ -94,7 +99,8 @@ class JWTBearerAuthenticationConfig(BaseModel):
         v = [item.strip() for item in v if item.strip()]
         if len(v) == 0:
             raise ValueError("Invalid value: empty list after processing")
-        return list(set(v))
+        # Preserve first-seen order (set() would be nondeterministic).
+        return list(dict.fromkeys(v))
 
     @field_validator("authorized_algorithms")
     @classmethod
