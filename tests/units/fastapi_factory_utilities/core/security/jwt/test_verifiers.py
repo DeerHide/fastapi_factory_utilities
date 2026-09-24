@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from opentelemetry.trace import StatusCode
 
+from fastapi_factory_utilities.core.security import jwt as jwt_pkg
 from fastapi_factory_utilities.core.security.jwt import verifiers as verifiers_module
 from fastapi_factory_utilities.core.security.jwt.configs import JWTBearerAuthenticationConfig
 from fastapi_factory_utilities.core.security.jwt.exceptions import InvalidJWTError
@@ -14,6 +15,7 @@ from fastapi_factory_utilities.core.security.jwt.telemetry import ATTR_OUTCOME, 
 from fastapi_factory_utilities.core.security.jwt.verifiers import (
     GenericHydraJWTVerifier,
     JWTNoneVerifier,
+    JWTNoOpIntrospectionVerifier,
     JWTVerifierAbstract,
     build_introspect_cache_key,
     clear_introspect_cache,
@@ -114,11 +116,20 @@ class TestJWTNoneVerifier:
             sub="user123",
         )
 
-    def test_can_be_instantiated(self) -> None:
-        """Test that JWTNoneVerifier can be instantiated."""
-        verifier = JWTNoneVerifier()
-        assert isinstance(verifier, JWTNoneVerifier)
-        assert isinstance(verifier, JWTVerifierAbstract)
+    def test_instantiation_emits_test_only_warning(self) -> None:
+        """Instantiating the no-op verifier must warn that it is test-only."""
+        with pytest.warns(UserWarning, match="tests only"):
+            JWTNoneVerifier()
+
+    def test_preferred_name_is_noop_introspection_verifier(self) -> None:
+        """JWTNoneVerifier is an alias of JWTNoOpIntrospectionVerifier."""
+        assert JWTNoneVerifier is JWTNoOpIntrospectionVerifier
+
+    def test_none_verifier_not_in_package_all(self) -> None:
+        """JWTNoneVerifier stays importable but is omitted from package __all__."""
+        assert "JWTNoneVerifier" not in jwt_pkg.__all__
+        assert "JWTNoOpIntrospectionVerifier" in jwt_pkg.__all__
+        assert jwt_pkg.JWTNoneVerifier is JWTNoOpIntrospectionVerifier
 
     def test_inherits_from_abstract_class(self, verifier: JWTNoneVerifier) -> None:
         """Test that JWTNoneVerifier inherits from JWTVerifierAbstract.
