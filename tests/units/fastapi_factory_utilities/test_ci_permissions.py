@@ -1,7 +1,8 @@
 """Guardrail: PR-path CI jobs must not carry unused write token scopes."""
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import pytest
 import yaml
@@ -51,9 +52,7 @@ def test_pr_path_jobs_are_contents_read_only(job_name: str) -> None:
     permissions = _job_permissions(jobs, job_name)
     assert permissions.get("contents") == "read"
     for key, write_value in _WRITE_PERMISSIONS.items():
-        assert permissions.get(key) != write_value, (
-            f"{job_name} must not set {key}: {write_value} (got {permissions})"
-        )
+        assert permissions.get(key) != write_value, f"{job_name} must not set {key}: {write_value} (got {permissions})"
     # Catch any future write-scoped key, not only the known set above.
     for key, value in permissions.items():
         assert value != "write", f"{job_name} must not set {key}: write (got {permissions})"
