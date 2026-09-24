@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hydra JWT introspection cache keys are namespaced by configured issuer
   (``issuer`` + NUL + ``jti``), not ``jti`` alone, preventing cross-issuer
   cache confusion in a shared process. Cache hits also re-check ``exp``.
+- OpenAPI / Swagger / ReDoc are disabled by default outside ``development``.
+  Set ``docs.enabled: true`` to opt in (or ``false`` to force off).
 
 - JWT: ``authorized_audiences`` is required and always passed to PyJWT
   decode (fail closed). Legacy ``audience`` is a deprecated alias that
