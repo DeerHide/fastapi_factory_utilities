@@ -26,6 +26,7 @@ class TestJWTBearerTokenExtractionStrategyHeaderAuthorizationBearer:
     def jwt_config(self) -> JWTBearerAuthenticationConfig:
         """Create a basic JWT bearer authentication config."""
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer(_DEFAULT_ISSUER),
         )
@@ -121,6 +122,7 @@ class TestJWTHeaderTokenExtractionStrategy:
     def jwt_config(self) -> JWTBearerAuthenticationConfig:
         """Create a JWT bearer authentication config for header-based extraction."""
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer(_DEFAULT_ISSUER),
             authorized_locations=[JWTLocation.HEADER],
@@ -130,6 +132,7 @@ class TestJWTHeaderTokenExtractionStrategy:
     def test_initialization_requires_header_name(self) -> None:
         """Strategy initialization should fail when header_name is missing."""
         config = JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer(_DEFAULT_ISSUER),
             authorized_locations=[JWTLocation.HEADER],
@@ -169,6 +172,7 @@ class TestJWTBearerTokenExtractionStrategyCookie:
     def jwt_config(self) -> JWTBearerAuthenticationConfig:
         """Create a JWT bearer authentication config for cookie-based extraction."""
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer(_DEFAULT_ISSUER),
             authorized_locations=[JWTLocation.COOKIE],
@@ -178,6 +182,7 @@ class TestJWTBearerTokenExtractionStrategyCookie:
     def test_initialization_requires_cookie_name(self) -> None:
         """Strategy initialization should fail when cookie_name is missing."""
         config = JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer(_DEFAULT_ISSUER),
             authorized_locations=[JWTLocation.COOKIE],
@@ -217,6 +222,7 @@ class TestGetStrategyFromLocation:
     def jwt_config(self) -> JWTBearerAuthenticationConfig:
         """Create a base JWT bearer authentication config."""
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer(_DEFAULT_ISSUER),
         )
@@ -265,6 +271,7 @@ class TestExtractTokenFromRequest:
     def base_config(self) -> JWTBearerAuthenticationConfig:
         """Base JWT bearer authentication config."""
         return JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=OAuth2Issuer(_DEFAULT_ISSUER),
         )

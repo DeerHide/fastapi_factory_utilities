@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenAPI / Swagger / ReDoc are disabled by default outside ``development``.
   Set ``docs.enabled: true`` to opt in (or ``false`` to force off).
 
+- JWT: ``authorized_audiences`` is required and always passed to PyJWT
+  decode (fail closed). Legacy ``audience`` is a deprecated alias that
+  populates ``authorized_audiences``. README sample updated.
+  **Breaking** for configs that only set ``issuer`` (or only the unused
+  ``audience`` field without realizing it was ignored).
+
 ## [6.5.3] - 2026-08-29
 
 ### Fixed

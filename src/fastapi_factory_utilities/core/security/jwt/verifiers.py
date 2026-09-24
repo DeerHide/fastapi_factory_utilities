@@ -204,7 +204,7 @@ class GenericHydraJWTVerifier(
                     token=cast(HydraAccessToken, jwt_token)
                 )
             except HydraOperationError as e:
-                outcome: str = OUTCOME_INVALID_JWT
+                outcome = OUTCOME_INVALID_JWT
                 span.set_attribute(ATTR_OUTCOME, outcome)
                 span.record_exception(e)
                 span.set_status(Status(StatusCode.ERROR, str(e)))

@@ -28,15 +28,15 @@ class TestJWTBearerAuthenticationConfig:
 
     def test_can_be_initialized_with_required_fields(self) -> None:
         """Test that the config can be initialized with required fields."""
-        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         assert config.authorized_algorithms is not None
         assert isinstance(config.authorized_algorithms, list)
-        assert config.authorized_audiences is None
+        assert config.authorized_audiences == ["test-api"]
         assert config.issuer == _DEFAULT_ISSUER
 
     def test_default_authorized_algorithms(self) -> None:
         """Test that default authorized algorithms are set correctly."""
-        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         expected_algorithms = list(get_default_algorithms().keys())
         assert config.authorized_algorithms == expected_algorithms
 
@@ -48,8 +48,7 @@ class TestJWTBearerAuthenticationConfig:
             issuer=OAuth2Issuer("https://issuer.example"),
         )
         assert config.authorized_algorithms == ["RS256", "ES256"]
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2"}
+        assert config.authorized_audiences == ["aud1", "aud2"]
         assert config.issuer == OAuth2Issuer("https://issuer.example")
 
     def test_can_be_initialized_with_optional_fields(self) -> None:
@@ -63,9 +62,9 @@ class TestJWTBearerAuthenticationConfig:
 
     def test_can_be_initialized_with_minimal_required_fields(self) -> None:
         """Test that the config can be initialized with minimal required fields (issuer)."""
-        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         assert config.authorized_algorithms is not None
-        assert config.authorized_audiences is None
+        assert config.authorized_audiences == ["test-api"]
         assert config.issuer == _DEFAULT_ISSUER
 
     def test_raises_validation_error_when_issuer_missing_in_model_validate(self) -> None:
@@ -79,7 +78,9 @@ class TestJWTBearerAuthenticationConfig:
     def test_raises_validation_error_when_issuer_omitted_in_constructor(self) -> None:
         """Test that constructor raises ValidationError when issuer is not provided."""
         with pytest.raises(ValidationError) as exc_info:
-            JWTBearerAuthenticationConfig()  # type: ignore[call-arg]
+            JWTBearerAuthenticationConfig(
+                authorized_audiences=["test-api"],
+            )  # type: ignore[call-arg]
 
         errors = exc_info.value.errors()
         assert any(e["loc"] == ("issuer",) for e in errors)
@@ -88,6 +89,7 @@ class TestJWTBearerAuthenticationConfig:
         """Test that valid algorithms (requiring cryptography) are accepted."""
         valid_algorithms = list(requires_cryptography)
         config = JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=valid_algorithms,
             issuer=_DEFAULT_ISSUER,
         )
@@ -96,6 +98,7 @@ class TestJWTBearerAuthenticationConfig:
     def test_validates_authorized_algorithms_with_single_valid_algorithm(self) -> None:
         """Test that a single valid algorithm is accepted."""
         config = JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=["RS256"],
             issuer=_DEFAULT_ISSUER,
         )
@@ -108,6 +111,7 @@ class TestJWTBearerAuthenticationConfig:
         invalid_algorithms = ["HS256", "HS384", "HS512", "none"]
         with pytest.raises(ValidationError) as exc_info:
             JWTBearerAuthenticationConfig(
+                authorized_audiences=["test-api"],
                 authorized_algorithms=invalid_algorithms,
                 issuer=_DEFAULT_ISSUER,
             )
@@ -125,6 +129,7 @@ class TestJWTBearerAuthenticationConfig:
         mixed_algorithms = ["RS256", "HS256", "ES256", "none"]
         with pytest.raises(ValidationError) as exc_info:
             JWTBearerAuthenticationConfig(
+                authorized_audiences=["test-api"],
                 authorized_algorithms=mixed_algorithms,
                 issuer=_DEFAULT_ISSUER,
             )
@@ -152,6 +157,7 @@ class TestJWTBearerAuthenticationConfig:
         """Test that each invalid algorithm raises ValueError."""
         with pytest.raises(ValidationError) as exc_info:
             JWTBearerAuthenticationConfig(
+                authorized_audiences=["test-api"],
                 authorized_algorithms=[invalid_algorithm],
                 issuer=_DEFAULT_ISSUER,
             )
@@ -184,6 +190,7 @@ class TestJWTBearerAuthenticationConfig:
     ) -> None:
         """Test that each valid algorithm is accepted."""
         config = JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=[valid_algorithm],
             issuer=_DEFAULT_ISSUER,
         )
@@ -191,7 +198,7 @@ class TestJWTBearerAuthenticationConfig:
 
     def test_config_is_frozen(self) -> None:
         """Test that the config is frozen and cannot be modified."""
-        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         with pytest.raises(ValidationError):
             config.authorized_algorithms = ["HS256"]  # type: ignore[misc]
 
@@ -199,6 +206,7 @@ class TestJWTBearerAuthenticationConfig:
         """Test that the config forbids extra fields."""
         with pytest.raises(ValidationError) as exc_info:
             JWTBearerAuthenticationConfig(
+                authorized_audiences=["test-api"],
                 issuer=_DEFAULT_ISSUER,
                 extra_field="extra",  # type: ignore[call-overload]
             )
@@ -219,19 +227,70 @@ class TestJWTBearerAuthenticationConfig:
         config = JWTBearerAuthenticationConfig.model_validate(data)
 
         assert config.authorized_algorithms == ["RS256", "ES256"]
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2"}
+        assert config.authorized_audiences == ["aud1", "aud2"]
         assert config.issuer == OAuth2Issuer("https://issuer.example")
 
     def test_model_validate_with_minimal_fields(self) -> None:
-        """Test creating config using model_validate with minimal fields."""
-        data: dict[str, str] = {"issuer": "https://example.com"}
+        """Test creating config using model_validate with minimal required fields."""
+        data: dict[str, str | list[str]] = {
+            "issuer": "https://example.com",
+            "authorized_audiences": ["test-api"],
+        }
 
         config = JWTBearerAuthenticationConfig.model_validate(data)
 
         assert config.authorized_algorithms is not None
-        assert config.authorized_audiences is None
+        assert config.authorized_audiences == ["test-api"]
         assert config.issuer == OAuth2Issuer("https://example.com")
+
+    def test_raises_validation_error_when_authorized_audiences_missing(self) -> None:
+        """Fail closed: omitting authorized_audiences is a validation error."""
+        with pytest.raises(ValidationError) as exc_info:
+            JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)  # type: ignore[call-arg]
+
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("authorized_audiences",) for e in errors)
+
+    def test_deprecated_audience_alias_populates_authorized_audiences(self) -> None:
+        """Legacy audience= wires into authorized_audiences with a DeprecationWarning."""
+        with pytest.warns(DeprecationWarning, match="audience is deprecated"):
+            config = JWTBearerAuthenticationConfig(
+                issuer=_DEFAULT_ISSUER,
+                audience="legacy-api",
+            )
+        assert config.authorized_audiences == ["legacy-api"]
+
+    def test_deprecated_audience_alias_keeps_commas_as_single_audience(self) -> None:
+        """Legacy audience= is wrapped as a list; commas are not split into multiple audiences."""
+        with pytest.warns(DeprecationWarning, match="audience is deprecated"):
+            config = JWTBearerAuthenticationConfig(
+                issuer=_DEFAULT_ISSUER,
+                audience="api-one,api-two",
+            )
+        assert config.authorized_audiences == ["api-one,api-two"]
+
+    def test_deprecated_audience_alias_rejects_empty_string(self) -> None:
+        """Empty legacy audience= still fails closed after parse."""
+        with pytest.warns(DeprecationWarning, match="audience is deprecated"):
+            with pytest.raises(ValidationError) as exc_info:
+                JWTBearerAuthenticationConfig(
+                    issuer=_DEFAULT_ISSUER,
+                    audience="",
+                )
+
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("authorized_audiences",) for e in errors)
+
+    def test_deprecated_audience_warns_when_both_fields_provided(self) -> None:
+        """audience= with authorized_audiences still warns; authorized_audiences wins."""
+        with pytest.warns(DeprecationWarning, match="audience is deprecated"):
+            config = JWTBearerAuthenticationConfig(
+                issuer=_DEFAULT_ISSUER,
+                audience="legacy-ignored",
+                authorized_audiences=["canonical-api"],
+            )
+        assert config.authorized_audiences == ["canonical-api"]
+        assert config.audience == "legacy-ignored"
 
     def test_model_validate_json(self) -> None:
         """Test creating config using model_validate_json."""
@@ -248,6 +307,7 @@ class TestJWTBearerAuthenticationConfig:
     def test_empty_authorized_algorithms_list_is_valid(self) -> None:
         """Test that empty authorized algorithms list is valid (no invalid algorithms)."""
         config = JWTBearerAuthenticationConfig(
+            authorized_audiences=["test-api"],
             authorized_algorithms=[],
             issuer=_DEFAULT_ISSUER,
         )
@@ -259,9 +319,7 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences="aud1,aud2,aud3",  # type: ignore[arg-type]
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
-        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2", "aud3"]
 
     def test_validate_authorized_audiences_strips_whitespace(self) -> None:
         """Test that whitespace is stripped from comma-separated values."""
@@ -269,9 +327,7 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences=" aud1 , aud2 , aud3 ",  # type: ignore[arg-type]
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
-        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2", "aud3"]
 
     def test_validate_authorized_audiences_strips_whitespace_from_single_value(self) -> None:
         """Test that whitespace is stripped from single value."""
@@ -287,19 +343,23 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences="aud1,aud2,aud1",  # type: ignore[arg-type]
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2"}
-        assert len(config.authorized_audiences) == 2  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2"]
 
     def test_validate_authorized_audiences_removes_duplicates_from_list(self) -> None:
-        """Test that duplicate values are removed from list."""
+        """Test that duplicate values are removed from list, preserving first-seen order."""
         config = JWTBearerAuthenticationConfig(
             authorized_audiences=["aud1", "aud2", "aud1"],
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2"}
-        assert len(config.authorized_audiences) == 2  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2"]
+
+    def test_validate_authorized_audiences_preserves_first_seen_order(self) -> None:
+        """Dedup preserves first-seen order (not hash-set order)."""
+        config = JWTBearerAuthenticationConfig(
+            authorized_audiences=["aud3", "aud1", "aud2", "aud1", "aud3"],
+            issuer=_DEFAULT_ISSUER,
+        )
+        assert config.authorized_audiences == ["aud3", "aud1", "aud2"]
 
     def test_validate_authorized_audiences_filters_empty_strings_from_comma_separated(
         self,
@@ -309,9 +369,7 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences="aud1,,aud2, ,aud3",  # type: ignore[arg-type]
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
-        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2", "aud3"]
 
     def test_validate_authorized_audiences_filters_empty_strings_from_list(self) -> None:
         """Test that empty strings are filtered from list."""
@@ -319,9 +377,7 @@ class TestJWTBearerAuthenticationConfig:
             authorized_audiences=["aud1", "", "aud2", " ", "aud3"],
             issuer=_DEFAULT_ISSUER,
         )
-        assert config.authorized_audiences is not None
-        assert set(config.authorized_audiences) == {"aud1", "aud2", "aud3"}
-        assert len(config.authorized_audiences) == 3  # noqa: PLR2004
+        assert config.authorized_audiences == ["aud1", "aud2", "aud3"]
 
     def test_validate_authorized_audiences_raises_error_for_empty_string(self) -> None:
         """Test that empty string raises ValueError."""
@@ -436,7 +492,7 @@ class TestJWTBearerAuthenticationConfigBuilder:
         mock_build_config: MagicMock,
     ) -> None:
         """build() loads config from YAML when package and filename are set."""
-        expected_config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        expected_config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         mock_build_config.return_value = expected_config
 
         builder = JWTBearerAuthenticationConfigBuilder("my_jwt").add_application_yaml_path(
@@ -458,7 +514,7 @@ class TestJWTBearerAuthenticationConfigBuilder:
         mock_build_config: MagicMock,
     ) -> None:
         """build() returns same config on second call without calling YAML again."""
-        expected_config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        expected_config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         mock_build_config.return_value = expected_config
 
         builder = JWTBearerAuthenticationConfigBuilder("my_jwt").add_application_yaml_path(
@@ -505,7 +561,7 @@ class TestJWTBearerAuthenticationConfigBuilder:
         mock_build_config: MagicMock,
     ) -> None:
         """Config property returns config after successful build()."""
-        expected_config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        expected_config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         mock_build_config.return_value = expected_config
 
         builder = JWTBearerAuthenticationConfigBuilder("my_jwt").add_application_yaml_path(
@@ -541,7 +597,7 @@ class TestDependsJWTBearerAuthenticationConfig:
 
     def test_export_from_state_returns_config_when_present(self) -> None:
         """export_from_state returns config when state has it."""
-        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         state: State = MagicMock(spec=State)
         setattr(state, "jwt_configs.my_jwt", config)
 
@@ -550,7 +606,7 @@ class TestDependsJWTBearerAuthenticationConfig:
 
     def test_import_to_state_sets_attribute(self) -> None:
         """import_to_state sets state attribute so export_from_state can read it."""
-        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         state: State = MagicMock(spec=State)
 
         DependsJWTBearerAuthenticationConfig.import_to_state(state=state, config=config, key="my_jwt")
@@ -558,7 +614,7 @@ class TestDependsJWTBearerAuthenticationConfig:
 
     def test_call_returns_config_from_request_app_state(self) -> None:
         """__call__ returns config from request.app.state using the dependency key."""
-        config = JWTBearerAuthenticationConfig(issuer=_DEFAULT_ISSUER)
+        config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         app_state: State = MagicMock(spec=State)
         setattr(app_state, "jwt_configs.my_jwt", config)
 
