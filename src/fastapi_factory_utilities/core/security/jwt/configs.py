@@ -1,12 +1,13 @@
 """Provides the configurations for the JWT bearer token."""
 
+import warnings
 from enum import StrEnum
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 
 from fastapi import Request
 from fastapi.datastructures import State
 from jwt.algorithms import get_default_algorithms, requires_cryptography
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from fastapi_factory_utilities.core.security.types import OAuth2Issuer
 from fastapi_factory_utilities.core.utils.configs import (
@@ -27,7 +28,12 @@ class JWTLocation(StrEnum):
 
 
 class JWTBearerAuthenticationConfig(BaseModel):
-    """JWT bearer token authentication configuration."""
+    """JWT bearer token authentication configuration.
+
+    ``authorized_audiences`` is required and always enforced during decode.
+    The legacy ``audience`` field is accepted only as a deprecated alias that
+    populates ``authorized_audiences`` when the latter is omitted.
+    """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
 
@@ -35,9 +41,15 @@ class JWTBearerAuthenticationConfig(BaseModel):
         default_factory=lambda: list(get_default_algorithms().keys()), description="The authorized algorithms."
     )
 
-    authorized_audiences: list[str] | None = Field(default=None, description="The authorized audiences.")
+    authorized_audiences: list[str] = Field(
+        min_length=1,
+        description="The authorized audiences (required, non-empty; enforced on decode).",
+    )
     issuer: OAuth2Issuer = Field(description="The authorized issuers.")
-    audience: str | None = Field(default=None, description="The audience.")
+    audience: str | None = Field(
+        default=None,
+        description="Deprecated alias for a single authorized audience; use authorized_audiences.",
+    )
 
     # JWT location
     authorized_locations: list[JWTLocation] = Field(
@@ -50,21 +62,45 @@ class JWTBearerAuthenticationConfig(BaseModel):
     cache_ttl_seconds: int = Field(default=300, description="Default TTL for cached introspection results in seconds.")
     cache_max_entries: int = Field(default=10000, description="Maximum number of cached introspection results.")
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_audience_alias(cls, data: Any) -> Any:
+        """Warn on deprecated ``audience``; map it into ``authorized_audiences`` when needed.
+
+        When both fields are set, ``authorized_audiences`` remains the source of truth
+        (``audience`` is not merged in), but a DeprecationWarning is still emitted.
+        """
+        if not isinstance(data, dict):
+            return data
+        if data.get("audience") is not None:
+            warnings.warn(
+                "JWTBearerAuthenticationConfig.audience is deprecated; use authorized_audiences=[...] instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if data.get("authorized_audiences") is None:
+                # Wrap as a one-element list so commas in the legacy value stay one audience.
+                return {**data, "authorized_audiences": [data["audience"]]}
+        return data
+
     @field_validator("authorized_audiences", mode="before")
     @classmethod
-    def validate_authorized_audiences(cls, v: str | list[str]) -> list[str]:
+    def validate_authorized_audiences(cls, v: str | list[str] | None) -> list[str]:
         """Validate the authorized audiences.
 
         Example:
             "aud1,aud2,aud3" -> ["aud1", "aud2", "aud3"]
             ["aud1", "aud2", "aud3"] -> ["aud1", "aud2", "aud3"]
         """
+        if v is None:
+            raise ValueError("authorized_audiences is required and must be non-empty")
         if isinstance(v, str):
             v = v.split(sep=",")
         v = [item.strip() for item in v if item.strip()]
         if len(v) == 0:
             raise ValueError("Invalid value: empty list after processing")
-        return list(set(v))
+        # Preserve first-seen order (set() would be nondeterministic).
+        return list(dict.fromkeys(v))
 
     @field_validator("authorized_algorithms")
     @classmethod

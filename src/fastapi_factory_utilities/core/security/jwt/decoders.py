@@ -61,8 +61,8 @@ async def decode_jwt_token_payload(
     # Additional kwargs for the decode function
     kwargs: dict[str, Any] = {}
     kwargs["issuer"] = issuer or jwt_bearer_authentication_config.issuer
-    if jwt_bearer_authentication_config.authorized_audiences:
-        kwargs["audience"] = jwt_bearer_authentication_config.authorized_audiences
+    # Audience is always required on the config and always verified (fail closed).
+    kwargs["audience"] = jwt_bearer_authentication_config.authorized_audiences
     if subject:
         kwargs["subject"] = subject
     # Decode the JWT bearer token payload
