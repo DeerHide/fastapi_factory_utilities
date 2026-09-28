@@ -9,14 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- OpenTelemetry dependency ranges are the Source of Truth for Velmios services
-  (constraint bands, not exact pins). The hole was ``opentelemetry-instrumentation*``
-  at ``^0``, which could resolve to 0.66 and thrash against
-  ``opentelemetry-semantic-conventions`` ``^0.64b0``. All instrumentors now use
-  ``^0.64b0`` (``>=0.64b0,<0.65``), matching aio-pika/botocore. Core
-  ``opentelemetry-api`` / ``sdk`` / exporters / ``propagator-b3`` stay
-  ``^1.43.0``; semconv ``<0.65`` keeps that pair coherent. Consumers (e.g.
-  ``payment_backend``) can drop app-level OTel pins after bumping FFU.
+- OpenTelemetry SoT upgraded to the coherent **1.45 / 0.66** pair, with major-floor
+  ranges (not exact pins): ``opentelemetry-api`` / ``sdk`` / OTLP exporters /
+  ``propagator-b3`` are ``^1.45.0`` (``>=1.45.0,<2``); ``opentelemetry-semantic-conventions``
+  and all ``opentelemetry-instrumentation*`` are ``>=0.66b0,<=1``. Replaces the
+  previous 1.43 / 0.64 floor and the thrash-prone ``instrumentation*^0`` hole.
+  Consumers (e.g. ``payment_backend``) can drop app-level OTel pins after bumping FFU.
 
 ### Security
 
