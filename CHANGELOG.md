@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.0] - 2026-09-28
+
 ### Changed
 
 - OpenTelemetry SoT upgraded to the coherent **1.45 / 0.66** pair, with major-floor
