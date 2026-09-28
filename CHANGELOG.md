@@ -10,11 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - OpenTelemetry SoT upgraded to the coherent **1.45 / 0.66** pair, with major-floor
-  ranges (not exact pins): ``opentelemetry-api`` / ``sdk`` / OTLP exporters /
-  ``propagator-b3`` are ``^1.45.0`` (``>=1.45.0,<2``); ``opentelemetry-semantic-conventions``
-  and all ``opentelemetry-instrumentation*`` are ``>=0.66b0,<=1``. Replaces the
-  previous 1.43 / 0.64 floor and the thrash-prone ``instrumentation*^0`` hole.
-  Consumers (e.g. ``payment_backend``) can drop app-level OTel pins after bumping FFU.
+  ranges (not exact pins): ``opentelemetry-api`` / ``opentelemetry-sdk`` / OTLP
+  exporters / ``opentelemetry-propagator-b3`` are ``^1.45.0`` (``>=1.45.0,<2``);
+  ``opentelemetry-semantic-conventions`` and all ``opentelemetry-instrumentation*``
+  are ``>=0.66b0,<1``. Replaces the previous 1.43 / 0.64 floor and the
+  thrash-prone ``instrumentation*^0`` hole. Consumers (e.g. ``payment_backend``)
+  can drop app-level OTel pins after bumping FFU.
 
 ### Security
 
