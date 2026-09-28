@@ -5571,4 +5571,4 @@ taskiq = ["redis", "taskiq-dependencies", "taskiq-fastapi", "taskiq-redis"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "4d2263442e09937a476da46743caa4b3514be3b055fbe3cd5885e2196ae8d410"
+content-hash = "24e2ffe769f6602fdfb6e8c5c6c9ce65193e1eb2bb9659dd6ee5a3e23688c7ea"
