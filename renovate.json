@@ -5,7 +5,8 @@
     "Copy this file to the FFU repo root as renovate.json (first-wave SoT).",
     "FFU defines and bumps shared OTel/FFU dependency bands here; Laelidona .github-private:ffu-otel-bands mirrors them for consumers.",
     "Do not extend Laelidona/.github-private from DeerHide (private cross-org; wrong SoT direction).",
-    "Automerge off. No production promotion. Scripts/postUpgradeTasks disabled."
+    "Never update Poetry python language constraint; Poetry ranges use widen (not bump).",
+    "Automerge off. No production promotion. Scripts/postUpgradeTasks disabled. No secrets/hostRules in-repo."
   ],
   "extends": ["config:recommended"],
   "dependencyDashboard": true,
@@ -43,9 +44,15 @@
   },
   "packageRules": [
     {
-      "description": "Poetry: bump constraint ranges in pyproject.toml (FFU commits poetry.lock; artifacts refresh with updates)",
+      "description": "Never update Poetry python language constraint (tool.poetry.dependencies.python). Runtime pin is intentional (>=3.12,<3.13); bumping it via PyPI/docker lookups is wrong (see PR #65).",
       "matchManagers": ["poetry"],
-      "rangeStrategy": "bump"
+      "matchPackageNames": ["python"],
+      "enabled": false
+    },
+    {
+      "description": "Poetry: use rangeStrategy=widen (not bump). bump collapses dual-bound SpecifierSets to a one-patch window (e.g. fastapi >=0.115.13,<0.140.0 → >=0.141.1,<0.141.2) and over-tightens floors; widen keeps/extends existing ranges. FFU commits poetry.lock — Poetry manager refreshes the lock when pyproject.toml changes; lockFileMaintenance covers weekly in-range lock refresh.",
+      "matchManagers": ["poetry"],
+      "rangeStrategy": "widen"
     },
     {
       "description": "Group Poetry patch/minor updates",
