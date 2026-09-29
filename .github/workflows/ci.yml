@@ -20,7 +20,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.1.0
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       - name: Verify runner Python and Poetry toolchain
@@ -31,7 +31,7 @@ jobs:
           uv --version
       - name: Cache virtual environment
         id: venv-cache
-        uses: actions/cache@v5.0.3
+        uses: actions/cache@v5.1.0
         with:
           path: ./.venv
           key: venv-${{ hashFiles('poetry.lock') }}
@@ -55,7 +55,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.1.0
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       # ponytail: runner Python has no ensurepip (`python3.12 -m venv` fails).
@@ -85,12 +85,12 @@ jobs:
           cat "${REPO_NAME}-mandatory-grype-scan.txt"
           exit $GRYPE_EXIT
       - name: Upload mandatory SBOM
-        uses: actions/upload-artifact@v7.0.0
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: "${{ github.event.repository.name }}-mandatory-sbom.spdx.json"
           path: "${{ github.event.repository.name }}-mandatory-sbom.spdx.json"
       - name: Upload mandatory Grype report
-        uses: actions/upload-artifact@v7.0.0
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: "${{ github.event.repository.name }}-mandatory-grype-scan.txt"
           path: "${{ github.event.repository.name }}-mandatory-grype-scan.txt"
@@ -108,7 +108,7 @@ jobs:
       security-events: write
       id-token: write
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.1.0
       - name: Generate SBOM with Syft
         env:
           REPO_NAME: ${{ github.event.repository.name }}
@@ -160,17 +160,17 @@ jobs:
           cat "${REPO_NAME}-grype-scan.txt"
           exit $GRYPE_EXIT
       - name: Upload SBOM
-        uses: actions/upload-artifact@v7.0.0
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: "${{ github.event.repository.name }}-sbom.spdx.json"
           path: "${{ github.event.repository.name }}-sbom.spdx.json"
       - name: Upload Grype text report
-        uses: actions/upload-artifact@v7.0.0
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: "${{ github.event.repository.name }}-grype-scan.txt"
           path: "${{ github.event.repository.name }}-grype-scan.txt"
       - name: Upload Grype SARIF artifact
-        uses: actions/upload-artifact@v7.0.0
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: "${{ github.event.repository.name }}-grype-scan.sarif"
           path: "${{ github.event.repository.name }}-grype-scan.sarif"
@@ -181,7 +181,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.1.0
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       - name: Verify runner Python and Poetry toolchain
@@ -191,13 +191,13 @@ jobs:
           poetry --version
           uv --version
       - name: Restore Cache
-        uses: actions/cache/restore@v5.0.3
+        uses: actions/cache/restore@v5.1.0
         with:
           path: ./.venv
           key: venv-${{ hashFiles('poetry.lock') }}
           restore-keys: |
             venv-
-      - uses: actions/cache@v5.0.3
+      - uses: actions/cache@v5.1.0
         name: Restore virtualenv
         with:
           path: ./.venv
@@ -234,7 +234,7 @@ jobs:
       packages: write
       discussions: write
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.1.0
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       - name: Download SBOM
@@ -282,7 +282,7 @@ jobs:
           echo "Extracted release notes for v$VERSION:"
           cat release_notes.txt
       - name: Release
-        uses: softprops/action-gh-release@v3.0.2
+        uses: softprops/action-gh-release@v3.0.3
         with:
           body_path: release_notes.txt
           files: |
@@ -295,4 +295,4 @@ jobs:
           name: ${{ github.ref_name }}
           prerelease: false
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.13.0
+        uses: pypa/gh-action-pypi-publish@v1.14.2

@@ -19,7 +19,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.1.0
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       - name: Configure Poetry virtualenvs
