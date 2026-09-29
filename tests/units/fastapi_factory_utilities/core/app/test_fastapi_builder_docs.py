@@ -63,6 +63,7 @@ class TestFastAPIBuilderDocsExposure:
         app = FastAPIBuilder(root_config=root_config).build(lifespan=_noop_lifespan)
         with TestClient(app) as client:
             assert client.get("/docs").status_code == HTTPStatus.OK
+            assert client.get("/redoc").status_code == HTTPStatus.OK
             assert client.get("/openapi.json").status_code == HTTPStatus.OK
 
     def test_explicit_enabled_overrides_production(self) -> None:
