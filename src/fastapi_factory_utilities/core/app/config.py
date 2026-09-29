@@ -92,6 +92,22 @@ class DevelopmentConfig(BaseModel):
     reload: bool = Field(default=False, description="Reload mode")
 
 
+class DocsConfig(BaseModel):
+    """Interactive docs and OpenAPI schema exposure.
+
+    When ``enabled`` is ``None`` (default), docs are exposed only if
+    ``application.environment`` is ``development``. Set ``enabled=True`` to
+    force-on (e.g. staging) or ``enabled=False`` to force-off in any environment.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
+
+    enabled: bool | None = Field(
+        default=None,
+        description="Expose /docs, /redoc, and /openapi.json. None = development only.",
+    )
+
+
 class BaseApplicationConfig(BaseModel):
     """Application configuration abstract class."""
 
@@ -120,6 +136,7 @@ class RootConfig(BaseModel):
     application: BaseApplicationConfig = Field(description="Application configuration")
     server: ServerConfig = Field(description="Server configuration", default_factory=ServerConfig)
     cors: CorsConfig = Field(description="CORS configuration", default_factory=CorsConfig)
+    docs: DocsConfig = Field(description="OpenAPI / docs exposure", default_factory=DocsConfig)
     development: DevelopmentConfig = Field(description="Development configuration", default_factory=DevelopmentConfig)
     csrf: AppCsrfConfig | None = Field(description="CSRF configuration", default=None)
     # Logging configuration

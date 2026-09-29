@@ -7,6 +7,7 @@ from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi_factory_utilities.core.app.config import RootConfig
+from fastapi_factory_utilities.core.app.enums import EnvironmentEnum
 
 
 class MiddlewareArgs(NamedTuple):
@@ -54,17 +55,28 @@ class FastAPIBuilder:
         self._middleware_list.append(MiddlewareArgs(middleware_class=middleware_class, kwargs=kwargs))
         return self
 
+    def _docs_enabled(self) -> bool:
+        """Resolve whether interactive docs / OpenAPI schema should be exposed."""
+        configured = self._root_config.docs.enabled
+        if configured is not None:
+            return configured
+        return self._root_config.application.environment == EnvironmentEnum.DEVELOPMENT
+
     def build(self, lifespan: Any) -> FastAPI:
         """Build the FastAPI application.
 
         Returns:
             FastAPI: The FastAPI application.
         """
+        docs_enabled = self._docs_enabled()
         fastapi = FastAPI(
             title=self._root_config.application.service_name,
             description="",
             version=self._root_config.application.version,
             lifespan=lifespan,
+            docs_url="/docs" if docs_enabled else None,
+            redoc_url="/redoc" if docs_enabled else None,
+            openapi_url="/openapi.json" if docs_enabled else None,
         )
 
         # Opt-in CORS: empty allow_origins (the default) skips middleware entirely.
