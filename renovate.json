@@ -1,0 +1,151 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "AUTHORITATIVE Renovate config for DeerHide/fastapi_factory_utilities (FFU).",
+    "Copy this file to the FFU repo root as renovate.json (first-wave SoT).",
+    "FFU defines and bumps shared OTel/FFU dependency bands here; Laelidona .github-private:ffu-otel-bands mirrors them for consumers.",
+    "Do not extend Laelidona/.github-private from DeerHide (private cross-org; wrong SoT direction).",
+    "Automerge off. No production promotion. Scripts/postUpgradeTasks disabled."
+  ],
+  "extends": ["config:recommended"],
+  "dependencyDashboard": true,
+  "automerge": false,
+  "platformAutomerge": false,
+  "ignoreScripts": true,
+  "postUpgradeTasks": {
+    "commands": [],
+    "fileFilters": [],
+    "executionMode": "update"
+  },
+  "minimumReleaseAge": "72 hours",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
+  "internalChecksFilter": "strict",
+  "prHourlyLimit": 1,
+  "prConcurrentLimit": 3,
+  "branchConcurrentLimit": 3,
+  "separateMajorMinor": true,
+  "separateMultipleMajor": true,
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "automerge": false,
+    "groupName": null,
+    "dependencyDashboardApproval": false,
+    "labels": ["security", "dependencies"]
+  },
+  "labels": ["dependencies", "ffu-sot"],
+  "poetry": {
+    "managerFilePatterns": ["/(^|/)pyproject\\.toml$/"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 4am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "Poetry: bump constraint ranges in pyproject.toml (FFU commits poetry.lock; artifacts refresh with updates)",
+      "matchManagers": ["poetry"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "description": "Group Poetry patch/minor updates",
+      "matchManagers": ["poetry"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "poetry patch/minor",
+      "groupSlug": "poetry-patch-minor"
+    },
+    {
+      "description": "Group GitHub Actions patch/minor updates",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["patch", "minor", "digest", "pinDigest"],
+      "groupName": "github-actions patch/minor",
+      "groupSlug": "gha-patch-minor"
+    },
+    {
+      "description": "Group container image patch/minor/digest updates",
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "matchUpdateTypes": ["patch", "minor", "digest"],
+      "groupName": "container images patch/minor",
+      "groupSlug": "containers-patch-minor"
+    },
+    {
+      "description": "SoT — OTel stable API/SDK/exporter/propagator band (floor 1.45 / ceiling next major). Keep pyproject.toml coherent with this band. After changing floors/ceilings, open a Laelidona/.github-private PR to mirror ffu-otel-bands.json.",
+      "matchDatasources": ["pypi"],
+      "matchManagers": ["poetry"],
+      "matchPackageNames": [
+        "opentelemetry-api",
+        "opentelemetry-sdk",
+        "opentelemetry-exporter-otlp-proto-http",
+        "opentelemetry-exporter-otlp-proto-grpc",
+        "opentelemetry-propagator-b3"
+      ],
+      "allowedVersions": ">=1.45.0 <2.0.0",
+      "groupName": "opentelemetry stable (FFU SoT band)",
+      "groupSlug": "otel-stable-ffu-sot"
+    },
+    {
+      "description": "SoT — OTel 0.x instrumentation/semconv band (floor 0.66b0 / ceiling 1.0). Mirror to Laelidona ffu-otel-bands.json when changed.",
+      "matchDatasources": ["pypi"],
+      "matchManagers": ["poetry"],
+      "matchPackageNames": [
+        "opentelemetry-semantic-conventions",
+        "opentelemetry-instrumentation",
+        "opentelemetry-instrumentation-**"
+      ],
+      "allowedVersions": ">=0.66b0 <1.0.0",
+      "groupName": "opentelemetry instrumentation (FFU SoT band)",
+      "groupSlug": "otel-instrumentation-ffu-sot"
+    },
+    {
+      "description": "SoT — taskiq-dependencies band (Velmios index). Configure Renovate hostRules/secrets for pypi.velmios.io in the DeerHide bot/app settings, not in this file.",
+      "matchDatasources": ["pypi"],
+      "matchManagers": ["poetry"],
+      "matchPackageNames": ["taskiq-dependencies"],
+      "allowedVersions": ">=1.5.8 <2.0.0",
+      "groupName": "taskiq-dependencies (FFU SoT band)",
+      "groupSlug": "taskiq-dependencies-ffu-sot"
+    },
+    {
+      "description": "Isolate major updates; require Dependency Dashboard approval",
+      "matchUpdateTypes": ["major"],
+      "groupName": null,
+      "dependencyDashboardApproval": true,
+      "labels": ["dependencies", "major"]
+    },
+    {
+      "description": "OTel/taskiq majors are SoT band escapes — dashboard approval + follow-up Laelidona mirror PR",
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": [
+        "opentelemetry-api",
+        "opentelemetry-sdk",
+        "opentelemetry-exporter-otlp-proto-http",
+        "opentelemetry-exporter-otlp-proto-grpc",
+        "opentelemetry-propagator-b3",
+        "opentelemetry-semantic-conventions",
+        "opentelemetry-instrumentation",
+        "opentelemetry-instrumentation-**",
+        "taskiq-dependencies"
+      ],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "labels": ["dependencies", "major", "ffu-sot-band"]
+    },
+    {
+      "description": "Keep security remediation PRs ungrouped",
+      "matchJsonata": ["$exists(vulnerabilityFixVersion)"],
+      "groupName": null,
+      "automerge": false,
+      "labels": ["security", "dependencies"]
+    },
+    {
+      "description": "Skip minimum release age for lock-file maintenance",
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "Skip minimum release age for pin-only updates",
+      "matchUpdateTypes": ["pin", "pinDigest"],
+      "minimumReleaseAge": null
+    }
+  ]
+}
