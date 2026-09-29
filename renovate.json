@@ -5,13 +5,14 @@
     "Copy this file to the FFU repo root as renovate.json (first-wave SoT).",
     "FFU defines and bumps shared OTel/FFU dependency bands here; Laelidona .github-private:ffu-otel-bands mirrors them for consumers.",
     "Do not extend Laelidona/.github-private from DeerHide (private cross-org; wrong SoT direction).",
-    "Never update Poetry python language constraint; Poetry ranges use widen (not bump).",
+    "Never update Poetry python language constraint: ignoreDeps=['python'] plus hardened poetry packageRule (matchDepNames + datasources); Poetry ranges use widen (not bump).",
     "Automerge off. No production promotion. Scripts/postUpgradeTasks disabled. No secrets/hostRules in-repo."
   ],
   "extends": ["config:recommended"],
   "dependencyDashboard": true,
   "automerge": false,
   "platformAutomerge": false,
+  "ignoreDeps": ["python"],
   "ignoreScripts": true,
   "postUpgradeTasks": {
     "commands": [],
@@ -44,9 +45,16 @@
   },
   "packageRules": [
     {
-      "description": "Never update Poetry python language constraint (tool.poetry.dependencies.python). Runtime pin is intentional (>=3.12,<3.13); bumping it via PyPI/docker lookups is wrong (see PR #65).",
+      "description": "Never update Poetry python language constraint (tool.poetry.dependencies.python). Runtime pin is intentional (>=3.12,<3.13). Renovate extracts depName=python with packageName=containerbase/python-prebuild via github-releases (historically docker; see renovate#24256/#24335); matchPackageNames=['python'] alone missed it after #67. Belt with top-level ignoreDeps=['python'].",
       "matchManagers": ["poetry"],
-      "matchPackageNames": ["python"],
+      "matchDepNames": ["python"],
+      "enabled": false
+    },
+    {
+      "description": "Complementary Poetry python disable by packageName/datasource variants (docker/pypi historically; containerbase/python-prebuild via github-releases currently). Separate rule so matchers are not AND-combined with matchDepNames.",
+      "matchManagers": ["poetry"],
+      "matchPackageNames": ["python", "containerbase/python-prebuild"],
+      "matchDatasources": ["docker", "pypi", "github-releases"],
       "enabled": false
     },
     {
