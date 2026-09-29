@@ -50,43 +50,43 @@ url = "https://pypi.velmios.io/simple"
 priority = "explicit"
 
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
+python = ">=3.14.7,<3.15"
 structlog = ">=26.1.0,<27.0"
-typer = "^0"
-pydantic = "^2.8.2"
-fastapi = ">=0.115.13,<0.140.0"
-uvicorn = ">=0.51.0,<1"
+typer = "^0.27.2"
+pydantic = "^2.13.5"
+fastapi = ">=0.141.1,<0.141.2"
+uvicorn = ">=0.54.0,<1"
 # ponytail: API + semconv stay mandatory so exceptions/JWT/logging no-op without the SDK.
 # SoT for Velmios OTel pairing: floor at coherent 1.45/0.66, ceiling at next major
 # (api/sdk ^1.45.0 => >=1.45,<2; 0.x packages >=0.66b0,<1 — same shape as uvicorn).
 opentelemetry-api = "^1.45.0"
 opentelemetry-semantic-conventions = ">=0.66b0,<1"
 # ponytail: TaskiqDepends is the FastAPI/worker DI bridge used by core depends.
-taskiq = "^0"
+taskiq = "^0.12.6"
 pyaml = "^26.7.0"
 reactivex = "^4.1.0"
-pyjwt = "^2.10.1"
-aiohttp = { version="^3.12.13", extras=["speedups"] }
-certifi = "^2026.6.17"
+pyjwt = "^2.15.0"
+aiohttp = { version="^3.14.3", extras=["speedups"] }
+certifi = "^2026.7.22"
 fastapi-csrf-protect = "^1.0.7"
 cacheout = "^0.16.0"
 # mongo extra
-beanie = { version = "^2.0.0", optional = true }
-pymongo = { version = ">=4.17.0,<4.18.0", extras = ["encryption"], optional = true }
+beanie = { version = "^2.2.0", optional = true }
+pymongo = { version = ">=4.18.2,<4.18.3", extras = ["encryption"], optional = true }
 opentelemetry-instrumentation-pymongo = { version = ">=0.66b0,<1", optional = true }
 # amqp extra
-aio-pika = { version = "^9.5.7", optional = true }
+aio-pika = { version = "^9.6.2", optional = true }
 opentelemetry-instrumentation-aio-pika = { version = ">=0.66b0,<1", optional = true }
 # s3 extra
-aioboto3 = { version = "^15.0.0", optional = true }
+aioboto3 = { version = "^15.5.0", optional = true }
 opentelemetry-instrumentation-botocore = { version = ">=0.66b0,<1", optional = true }
 # redis extra
-redis = { version = "^8.0", optional = true }
+redis = { version = "^8.1.0", optional = true }
 opentelemetry-instrumentation-redis = { version = ">=0.66b0,<1", optional = true }
 # taskiq extra (Redis broker)
 taskiq-dependencies = { version="^1.5.8", source="velmios", optional = true }
 taskiq-fastapi = { version = "^0.5.0", optional = true }
-taskiq-redis = { version = "^1.0.9", optional = true }
+taskiq-redis = { version = "^1.2.3", optional = true }
 # otel extra (SDK / exporters / generic instrumentors)
 opentelemetry-sdk = { version = "^1.45.0", optional = true }
 opentelemetry-exporter-otlp-proto-http = { version = "^1.45.0", optional = true }
@@ -99,33 +99,33 @@ opentelemetry-instrumentation-urllib3 = { version = ">=0.66b0,<1", optional = tr
 opentelemetry-instrumentation-asyncio = { version = ">=0.66b0,<1", optional = true }
 opentelemetry-instrumentation-system-metrics = { version = ">=0.66b0,<1", optional = true }
 opentelemetry-instrumentation-httpx = { version = ">=0.66b0,<1", optional = true }
-psutil = { version = "^7", optional = true }
+psutil = { version = "^7.2.2", optional = true }
 
 [tool.poetry.group.test]
 optional = true
 
 [tool.poetry.group.test.dependencies]
-mypy = "^1.10.0"
+mypy = "^1.20.2"
 types-requests = "^2.32.0.20240712"
 types-pyyaml = "^6.0.12.20240311"
-pre-commit = "^4.6.0"
+pre-commit = "^4.6.2"
 pyupgrade = "^3.21.2"
-pytest = "^9.0.1"
-pytest-xdist = "^3.6.1"
-pytest-cov = "^7.0.0"
-ruff = "^0"
-pytest-asyncio = ">=0.25,<1.4"
-locust = "^2.45.0"
-testcontainers = {version = "^4.9.0", extras = ["mongodb", "rabbitmq", "redis", "minio"]}
+pytest = "^9.1.1"
+pytest-xdist = "^3.8.0"
+pytest-cov = "^7.1.0"
+ruff = "^0.16.9"
+pytest-asyncio = ">=1.4.0,<1.5"
+locust = "^2.46.6"
+testcontainers = {version = "^4.15.0", extras = ["mongodb", "rabbitmq", "redis", "minio"]}
 types-deprecated = "^1.3.1.20260520"
 types-pygments = "^2.20.0.20260518"
 types-colorama = "^0.4.15.20260508"
-types-protobuf = ">=5.29.1.20241207,<7.0.0.0"
-types-psutil = ">=7.2.2.20260518,<8.0.0.0"
+types-protobuf = ">=6.32.1.20260221,<7.0.0.0"
+types-psutil = ">=7.2.2.20260906,<8.0.0.0"
 types-pyopenssl = "^24.1.0.20240722"
 types-ujson = "^5.10.0.20240515"
 httpx = "^0.28.1"
-minio = "^7"
+minio = "^7.2.20"
 pymongo-async-mock = "^0.1.3"
 
 [tool.poetry.extras]
