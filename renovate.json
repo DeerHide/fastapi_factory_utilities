@@ -79,7 +79,7 @@
         "opentelemetry-exporter-otlp-proto-grpc",
         "opentelemetry-propagator-b3"
       ],
-      "allowedVersions": ">=1.45.0 <2.0.0",
+      "allowedVersions": ">=1.45.0,<2.0.0",
       "groupName": "opentelemetry stable (FFU SoT band)",
       "groupSlug": "otel-stable-ffu-sot"
     },
@@ -92,7 +92,7 @@
         "opentelemetry-instrumentation",
         "opentelemetry-instrumentation-**"
       ],
-      "allowedVersions": ">=0.66b0 <1.0.0",
+      "allowedVersions": ">=0.66b0,<1.0.0",
       "groupName": "opentelemetry instrumentation (FFU SoT band)",
       "groupSlug": "otel-instrumentation-ffu-sot"
     },
@@ -101,7 +101,7 @@
       "matchDatasources": ["pypi"],
       "matchManagers": ["poetry"],
       "matchPackageNames": ["taskiq-dependencies"],
-      "allowedVersions": ">=1.5.8 <2.0.0",
+      "allowedVersions": ">=1.5.8,<2.0.0",
       "groupName": "taskiq-dependencies (FFU SoT band)",
       "groupSlug": "taskiq-dependencies-ffu-sot"
     },
