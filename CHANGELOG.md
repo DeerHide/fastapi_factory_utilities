@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Taskiq scheduler single-flights cron kicks across processes with a Redis
+  ``SET NX`` lock (``<svc>:taskiq:cron-lock:<task_name>:<YYYYMMDDHHMM>``,
+  TTL 70s). API + worker (and multi-replica) pods no longer each enqueue the
+  same periodic task within the matching minute.
+
 ## [7.0.0] - 2026-09-28
 
 ### Changed
