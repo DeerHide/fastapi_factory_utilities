@@ -136,47 +136,51 @@ class TestSchedulerComponentUnits:
 
 
 class TestMinuteGuardSchedulerLoop:
-    """In-process guard against Taskiq's end-of-minute double cron kick."""
+    """Tick handoff from the scheduler loop into the Redis lock."""
 
-    def test_same_minute_skips_without_calling_taskiq(self) -> None:
-        """Wake at hh:00:59.995 after a kick at hh:00:00.009 must not be ready."""
-        loop = MinuteGuardSchedulerLoop(MagicMock())
+    def test_ready_cron_records_pending_tick(self) -> None:
+        """A ready cron task stores the loop tick for the lock key."""
+        scheduler = SingleFlightTaskiqScheduler(
+            broker=MagicMock(),
+            sources=[],
+            redis_url="redis://localhost:6379/0",
+            lock_prefix="svc",
+        )
+        loop = MinuteGuardSchedulerLoop(scheduler)
         task = MagicMock(
             cron="0 * * * *",
             schedule_id="sched-1",
             interval=None,
             time=None,
         )
-        loop.cron_tasks_last_run["sched-1"] = datetime(2026, 10, 1, 12, 0, 0, 9000, tzinfo=timezone.utc)
         now = datetime(2026, 10, 1, 12, 0, 59, 995000, tzinfo=timezone.utc)
 
-        with patch.object(
-            SchedulerLoop,
-            "_is_schedule_ready_to_send",
-            return_value=True,
-        ) as parent:
-            assert loop._is_schedule_ready_to_send(task, now) is False
-            parent.assert_not_called()
+        with patch.object(SchedulerLoop, "_is_schedule_ready_to_send", return_value=True):
+            assert loop._is_schedule_ready_to_send(task, now) is True
 
-    def test_next_minute_defers_to_taskiq(self) -> None:
-        """A wake in the next UTC minute must defer to Taskiq's readiness check."""
-        loop = MinuteGuardSchedulerLoop(MagicMock())
+        assert scheduler.pending_ticks["sched-1"] == now
+
+    def test_not_ready_does_not_record_tick(self) -> None:
+        """A not-ready check must not populate pending_ticks."""
+        scheduler = SingleFlightTaskiqScheduler(
+            broker=MagicMock(),
+            sources=[],
+            redis_url="redis://localhost:6379/0",
+            lock_prefix="svc",
+        )
+        loop = MinuteGuardSchedulerLoop(scheduler)
         task = MagicMock(
             cron="0 * * * *",
             schedule_id="sched-1",
             interval=None,
             time=None,
         )
-        loop.cron_tasks_last_run["sched-1"] = datetime(2026, 10, 1, 12, 0, 0, 9000, tzinfo=timezone.utc)
-        now = datetime(2026, 10, 1, 12, 1, 0, 1000, tzinfo=timezone.utc)
+        now = datetime(2026, 10, 1, 12, 0, 30, tzinfo=timezone.utc)
 
-        with patch.object(
-            SchedulerLoop,
-            "_is_schedule_ready_to_send",
-            return_value=True,
-        ) as parent:
-            assert loop._is_schedule_ready_to_send(task, now) is True
-            parent.assert_called_once_with(task, now)
+        with patch.object(SchedulerLoop, "_is_schedule_ready_to_send", return_value=False):
+            assert loop._is_schedule_ready_to_send(task, now) is False
+
+        assert scheduler.pending_ticks == {}
 
 
 class TestSingleFlightTaskiqScheduler:
@@ -201,6 +205,47 @@ class TestSingleFlightTaskiqScheduler:
             now,
         )
         assert key == "youtube-integration:taskiq:cron-lock:system_synchronization_dispatch:202609301600"
+
+    @pytest.mark.asyncio
+    async def test_on_ready_keys_lock_on_tick_not_wall_clock(self) -> None:
+        """End-of-minute wake must lock on the loop tick minute, not send time."""
+        scheduler = self._scheduler()
+        redis = AsyncMock()
+        redis.set = AsyncMock(side_effect=[True, None])
+        scheduler._redis = redis
+
+        source = AsyncMock()
+        source.pre_send = AsyncMock()
+        source.post_send = AsyncMock()
+        task = MagicMock(
+            task_name="system_synchronization_dispatch",
+            schedule_id="sched-1",
+            task_id=None,
+            labels={},
+            args=(),
+            kwargs={},
+        )
+        tick = datetime(2026, 10, 1, 12, 0, 0, 9000, tzinfo=timezone.utc)
+        late_tick = datetime(2026, 10, 1, 12, 0, 59, 995000, tzinfo=timezone.utc)
+
+        kicker = MagicMock()
+        kicker.with_labels.return_value = kicker
+        kicker.with_task_id.return_value = kicker
+        kicker.kiq = AsyncMock()
+
+        with patch("taskiq.scheduler.scheduler.AsyncKicker", return_value=kicker):
+            scheduler.pending_ticks["sched-1"] = tick
+            await scheduler.on_ready(source, task)
+
+            scheduler.pending_ticks["sched-1"] = late_tick
+            await scheduler.on_ready(source, task)
+
+        assert redis.set.await_count == 2  # noqa: PLR2004
+        first_key = redis.set.await_args_list[0].args[0]
+        second_key = redis.set.await_args_list[1].args[0]
+        assert first_key == second_key
+        assert first_key.endswith(":202610011200")
+        assert kicker.kiq.await_count == 1
 
     @pytest.mark.asyncio
     async def test_on_ready_skips_kick_when_lock_lost(self) -> None:
@@ -262,3 +307,52 @@ class TestSingleFlightTaskiqScheduler:
         kicker_cls.assert_called_once()
         kicker.kiq.assert_awaited_once()
         redis.set.assert_awaited_once()
+
+
+class TestEnsureCronScheduleUnits:
+    """Mock-driven paths for ``SchedulerComponent.ensure_cron_schedule``."""
+
+    @pytest.mark.asyncio
+    async def test_ensure_requires_scheduler_source(self) -> None:
+        """ensure_cron_schedule before configure raises."""
+        component = SchedulerComponent(name_suffix="svc")
+        with pytest.raises(ValueError, match="Scheduler source"):
+            await component.ensure_cron_schedule("task", "* * * * *")
+
+    @pytest.mark.asyncio
+    async def test_ensure_noop_when_matching_stable_row(self) -> None:
+        """Matching schedule_id + cron is a no-op."""
+        component = SchedulerComponent(name_suffix="svc")
+        source = AsyncMock()
+        source.get_schedules.return_value = [
+            MagicMock(task_name="task", schedule_id="task", cron="0 * * * *"),
+        ]
+        component._scheduler_source = source
+        component._schedulers_tasks["task"] = MagicMock()
+
+        await component.ensure_cron_schedule("task", "0 * * * *")
+
+        source.delete_schedule.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_ensure_replaces_legacy_and_cron_change(self) -> None:
+        """Legacy random ids and cron changes are deleted then re-inserted."""
+        component = SchedulerComponent(name_suffix="svc")
+        source = AsyncMock()
+        source.get_schedules.return_value = [
+            MagicMock(task_name="task", schedule_id="random-uuid", cron="0 * * * *"),
+        ]
+        component._scheduler_source = source
+
+        decorated = MagicMock()
+        kicker = MagicMock()
+        kicker.with_schedule_id.return_value = kicker
+        kicker.schedule_by_cron = AsyncMock()
+        decorated.kicker.return_value = kicker
+        component._schedulers_tasks["task"] = decorated
+
+        await component.ensure_cron_schedule("task", "*/5 * * * *")
+
+        source.delete_schedule.assert_awaited_once_with("random-uuid")
+        kicker.with_schedule_id.assert_called_once_with("task")
+        kicker.schedule_by_cron.assert_awaited_once_with(source, "*/5 * * * *")

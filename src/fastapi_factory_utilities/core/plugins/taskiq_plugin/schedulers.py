@@ -33,48 +33,46 @@ _logger = get_logger(__package__)
 _CRON_LOCK_TTL_SECONDS: int = 70
 
 
-def _utc_minute_bucket(dt: datetime) -> datetime:
-    """Floor ``dt`` to the UTC minute (seconds and microseconds cleared)."""
-    return dt.astimezone(timezone.utc).replace(second=0, microsecond=0)
-
-
 class MinuteGuardSchedulerLoop(SchedulerLoop):
-    """SchedulerLoop that refuses a second cron kick in the same UTC minute."""
+    """SchedulerLoop that hands the tick clock to ``SingleFlightTaskiqScheduler``."""
 
     # ponytail: Taskiq's ``is_cron_task_now`` uses
     # ``round((now - last_run).total_seconds()) < 60``, so a wake at
     # ``hh:00:59.995`` after a kick at ``hh:00:00.009`` passes the guard while
-    # ``pycron.is_now`` still sees minute 0 and re-fires (stream message lands at
-    # ``hh:01:00.00x``). Delete this subclass once Taskiq compares UTC minutes
-    # instead of rounded seconds.
+    # ``pycron.is_now`` still sees minute 0. Keying the Redis lock on
+    # ``datetime.now()`` at send time then buckets into minute 01 and both
+    # kicks land. This subclass only records the loop tick so the lock key
+    # uses that minute. Delete once Taskiq compares UTC minutes instead of
+    # rounded seconds (and ``on_ready`` receives the tick).
 
     def _is_schedule_ready_to_send(
         self,
         task: ScheduledTask,
         now: datetime,
     ) -> bool:
-        """Skip cron tasks already kicked in the current UTC minute.
+        """Record the loop tick when Taskiq marks a cron task ready.
 
         Args:
             task: Scheduled task under consideration.
             now: Current wall clock from the scheduler loop.
 
         Returns:
-            ``False`` when a cron task already ran this UTC minute; otherwise
             Taskiq's own readiness result.
         """
-        last: datetime | None = self.cron_tasks_last_run.get(task.schedule_id)
-        if task.cron is not None and last is not None and _utc_minute_bucket(last) == _utc_minute_bucket(now):
-            return False
-        return super()._is_schedule_ready_to_send(task, now)
+        ready = super()._is_schedule_ready_to_send(task, now)
+        if ready and task.cron is not None:
+            scheduler = self.scheduler
+            if isinstance(scheduler, SingleFlightTaskiqScheduler):
+                scheduler.pending_ticks[task.schedule_id] = now
+        return ready
 
 
 async def run_minute_guard_scheduler_task(scheduler: TaskiqScheduler) -> None:
-    """Run the scheduler loop with per-minute cron dedup (replaces ``run_scheduler_task``).
+    """Run the scheduler loop with tick-handed cron locks.
 
     Starts each schedule source once, then runs
-    :class:`MinuteGuardSchedulerLoop` forever — the same shape as Taskiq's
-    ``run_scheduler_task``, but with the end-of-minute double-kick guard.
+    :class:`MinuteGuardSchedulerLoop` forever — same shape as Taskiq's
+    ``run_scheduler_task``, but the lock keys on the loop tick minute.
 
     Args:
         scheduler: Configured Taskiq scheduler (broker + sources).
@@ -93,7 +91,8 @@ class SingleFlightTaskiqScheduler(TaskiqScheduler):
     would each kick the same cron within the matching minute. Before kicking,
     we claim ``<lock_prefix>:taskiq:cron-lock:<task_name>:<YYYYMMDDHHMM>`` with
     ``SET NX EX 70``; losers skip the kick. Keyed by ``task_name`` so a
-    duplicate Redis schedule row still sends once.
+    duplicate Redis schedule row still sends once. The minute bucket comes from
+    the scheduler loop tick (via ``pending_ticks``), not wall clock at send.
     """
 
     _LOCK_TTL_SECONDS: ClassVar[int] = _CRON_LOCK_TTL_SECONDS
@@ -120,6 +119,7 @@ class SingleFlightTaskiqScheduler(TaskiqScheduler):
         self._redis_url: str = redis_url
         self._lock_prefix: str = lock_prefix
         self._redis: Redis | None = None
+        self.pending_ticks: dict[str, datetime] = {}
 
     async def startup(self) -> None:
         """Open the Redis lock client, then start the broker."""
@@ -140,7 +140,7 @@ class SingleFlightTaskiqScheduler(TaskiqScheduler):
         Args:
             lock_prefix: Service key prefix.
             task_name: Registered Taskiq task name.
-            now: Wall clock used for the minute bucket.
+            now: Tick (or wall clock) used for the minute bucket.
 
         Returns:
             Redis key unique per ``(task_name, UTC minute)``.
@@ -148,11 +148,12 @@ class SingleFlightTaskiqScheduler(TaskiqScheduler):
         minute: str = now.astimezone(timezone.utc).strftime("%Y%m%d%H%M")
         return f"{lock_prefix}:taskiq:cron-lock:{task_name}:{minute}"
 
-    async def _try_acquire_cron_lock(self, task_name: str) -> bool:
+    async def _try_acquire_cron_lock(self, task_name: str, tick: datetime) -> bool:
         """Claim the per-minute cron lock for ``task_name``.
 
         Args:
             task_name: Registered Taskiq task name.
+            tick: Scheduler loop clock that decided the task was ready.
 
         Returns:
             ``True`` when this process won the lock (or Redis is unavailable
@@ -165,11 +166,7 @@ class SingleFlightTaskiqScheduler(TaskiqScheduler):
                 task_name=task_name,
             )
             return True
-        key: str = self.cron_lock_key(
-            self._lock_prefix,
-            task_name,
-            datetime.now(timezone.utc),
-        )
+        key: str = self.cron_lock_key(self._lock_prefix, task_name, tick)
         acquired = await self._redis.set(
             key,
             "1",
@@ -185,7 +182,8 @@ class SingleFlightTaskiqScheduler(TaskiqScheduler):
             source: Schedule source that marked the task ready.
             task: Scheduled task to kick.
         """
-        if not await self._try_acquire_cron_lock(task.task_name):
+        tick = self.pending_ticks.pop(task.schedule_id, datetime.now(timezone.utc))
+        if not await self._try_acquire_cron_lock(task.task_name, tick):
             _logger.info(
                 "Skipping duplicate scheduled kick; another scheduler won the cron lock.",
                 task_name=task.task_name,
@@ -304,6 +302,42 @@ class SchedulerComponent:
                 )
                 removed += 1
         return removed
+
+    async def ensure_cron_schedule(self, task_name: str, cron: str) -> None:
+        """Register ``task_name`` on ``cron`` with ``schedule_id == task_name``.
+
+        Idempotent and race-safe across pods: a matching row is a no-op;
+        legacy random-id rows and cron changes are deleted then re-inserted
+        with a stable id. Concurrent pods converge on one data key; a
+        duplicate list entry is harmless (loop dedups by ``schedule_id``,
+        lock by ``task_name``).
+
+        Args:
+            task_name: Registered Taskiq task name (also used as schedule id).
+            cron: Cron expression to persist.
+
+        Raises:
+            ValueError: If the scheduler source is not initialized or the
+                task is not registered.
+        """
+        if self._scheduler_source is None:
+            raise ValueError("Scheduler source is not initialized")
+        existing = [
+            schedule for schedule in await self._scheduler_source.get_schedules() if schedule.task_name == task_name
+        ]
+        if len(existing) == 1 and existing[0].schedule_id == task_name and existing[0].cron == cron:
+            return
+        for schedule in existing:
+            await self._scheduler_source.delete_schedule(schedule.schedule_id)
+        await (
+            self.get_task(task_name).kicker().with_schedule_id(task_name).schedule_by_cron(self._scheduler_source, cron)
+        )
+        _logger.info(
+            "Cron schedule ensured.",
+            task_name=task_name,
+            cron=cron,
+            replaced=len(existing),
+        )
 
     async def startup(self, app: FastAPI) -> None:
         """Start the scheduler."""
