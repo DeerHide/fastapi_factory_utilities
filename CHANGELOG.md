@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.3] - 2026-10-01
+
+### Security
+
+- Lockfile bumps ``PyJWT`` from 2.13.0 to 2.15.1 (fixes High/Critical
+  advisories that blocked the v7.0.1 tag CI Grype gate: GHSA-ffc3-869f-jxw9 and
+  related). ``v7.0.2`` was tagged before this section existed; use ``7.0.3``.
+
 ## [7.0.1] - 2026-10-01
 
 ### Fixed
@@ -20,12 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   last_run).total_seconds()) < 60`` guard lets a wake at ``hh:00:59.995``
   re-fire while ``pycron`` still sees minute 0; the stream message then lands
   at ``hh:01:00.00x``.
-
-### Security
-
-- Lockfile bumps ``PyJWT`` from 2.13.0 to 2.15.1 (fixes High/Critical
-  advisories that blocked the tag CI Grype gate: GHSA-ffc3-869f-jxw9 and
-  related).
 
 ## [7.0.0] - 2026-09-28
 
@@ -1106,8 +1108,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.2...HEAD
-[7.0.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.1...v7.0.2
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.3...HEAD
+[7.0.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.1...v7.0.3
 [7.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.0...v7.0.1
 [7.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.3...v7.0.0
 [6.5.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.2...v6.5.3
