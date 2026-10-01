@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.4] - 2026-10-01
+
+### Fixed
+
+- Taskiq cron lock keys on the scheduler loop tick minute (via
+  ``pending_ticks``), not wall clock at send time, so an end-of-minute
+  double-ready still singles-flights across pods.
+- ``SchedulerComponent.ensure_cron_schedule`` registers crons with
+  ``schedule_id == task_name``, cleans legacy random-id rows, and replaces
+  the cron expression when config changes.
+
 ## [7.0.3] - 2026-10-01
 
 ### Security
@@ -1108,7 +1119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.3...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.4...HEAD
+[7.0.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.3...v7.0.4
 [7.0.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.1...v7.0.3
 [7.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.0...v7.0.1
 [7.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.3...v7.0.0
