@@ -19,7 +19,8 @@ from taskiq import (
     ScheduleSource,
     TaskiqScheduler,
 )
-from taskiq.api import run_receiver_task, run_scheduler_task
+from taskiq.api import run_receiver_task
+from taskiq.cli.scheduler.run import SchedulerLoop
 from taskiq.scheduler.scheduled_task import ScheduledTask
 from taskiq_redis import (
     ListRedisScheduleSource,
@@ -30,6 +31,58 @@ from taskiq_redis import (
 _logger = get_logger(__package__)
 
 _CRON_LOCK_TTL_SECONDS: int = 70
+
+
+def _utc_minute_bucket(dt: datetime) -> datetime:
+    """Floor ``dt`` to the UTC minute (seconds and microseconds cleared)."""
+    return dt.astimezone(timezone.utc).replace(second=0, microsecond=0)
+
+
+class MinuteGuardSchedulerLoop(SchedulerLoop):
+    """SchedulerLoop that refuses a second cron kick in the same UTC minute."""
+
+    # ponytail: Taskiq's ``is_cron_task_now`` uses
+    # ``round((now - last_run).total_seconds()) < 60``, so a wake at
+    # ``hh:00:59.995`` after a kick at ``hh:00:00.009`` passes the guard while
+    # ``pycron.is_now`` still sees minute 0 and re-fires (stream message lands at
+    # ``hh:01:00.00x``). Delete this subclass once Taskiq compares UTC minutes
+    # instead of rounded seconds.
+
+    def _is_schedule_ready_to_send(
+        self,
+        task: ScheduledTask,
+        now: datetime,
+    ) -> bool:
+        """Skip cron tasks already kicked in the current UTC minute.
+
+        Args:
+            task: Scheduled task under consideration.
+            now: Current wall clock from the scheduler loop.
+
+        Returns:
+            ``False`` when a cron task already ran this UTC minute; otherwise
+            Taskiq's own readiness result.
+        """
+        last: datetime | None = self.cron_tasks_last_run.get(task.schedule_id)
+        if task.cron is not None and last is not None and _utc_minute_bucket(last) == _utc_minute_bucket(now):
+            return False
+        return super()._is_schedule_ready_to_send(task, now)
+
+
+async def run_minute_guard_scheduler_task(scheduler: TaskiqScheduler) -> None:
+    """Run the scheduler loop with per-minute cron dedup (replaces ``run_scheduler_task``).
+
+    Starts each schedule source once, then runs
+    :class:`MinuteGuardSchedulerLoop` forever — the same shape as Taskiq's
+    ``run_scheduler_task``, but with the end-of-minute double-kick guard.
+
+    Args:
+        scheduler: Configured Taskiq scheduler (broker + sources).
+    """
+    for source in scheduler.sources:
+        await source.startup()
+    while True:
+        await MinuteGuardSchedulerLoop(scheduler).run()
 
 
 class SingleFlightTaskiqScheduler(TaskiqScheduler):
@@ -273,7 +326,9 @@ class SchedulerComponent:
         # State here — taskiq_fastapi does copy.copy(asgi_state) and State recurses.
         taskiq_fastapi.populate_dependency_context(self._stream_broker, app)
         self._worker_task: asyncio.Task[None] = asyncio.create_task(run_receiver_task(self._stream_broker))
-        self._scheduler_task: asyncio.Task[None] = asyncio.create_task(run_scheduler_task(self._scheduler))
+        self._scheduler_task: asyncio.Task[None] = asyncio.create_task(
+            run_minute_guard_scheduler_task(self._scheduler),
+        )
         _logger.info("Worker and scheduler tasks started")
 
     async def shutdown(self) -> None:

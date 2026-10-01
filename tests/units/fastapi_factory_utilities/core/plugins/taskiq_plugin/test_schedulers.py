@@ -6,8 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
+from taskiq.cli.scheduler.run import SchedulerLoop
 
 from fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers import (
+    MinuteGuardSchedulerLoop,
     SchedulerComponent,
     SingleFlightTaskiqScheduler,
 )
@@ -118,7 +120,7 @@ class TestSchedulerComponentUnits:
                 _hang,
             ),
             patch(
-                "fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers.run_scheduler_task",
+                "fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers.run_minute_guard_scheduler_task",
                 _hang,
             ),
             patch("taskiq_fastapi.populate_dependency_context"),
@@ -131,6 +133,50 @@ class TestSchedulerComponentUnits:
             assert component.scheduler_source is component._scheduler_source
 
             await component.shutdown()
+
+
+class TestMinuteGuardSchedulerLoop:
+    """In-process guard against Taskiq's end-of-minute double cron kick."""
+
+    def test_same_minute_skips_without_calling_taskiq(self) -> None:
+        """Wake at hh:00:59.995 after a kick at hh:00:00.009 must not be ready."""
+        loop = MinuteGuardSchedulerLoop(MagicMock())
+        task = MagicMock(
+            cron="0 * * * *",
+            schedule_id="sched-1",
+            interval=None,
+            time=None,
+        )
+        loop.cron_tasks_last_run["sched-1"] = datetime(2026, 10, 1, 12, 0, 0, 9000, tzinfo=timezone.utc)
+        now = datetime(2026, 10, 1, 12, 0, 59, 995000, tzinfo=timezone.utc)
+
+        with patch.object(
+            SchedulerLoop,
+            "_is_schedule_ready_to_send",
+            return_value=True,
+        ) as parent:
+            assert loop._is_schedule_ready_to_send(task, now) is False
+            parent.assert_not_called()
+
+    def test_next_minute_defers_to_taskiq(self) -> None:
+        """A wake in the next UTC minute must defer to Taskiq's readiness check."""
+        loop = MinuteGuardSchedulerLoop(MagicMock())
+        task = MagicMock(
+            cron="0 * * * *",
+            schedule_id="sched-1",
+            interval=None,
+            time=None,
+        )
+        loop.cron_tasks_last_run["sched-1"] = datetime(2026, 10, 1, 12, 0, 0, 9000, tzinfo=timezone.utc)
+        now = datetime(2026, 10, 1, 12, 1, 0, 1000, tzinfo=timezone.utc)
+
+        with patch.object(
+            SchedulerLoop,
+            "_is_schedule_ready_to_send",
+            return_value=True,
+        ) as parent:
+            assert loop._is_schedule_ready_to_send(task, now) is True
+            parent.assert_called_once_with(task, now)
 
 
 class TestSingleFlightTaskiqScheduler:
