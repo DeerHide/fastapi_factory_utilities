@@ -8,7 +8,7 @@ from typing import Annotated, Any, ClassVar, Generic, NewType, TypeVar, cast
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from fastapi_factory_utilities.core.plugins.aiopika_plugin.types import PartStr
-from fastapi_factory_utilities.core.utils.api import ApiField, ApiResponseModelAbstract, SearchableEntity
+from fastapi_factory_utilities.core.utils.api import ApiField, ApiResponseModelAbstract, SearchableEntity, redact
 
 EntityName = NewType("EntityName", PartStr)
 UseCaseName = NewType("UseCaseName", PartStr)
@@ -94,9 +94,12 @@ class AuditEventObject(SearchableEntity, ApiResponseModelAbstract, BaseModel, Ge
 
     @classmethod
     def pre_publish_hook(cls, entity: AuditEventActorGeneric) -> AuditEventActorGeneric:
-        """Provide a default implementation to filter the entity.
+        """Redact :class:`~fastapi_factory_utilities.core.utils.api.Redacted` fields.
 
-        Can be use to expurgate sensitive data from the entity.
+        Default implementation runs :func:`~fastapi_factory_utilities.core.utils.api.redact`
+        so services can mark sensitive fields declaratively. Override to add
+        custom filtering; call ``super().pre_publish_hook(entity)`` first when
+        you still want marker-based redaction.
 
         Args:
             entity: The entity to filter.
@@ -104,4 +107,4 @@ class AuditEventObject(SearchableEntity, ApiResponseModelAbstract, BaseModel, Ge
         Returns:
             The filtered entity.
         """
-        return entity
+        return redact(entity)
