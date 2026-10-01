@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.1] - 2026-10-01
+
 ### Fixed
 
 - Taskiq scheduler single-flights cron kicks across processes with a Redis
   ``SET NX`` lock (``<svc>:taskiq:cron-lock:<task_name>:<YYYYMMDDHHMM>``,
   TTL 70s). API + worker (and multi-replica) pods no longer each enqueue the
   same periodic task within the matching minute.
+- Taskiq scheduler loop refuses a second cron kick in the same UTC minute
+  (``MinuteGuardSchedulerLoop``). Upstream Taskiq's ``round((now -
+  last_run).total_seconds()) < 60`` guard lets a wake at ``hh:00:59.995``
+  re-fire while ``pycron`` still sees minute 0; the stream message then lands
+  at ``hh:01:00.00x``.
 
 ## [7.0.0] - 2026-09-28
 
@@ -1093,7 +1100,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.3...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.1...HEAD
+[7.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.0...v7.0.1
+[7.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.3...v7.0.0
 [6.5.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.2...v6.5.3
 [6.5.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.1...v6.5.2
 [6.5.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.0...v6.5.1
