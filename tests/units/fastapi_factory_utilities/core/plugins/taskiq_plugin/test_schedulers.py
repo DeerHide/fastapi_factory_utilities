@@ -146,7 +146,7 @@ class TestMinuteGuardSchedulerLoop:
             redis_url="redis://localhost:6379/0",
             lock_prefix="svc",
         )
-        loop = MinuteGuardSchedulerLoop(scheduler)
+        loop = MinuteGuardSchedulerLoop(scheduler, event_loop=asyncio.new_event_loop())
         task = MagicMock(
             cron="0 * * * *",
             schedule_id="sched-1",
@@ -168,7 +168,7 @@ class TestMinuteGuardSchedulerLoop:
             redis_url="redis://localhost:6379/0",
             lock_prefix="svc",
         )
-        loop = MinuteGuardSchedulerLoop(scheduler)
+        loop = MinuteGuardSchedulerLoop(scheduler, event_loop=asyncio.new_event_loop())
         task = MagicMock(
             cron="0 * * * *",
             schedule_id="sched-1",
