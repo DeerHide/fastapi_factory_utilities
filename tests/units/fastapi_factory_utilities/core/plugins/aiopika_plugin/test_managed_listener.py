@@ -112,6 +112,74 @@ class TestAbstractManagedListenerPipeline:
         hold.ack.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_gate_saturated_uses_hook_outcome(self) -> None:
+        """on_gate_saturated outcome is used for settlement when the gate is full."""
+        gate = LocalConcurrencyGate(telemetry=NoOpConsumerTelemetry())
+        gate.configure(global_limit=1)
+        release = asyncio.Event()
+
+        class DelayedGateListener(_ManagedListener):
+            async def process_message(self, message: Msg) -> MessageDeliveryOutcome | None:
+                del message
+                await release.wait()
+                return None
+
+            async def on_gate_saturated(self, message: Msg) -> MessageDeliveryOutcome:
+                del message
+                return MessageDeliveryOutcome.REQUEUE_DELAYED
+
+        listener = DelayedGateListener(queue=MagicMock(), concurrency_gate=gate, telemetry=NoOpConsumerTelemetry())
+
+        hold = self._incoming({"data": {"msg": "hold"}})
+        hold_task = asyncio.create_task(listener._on_message(hold))  # type: ignore[attr-defined]
+        await asyncio.sleep(0)
+
+        blocked = self._incoming({"data": {"msg": "blocked"}})
+        await listener._on_message(blocked)  # type: ignore[attr-defined]
+
+        blocked.reject.assert_awaited_once_with(requeue=False)
+        release.set()
+        await hold_task
+        hold.ack.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_listen_sets_qos_when_prefetch_configured(self) -> None:
+        """listen() applies basic.qos when prefetch_count is set."""
+        channel = MagicMock()
+        channel.set_qos = AsyncMock()
+        queue = MagicMock()
+        queue.queue = MagicMock()
+        queue.queue.channel = channel
+        queue.queue.consume = AsyncMock(return_value="ctag")
+        queue.exclusive = False
+
+        class PrefetchListener(_ManagedListener):
+            PREFETCH_COUNT = 2
+
+        listener = PrefetchListener(queue=queue, telemetry=NoOpConsumerTelemetry())
+        await listener.listen()
+
+        channel.set_qos.assert_awaited_once_with(prefetch_count=2)
+        queue.queue.consume.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_listen_skips_qos_when_prefetch_unset(self) -> None:
+        """listen() leaves broker defaults when prefetch_count is None."""
+        channel = MagicMock()
+        channel.set_qos = AsyncMock()
+        queue = MagicMock()
+        queue.queue = MagicMock()
+        queue.queue.channel = channel
+        queue.queue.consume = AsyncMock(return_value="ctag")
+        queue.exclusive = False
+
+        listener = _ManagedListener(queue=queue, telemetry=NoOpConsumerTelemetry())
+        await listener.listen()
+
+        channel.set_qos.assert_not_called()
+        queue.queue.consume.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_process_success_acks(self) -> None:
         """Successful process_message settles as ACK."""
         listener = _ManagedListener(queue=MagicMock(), telemetry=NoOpConsumerTelemetry())
