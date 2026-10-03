@@ -54,7 +54,7 @@ python = ">=3.12,<3.13"
 structlog = ">=26.1.0,<27.0"
 typer = "^0"
 pydantic = "^2.8.2"
-fastapi = ">=0.115.13,<0.142.0"
+fastapi = ">=0.115.13,<0.143.0"
 uvicorn = ">=0.51.0,<1"
 # ponytail: API + semconv stay mandatory so exceptions/JWT/logging no-op without the SDK.
 # SoT for Velmios OTel pairing: floor at coherent 1.45/0.66, ceiling at next major
