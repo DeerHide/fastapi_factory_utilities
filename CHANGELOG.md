@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- README and knowledge docs: Production/Stable badge, ``RedisPlugin``, JWT sample
+  uses ``JWTAuthenticationServiceAbstract``, plugin directory names
+  (``*_plugin``), S3/Redis next to Taskiq, dependency floors pointed at
+  ``pyproject.toml``.
+
 ## [7.2.0] - 2026-10-02
 
 ### Added

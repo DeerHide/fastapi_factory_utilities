@@ -42,7 +42,8 @@ fastapi_factory_utilities/
 │       │   │   │   ├── 📄 depends.py          # FastAPI dependencies
 │       │   │   │   ├── 📄 helpers.py          # PersistedEntity helper
 │       │   │   │   ├── 📄 mockers.py          # Test mocking utilities
-│       │   │   │   └── 📄 exceptions.py       # ODM exceptions
+│       │   │   │   ├── 📄 exceptions.py       # ODM exceptions
+│       │   │   │   └── 📁 encryption/         # CSFLE (Vault unwrap + schema map)
 │       │   │   │
 │       │   │   ├── 📁 opentelemetry_plugin/   # OpenTelemetry Plugin
 │       │   │   │   ├── 📄 plugins.py          # OpenTelemetryPlugin
@@ -52,34 +53,36 @@ fastapi_factory_utilities/
 │       │   │   │   ├── 📄 exceptions.py       # OTel exceptions
 │       │   │   │   └── 📁 instruments/        # Auto-instrumentation modules
 │       │   │   │
-│       │   │   ├── 📁 taskiq_plugin/         # Taskiq Task Queue Plugin
-│       │   │   │   ├── 📄 plugin.py           # TaskiqPlugin implementation
+│       │   │   ├── 📁 taskiq_plugin/          # Taskiq Task Queue Plugin
+│       │   │   │   ├── 📄 plugins.py          # TaskiqPlugin implementation
 │       │   │   │   ├── 📄 schedulers.py       # Task scheduling
 │       │   │   │   ├── 📄 depends.py          # FastAPI dependencies
 │       │   │   │   └── 📄 exceptions.py       # Taskiq exceptions
 │       │   │   │
-│       │   │   ├── 📁 aiopika/                # RabbitMQ Plugin
+│       │   │   ├── 📁 aiopika_plugin/         # RabbitMQ Plugin
 │       │   │   │   ├── 📄 plugins.py          # AiopikaPlugin implementation
 │       │   │   │   ├── 📄 abstract.py         # Abstract base classes
 │       │   │   │   ├── 📄 exchange.py         # Exchange management
 │       │   │   │   ├── 📄 queue.py            # Queue management
-│       │   │   │   ├── 📄 message.py          # Message handling
 │       │   │   │   ├── 📄 types.py            # Type definitions
 │       │   │   │   ├── 📄 depends.py          # FastAPI dependencies
 │       │   │   │   ├── 📄 exceptions.py       # Aiopika exceptions
 │       │   │   │   ├── 📁 listener/           # Message consumers
 │       │   │   │   └── 📁 publisher/          # Message publishers
 │       │   │   │
-│       │   │   └── 📁 aiohttp/                # HTTP Client Plugin
-│       │   │       ├── 📄 plugins.py          # AioHttpPlugin implementation
-│       │   │       ├── 📄 builder.py          # Client session builder
-│       │   │       ├── 📄 configs.py          # AioHttpConfig
-│       │   │       ├── 📄 resources.py        # Resource abstraction
-│       │   │       ├── 📄 factories.py        # Resource factories
-│       │   │       ├── 📄 constants.py        # Constants
-│       │   │       ├── 📄 depends.py          # FastAPI dependencies
-│       │   │       ├── 📄 mockers.py          # Test mocking utilities
-│       │   │       └── 📄 exceptions.py       # HTTP exceptions
+│       │   │   ├── 📁 aiohttp_plugin/         # HTTP Client Plugin
+│       │   │   │   ├── 📄 plugins.py          # AioHttpPlugin implementation
+│       │   │   │   ├── 📄 builder.py          # Client session builder
+│       │   │   │   ├── 📄 configs.py          # AioHttpConfig
+│       │   │   │   ├── 📄 resources.py        # Resource abstraction
+│       │   │   │   ├── 📄 factories.py        # Resource factories
+│       │   │   │   ├── 📄 constants.py        # Constants
+│       │   │   │   ├── 📄 depends.py          # FastAPI dependencies
+│       │   │   │   ├── 📄 mockers.py          # Test mocking utilities
+│       │   │   │   └── 📄 exceptions.py       # HTTP exceptions
+│       │   │   │
+│       │   │   ├── 📁 s3_plugin/              # MinIO / S3 Plugin
+│       │   │   └── 📁 redis_plugin/           # Standalone Redis / Valkey Plugin
 │       │   │
 │       │   ├── 📁 security/                   # Security & Authentication
 │       │   │   ├── 📄 __init__.py

@@ -9,6 +9,8 @@
 **FastAPI Factory Utilities** is a comprehensive Python library designed to accelerate the development of production-ready microservices. It provides a plugin-based architecture that consolidates common patterns for building modern Python applications with FastAPI, featuring built-in support for:
 
 - **Database Operations** via Beanie ODM (MongoDB)
+- **Object Storage** via S3Plugin (MinIO / S3)
+- **Cache / keys** via RedisPlugin (separate from Taskiq)
 - **Message Queuing** via AioPika (RabbitMQ)
 - **Task Processing** via Taskiq (Redis)
 - **Observability** via OpenTelemetry
@@ -34,13 +36,15 @@
 
 | Category | Technology | Version | Purpose |
 |----------|------------|---------|---------|
-| **Web Framework** | FastAPI | >= 0.115.13 | REST API framework |
+| **Web Framework** | FastAPI | see `pyproject.toml` (`>=0.115.13`) | REST API framework |
 | **Data Validation** | Pydantic | ^2.8.2 | Type-safe data models |
-| **ODM** | Beanie | ^2.0.0 | MongoDB async ODM |
-| **Message Broker** | AioPika | ^9.5.7 | RabbitMQ client |
-| **Task Queue** | Taskiq | ^0.3.5 | Distributed task processing |
-| **Observability** | OpenTelemetry | ^1.26.0 | Distributed tracing & metrics |
-| **Logging** | Structlog | >= 24.1 | Structured logging |
+| **ODM** | Beanie | ^2.0.0 (extra `mongo`) | MongoDB async ODM |
+| **Message Broker** | AioPika | ^9.5.7 (extra `amqp`) | RabbitMQ client |
+| **Object Storage** | aioboto3 | extra `s3` | MinIO / S3 |
+| **Cache / keys** | Redis | extra `redis` | Standalone `RedisPlugin` |
+| **Task Queue** | Taskiq | extra `taskiq` | Distributed task processing |
+| **Observability** | OpenTelemetry | API `^1.45.0`, instrumentation `>=0.66b0,<1` | Distributed tracing & metrics |
+| **Logging** | Structlog | `>=26.1.0,<27.0` | Structured logging |
 | **HTTP Client** | aiohttp | ^3.12.13 | Async HTTP operations |
 | **Package Manager** | Poetry | - | Dependency management |
 
@@ -68,12 +72,12 @@
           ▼                   ▼                   ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
 │   ODM Plugin    │  │  OpenTelemetry  │  │  Taskiq Plugin  │
-│   (MongoDB)     │  │     Plugin      │  │    (Redis)      │
+│   (MongoDB)     │  │     Plugin      │  │  (task queue)   │
 └─────────────────┘  └─────────────────┘  └─────────────────┘
           │                   │                   │
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  AioPika Plugin │  │  AioHttp Plugin │  │ Status Service  │
-│   (RabbitMQ)    │  │  (HTTP Client)  │  │ (Health Check)  │
+│  AioPika Plugin │  │  S3 / Redis     │  │ Status Service  │
+│   (RabbitMQ)    │  │  Plugins        │  │ (Health Check)  │
 └─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
@@ -118,6 +122,8 @@ fastapi_factory_utilities/
 - `TaskiqPlugin` - Background task processing
 - `AiopikaPlugin` - RabbitMQ messaging
 - `AioHttpPlugin` - Instrumented HTTP client
+- `S3Plugin` - MinIO / S3 via aioboto3
+- `RedisPlugin` - Standalone Redis / Valkey client
 
 ### 3. Security (`core/security/`)
 - JWT Bearer token authentication

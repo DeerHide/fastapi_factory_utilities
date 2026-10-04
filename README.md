@@ -2,7 +2,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/DeerHide/fastapi_factory_utilities)
+[![Development Status](https://img.shields.io/badge/status-production--stable-green.svg)](https://github.com/DeerHide/fastapi_factory_utilities)
 
 **A comprehensive library to build production-ready microservices with FastAPI, Beanie, Taskiq, AioPika, and OpenTelemetry.**
 
@@ -275,6 +275,7 @@ Each plugin extends your application with specific capabilities:
 | **`AioPikaPlugin`** | RabbitMQ messaging capabilities | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
 | **`AioHttpPlugin`** | Instrumented HTTP client | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
 | **`S3Plugin`** | Async MinIO / S3 (aioboto3), named buckets | [S3 skill reference](https://github.com/DeerHide/agent_skills/blob/main/skills/fastapi-factory-utilities/references/s3-plugin.md) |
+| **`RedisPlugin`** | Standalone Redis / Valkey client (`name_suffix`, `build_key`) | [Redis skill reference](https://github.com/DeerHide/agent_skills/blob/main/skills/fastapi-factory-utilities/references/redis-plugin.md) |
 
 Plugins follow a consistent lifecycle:
 1. `on_load()` - Initial setup when plugin is registered
@@ -291,25 +292,18 @@ Plugins follow a consistent lifecycle:
 
 ```python
 from fastapi_factory_utilities.core.security.jwt import (
-    JWTAuthenticationService,
+    JWTAuthenticationServiceAbstract,
     JWTBearerAuthenticationConfig,
 )
 
-# Configure JWT authentication (authorized_audiences is required and enforced)
+# authorized_audiences is required and always passed to PyJWT decode
 jwt_config = JWTBearerAuthenticationConfig(
     issuer="https://your-auth-server.com",
     authorized_audiences=["your-api"],
 )
-
-# Use in FastAPI dependencies
-from fastapi import Depends
-
-async def get_current_user(
-    token: str = Depends(JWTAuthenticationService),
-):
-    # Token is automatically verified
-    return token.sub
 ```
+
+Subclass `JWTAuthenticationServiceAbstract` with a decoder and verifier; do not `Depends()` the abstract class. Config, extraction, and Hydra wiring: [JWT skill reference](https://github.com/DeerHide/agent_skills/blob/main/skills/fastapi-factory-utilities/references/jwt-authentication.md).
 
 #### Ory Kratos Integration
 
