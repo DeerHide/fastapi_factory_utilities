@@ -131,6 +131,8 @@ class PluginAbstract(ABC):
 | **TaskiqPlugin** | Background tasks | taskiq, redis |
 | **AiopikaPlugin** | RabbitMQ messaging | aio-pika |
 | **AioHttpPlugin** | HTTP client | aiohttp |
+| **S3Plugin** | MinIO / S3 (aioboto3) | aioboto3 |
+| **RedisPlugin** | Standalone Redis / Valkey | redis |
 
 ### Plugin Lifecycle
 
