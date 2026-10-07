@@ -777,18 +777,18 @@ cffi = {version = ">=1.0.0", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "cacheout"
-version = "0.16.0"
+version = "0.17.0"
 description = "A caching library for Python"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "cacheout-0.16.0-py3-none-any.whl", hash = "sha256:1a52d9aa8b1e9720d8453b061348f15795578231f9ec4ad376fec49e717d0ed8"},
-    {file = "cacheout-0.16.0.tar.gz", hash = "sha256:ee264897cbaa089ae5f406da11952697d99fa7f3583cfab69fe8a00ff8e1952d"},
+    {file = "cacheout-0.17.0-py2.py3-none-any.whl", hash = "sha256:18e07127ae4e01fba6213a3310bb07cd7b800cac7d9c2cb7a4635e86f8e87ee0"},
+    {file = "cacheout-0.17.0.tar.gz", hash = "sha256:38e6ead5828e718e8451029fe9b6c0c6f9ca351cf321c73f8e06b60e4af27ad1"},
 ]
 
 [package.extras]
-dev = ["black", "build", "coverage", "docformatter", "flake8", "flake8-black", "flake8-bugbear", "flake8-isort", "furo", "importlib-metadata (<5) ; python_version == \"3.7\"", "invoke", "isort", "mypy", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "sphinx", "sphinx-autodoc-typehints", "tox", "twine", "wheel"]
+dev = ["build", "coverage", "furo", "invoke", "mypy", "pytest", "pytest-asyncio", "pytest-cov", "ruff", "sphinx", "sphinx-autodoc-typehints", "tox", "twine", "wheel"]
 
 [[package]]
 name = "certifi"
@@ -5614,4 +5614,4 @@ taskiq = ["redis", "taskiq-dependencies", "taskiq-fastapi", "taskiq-redis"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "ca67c1804ae75e5bb730d4dc92c99d8b436f9b09802ec9fcacf7cc655f2a6294"
+content-hash = "9224b7f26cbc250118c1545dde3d49cb9a2b20313b19359372e7dfe157e3fa5a"
