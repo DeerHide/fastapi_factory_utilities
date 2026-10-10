@@ -83,12 +83,12 @@ jobs:
           cat "${REPO_NAME}-mandatory-grype-scan.txt"
           exit $GRYPE_EXIT
       - name: Upload mandatory SBOM
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: "${{ github.event.repository.name }}-mandatory-sbom.spdx.json"
           path: "${{ github.event.repository.name }}-mandatory-sbom.spdx.json"
       - name: Upload mandatory Grype report
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: "${{ github.event.repository.name }}-mandatory-grype-scan.txt"
           path: "${{ github.event.repository.name }}-mandatory-grype-scan.txt"
@@ -128,17 +128,17 @@ jobs:
           cat "${REPO_NAME}-grype-scan.txt"
           exit $GRYPE_EXIT
       - name: Upload SBOM
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: "${{ github.event.repository.name }}-sbom.spdx.json"
           path: "${{ github.event.repository.name }}-sbom.spdx.json"
       - name: Upload Grype text report
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: "${{ github.event.repository.name }}-grype-scan.txt"
           path: "${{ github.event.repository.name }}-grype-scan.txt"
       - name: Upload Grype SARIF artifact
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: "${{ github.event.repository.name }}-grype-scan.sarif"
           path: "${{ github.event.repository.name }}-grype-scan.sarif"
@@ -153,7 +153,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.1.0
       - name: Generate and submit dependency snapshot
         env:
           GH_TOKEN: ${{ github.token }}
@@ -242,11 +242,11 @@ jobs:
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       - name: Download SBOM
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: "${{ github.event.repository.name }}-sbom.spdx.json"
       - name: Download Grype Scan
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: "${{ github.event.repository.name }}-grype-scan.txt"
       - name: Verify runner Python and Poetry toolchain
