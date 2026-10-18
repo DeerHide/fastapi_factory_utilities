@@ -63,6 +63,8 @@ This library consolidates common patterns, plugins, and utilities for creating m
   - MongoDB operations
   - HTTP client requests (aiohttp)
   - RabbitMQ messaging (AioPika)
+- **Metric export defaults:** 60s interval / 10s timeout (override via ``meter_config``)
+- **Runtime metrics opt-in:** system / asyncio / CPython via ``enable_runtime_instrumentation``
 - **Distributed Tracing** with OTLP exporters (HTTP/gRPC)
 - **Structured Logging** with structlog integration
 - **Status Endpoint** for health checks and monitoring

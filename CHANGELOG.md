@@ -9,10 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Behavior:** ``OpenTelemetryMeterConfig`` defaults
+  ``reader_interval_millis`` to ``60000`` and ``reader_timeout_millis`` to
+  ``10000`` (was ``1000`` / ``1000``). Validates
+  ``reader_timeout_millis <= reader_interval_millis``. Restores prior cadence
+  with an explicit ``meter_config`` block.
+- **Behavior:** System metrics, asyncio, and CPython runtime auto-instrumentation
+  are opt-in via ``OpenTelemetryConfig.enable_runtime_instrumentation``
+  (default ``false``). They are no longer in the default ``instrumentations``
+  list. HTTP and other library instrumentors are unchanged.
 - README and knowledge docs: Production/Stable badge, ``RedisPlugin``, JWT sample
   uses ``JWTAuthenticationServiceAbstract``, plugin directory names
   (``*_plugin``), S3/Redis next to Taskiq, dependency floors pointed at
   ``pyproject.toml``.
+
+### Added
+
+- ``OpenTelemetryConfig.enable_runtime_instrumentation`` flag to opt into
+  ``asyncio`` and ``system_metrics`` instrumentors.
 
 ## [7.2.0] - 2026-10-02
 

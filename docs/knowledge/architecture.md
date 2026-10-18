@@ -404,6 +404,13 @@ class BaseDocument(Document):
                 └───────────────────────┘
 ```
 
+**Meter defaults:** ``reader_interval_millis=60000``, ``reader_timeout_millis=10000``
+(timeout must be ``<=`` interval).
+
+**Runtime instrumentation** (system metrics, asyncio, CPython runtime) is **opt-in**:
+set ``opentelemetry.enable_runtime_instrumentation: true`` in ``application.yaml``.
+HTTP and other library instrumentors remain on via the default ``instrumentations`` list.
+
 ---
 
 ## Deployment Architecture
