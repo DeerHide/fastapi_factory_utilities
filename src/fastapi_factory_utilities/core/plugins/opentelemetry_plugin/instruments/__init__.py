@@ -345,14 +345,24 @@ INSTRUMENTS: dict[InstrumentationName, Callable[..., Any]] = {
 }
 
 
+def _effective_instrumentations(config: OpenTelemetryConfig) -> list[InstrumentationName]:
+    """Resolve instrumentations, optionally adding runtime ones when opted in."""
+    names: list[InstrumentationName] = list(config.instrumentations)
+    if config.enable_runtime_instrumentation:
+        for name in (InstrumentationName.ASYNCIO, InstrumentationName.SYSTEM_METRICS):
+            if name not in names:
+                names.append(name)
+    return names
+
+
 def apply_instruments(
     application: ApplicationAbstractProtocol,
     config: OpenTelemetryConfig,
     meter_provider: MeterProvider,
     tracer_provider: TracerProvider,
 ) -> None:
-    """Import and apply only the instrumentations listed in ``config.instrumentations``."""
-    for name in config.instrumentations:
+    """Import and apply instrumentations from config (plus runtime ones when opted in)."""
+    for name in _effective_instrumentations(config):
         INSTRUMENTS[name](application, config, meter_provider, tracer_provider)
 
 

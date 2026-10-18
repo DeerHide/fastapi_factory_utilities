@@ -7,6 +7,7 @@ import pytest
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import InstrumentationName, OpenTelemetryConfig
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments import (
     INSTRUMENTS,
+    _effective_instrumentations,
     apply_instruments,
     instrument_aio_pika,
     instrument_aiobotocore,
@@ -473,6 +474,22 @@ class TestInstrumentRedis(_BaseInstrumentTest):
 
 class TestApplyInstruments(_BaseInstrumentTest):
     """Tests for config-driven instrumentation loading."""
+
+    def test_runtime_instrumentations_not_effective_by_default(self) -> None:
+        """Default config does not schedule asyncio / system_metrics."""
+        config = OpenTelemetryConfig()
+        effective = _effective_instrumentations(config)
+        assert InstrumentationName.ASYNCIO not in effective
+        assert InstrumentationName.SYSTEM_METRICS not in effective
+
+    def test_enable_runtime_instrumentation_adds_asyncio_and_system_metrics(self) -> None:
+        """Opt-in flag appends runtime instrumentors without dropping HTTP ones."""
+        config = OpenTelemetryConfig(enable_runtime_instrumentation=True)
+        effective = _effective_instrumentations(config)
+        assert InstrumentationName.ASYNCIO in effective
+        assert InstrumentationName.SYSTEM_METRICS in effective
+        assert InstrumentationName.FASTAPI in effective
+        assert InstrumentationName.HTTPX in effective
 
     def test_disabled_instrumentors_are_not_imported(
         self,

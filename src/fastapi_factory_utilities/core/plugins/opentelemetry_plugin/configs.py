@@ -1,9 +1,9 @@
 """Provides the configuration model for the OpenTelemetry plugin."""
 
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, UrlConstraints
+from pydantic import BaseModel, ConfigDict, Field, UrlConstraints, model_validator
 from pydantic_core import Url
 
 
@@ -30,9 +30,19 @@ class InstrumentationName(StrEnum):
     AIOBOTOCORE = "aiobotocore"
 
 
-def _all_instrumentations() -> list[InstrumentationName]:
-    """Return every shipped instrumentation name."""
-    return list(InstrumentationName)
+# Heavy / high-cardinality runtime instrumentors — opt-in via
+# ``OpenTelemetryConfig.enable_runtime_instrumentation``.
+_RUNTIME_INSTRUMENTATIONS: frozenset[InstrumentationName] = frozenset(
+    {
+        InstrumentationName.ASYNCIO,
+        InstrumentationName.SYSTEM_METRICS,
+    }
+)
+
+
+def _default_instrumentations() -> list[InstrumentationName]:
+    """Return default instrumentations (HTTP/clients/etc.; runtime ones excluded)."""
+    return [name for name in InstrumentationName if name not in _RUNTIME_INSTRUMENTATIONS]
 
 
 class OpenTelemetryMeterConfig(BaseModel):
@@ -40,19 +50,38 @@ class OpenTelemetryMeterConfig(BaseModel):
 
     # Constants for time in milliseconds and seconds
     ONE_MINUTE_IN_MILLIS: int = 60000
+    TEN_SECONDS_IN_MILLIS: int = 10000
     ONE_SECOND_IN_MILLIS: int = 1000
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     reader_interval_millis: float = Field(
-        default=ONE_SECOND_IN_MILLIS,
+        default=ONE_MINUTE_IN_MILLIS,
         description="The interval in miliseconds to read and export metrics.",
     )
 
     reader_timeout_millis: float = Field(
-        default=ONE_SECOND_IN_MILLIS,
+        default=TEN_SECONDS_IN_MILLIS,
         description="The timeout in miliseconds for the reader.",
     )
+
+    @model_validator(mode="after")
+    def validate_timeout_not_greater_than_interval(self) -> Self:
+        """Ensure the export timeout does not exceed the export interval.
+
+        Returns:
+            The validated meter configuration.
+
+        Raises:
+            ValueError: If ``reader_timeout_millis`` is greater than
+                ``reader_interval_millis``.
+        """
+        if self.reader_timeout_millis > self.reader_interval_millis:
+            raise ValueError(
+                "reader_timeout_millis must be less than or equal to reader_interval_millis "
+                f"(got timeout={self.reader_timeout_millis}, interval={self.reader_interval_millis})"
+            )
+        return self
 
 
 class OpenTelemetryTracerConfig(BaseModel):
@@ -144,7 +173,21 @@ class OpenTelemetryConfig(BaseModel):
         ),
     )
 
+    enable_runtime_instrumentation: bool = Field(
+        default=False,
+        description=(
+            "Opt-in to system metrics, asyncio, and CPython runtime auto-instrumentation. "
+            "Disabled by default to avoid high-frequency / high-cardinality metric export. "
+            "HTTP and other library instrumentors are unchanged and controlled by "
+            "``instrumentations``."
+        ),
+    )
+
     instrumentations: list[InstrumentationName] = Field(
-        default_factory=_all_instrumentations,
-        description="Instrumentations to load. Absent target libraries are skipped with a log line.",
+        default_factory=_default_instrumentations,
+        description=(
+            "Instrumentations to load. Absent target libraries are skipped with a log line. "
+            "Defaults exclude ``asyncio`` and ``system_metrics``; set "
+            "``enable_runtime_instrumentation`` to opt in to those."
+        ),
     )

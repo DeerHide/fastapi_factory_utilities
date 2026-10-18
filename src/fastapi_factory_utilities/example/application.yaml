@@ -12,6 +12,13 @@ development:
 
 opentelemetry:
   activate: "${OTEL_ACTIVE:false}"
+  # Metric export defaults: interval 60s, timeout 10s (timeout must be <= interval).
+  # meter_config:
+  #   reader_interval_millis: 60000
+  #   reader_timeout_millis: 10000
+  # Opt-in system metrics / asyncio / CPython runtime auto-instrumentation (off by default).
+  # enable_runtime_instrumentation: true
+
 
 odm:
   uri: "${MONGO_URI:mongodb://localhost:27017}"
