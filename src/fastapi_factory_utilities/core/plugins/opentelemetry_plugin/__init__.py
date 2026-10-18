@@ -5,12 +5,18 @@ from fastapi_factory_utilities.core.plugins.extras import require_extra
 
 require_extra("otel", "opentelemetry.sdk")
 
-from .configs import OpenTelemetryConfig, OpenTelemetryMeterConfig, OpenTelemetryTracerConfig
+from .configs import (
+    RUNTIME_INSTRUMENTATIONS,
+    OpenTelemetryConfig,
+    OpenTelemetryMeterConfig,
+    OpenTelemetryTracerConfig,
+)
 from .depends import depends_meter_provider, depends_otel_config, depends_tracer_provider
 from .exceptions import OpenTelemetryPluginBaseException, OpenTelemetryPluginConfigError
 from .plugins import OpenTelemetryPlugin
 
 __all__: list[str] = [
+    "RUNTIME_INSTRUMENTATIONS",
     "OpenTelemetryConfig",
     "OpenTelemetryMeterConfig",
     "OpenTelemetryPlugin",

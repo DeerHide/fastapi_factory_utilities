@@ -11,6 +11,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import (
+    RUNTIME_INSTRUMENTATIONS,
     InstrumentationName,
     OpenTelemetryConfig,
 )
@@ -349,7 +350,7 @@ def _effective_instrumentations(config: OpenTelemetryConfig) -> list[Instrumenta
     """Resolve instrumentations, optionally adding runtime ones when opted in."""
     names: list[InstrumentationName] = list(config.instrumentations)
     if config.enable_runtime_instrumentation:
-        for name in (InstrumentationName.ASYNCIO, InstrumentationName.SYSTEM_METRICS):
+        for name in RUNTIME_INSTRUMENTATIONS:
             if name not in names:
                 names.append(name)
     return names

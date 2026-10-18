@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import (
+    RUNTIME_INSTRUMENTATIONS,
     InstrumentationName,
     OpenTelemetryConfig,
     OpenTelemetryMeterConfig,
@@ -50,11 +51,18 @@ class TestOpenTelemetryMeterConfigDefaults:
 class TestRuntimeInstrumentationOptIn:
     """Runtime / system metrics instrumentors are opt-in."""
 
-    def test_default_instrumentations_exclude_runtime(self) -> None:
-        """Default list omits asyncio and system_metrics."""
+    def test_runtime_constant_covers_asyncio_and_system_metrics(self) -> None:
+        """SoT tuple lists asyncio + system_metrics (CPython is via system_metrics)."""
+        assert RUNTIME_INSTRUMENTATIONS == (
+            InstrumentationName.ASYNCIO,
+            InstrumentationName.SYSTEM_METRICS,
+        )
+
+    def test_default_instrumentations_exclude_every_runtime_member(self) -> None:
+        """Every RUNTIME_INSTRUMENTATIONS member is omitted from defaults."""
         config = OpenTelemetryConfig()
-        assert InstrumentationName.ASYNCIO not in config.instrumentations
-        assert InstrumentationName.SYSTEM_METRICS not in config.instrumentations
+        for name in RUNTIME_INSTRUMENTATIONS:
+            assert name not in config.instrumentations
         assert InstrumentationName.FASTAPI in config.instrumentations
         assert InstrumentationName.HTTPX in config.instrumentations
         assert config.enable_runtime_instrumentation is False

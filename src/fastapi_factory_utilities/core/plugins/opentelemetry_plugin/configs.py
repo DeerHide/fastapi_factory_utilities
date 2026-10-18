@@ -32,17 +32,18 @@ class InstrumentationName(StrEnum):
 
 # Heavy / high-cardinality runtime instrumentors — opt-in via
 # ``OpenTelemetryConfig.enable_runtime_instrumentation``.
-_RUNTIME_INSTRUMENTATIONS: frozenset[InstrumentationName] = frozenset(
-    {
-        InstrumentationName.ASYNCIO,
-        InstrumentationName.SYSTEM_METRICS,
-    }
+# Order is deterministic (enum declaration order). There is no separate CPython
+# instrumentor: ``system_metrics`` covers process + CPython runtime (GC, …).
+RUNTIME_INSTRUMENTATIONS: tuple[InstrumentationName, ...] = (
+    InstrumentationName.ASYNCIO,
+    InstrumentationName.SYSTEM_METRICS,
 )
 
 
 def _default_instrumentations() -> list[InstrumentationName]:
     """Return default instrumentations (HTTP/clients/etc.; runtime ones excluded)."""
-    return [name for name in InstrumentationName if name not in _RUNTIME_INSTRUMENTATIONS]
+    runtime = frozenset(RUNTIME_INSTRUMENTATIONS)
+    return [name for name in InstrumentationName if name not in runtime]
 
 
 class OpenTelemetryMeterConfig(BaseModel):

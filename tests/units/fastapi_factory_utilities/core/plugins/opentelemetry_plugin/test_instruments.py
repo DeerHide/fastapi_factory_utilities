@@ -4,7 +4,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import InstrumentationName, OpenTelemetryConfig
+from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import (
+    RUNTIME_INSTRUMENTATIONS,
+    InstrumentationName,
+    OpenTelemetryConfig,
+)
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments import (
     INSTRUMENTS,
     _effective_instrumentations,
@@ -475,21 +479,18 @@ class TestInstrumentRedis(_BaseInstrumentTest):
 class TestApplyInstruments(_BaseInstrumentTest):
     """Tests for config-driven instrumentation loading."""
 
-    def test_runtime_instrumentations_not_effective_by_default(self) -> None:
-        """Default config does not schedule asyncio / system_metrics."""
-        config = OpenTelemetryConfig()
-        effective = _effective_instrumentations(config)
-        assert InstrumentationName.ASYNCIO not in effective
-        assert InstrumentationName.SYSTEM_METRICS not in effective
-
-    def test_enable_runtime_instrumentation_adds_asyncio_and_system_metrics(self) -> None:
-        """Opt-in flag appends runtime instrumentors without dropping HTTP ones."""
-        config = OpenTelemetryConfig(enable_runtime_instrumentation=True)
-        effective = _effective_instrumentations(config)
-        assert InstrumentationName.ASYNCIO in effective
-        assert InstrumentationName.SYSTEM_METRICS in effective
-        assert InstrumentationName.FASTAPI in effective
-        assert InstrumentationName.HTTPX in effective
+    def test_every_runtime_member_excluded_by_default_and_reenabled_by_flag(self) -> None:
+        """Every RUNTIME_INSTRUMENTATIONS member is off by default and on with the flag."""
+        default_effective = _effective_instrumentations(OpenTelemetryConfig())
+        opted_in = _effective_instrumentations(OpenTelemetryConfig(enable_runtime_instrumentation=True))
+        for name in RUNTIME_INSTRUMENTATIONS:
+            assert name not in default_effective
+            assert name in opted_in
+        assert InstrumentationName.FASTAPI in opted_in
+        assert InstrumentationName.HTTPX in opted_in
+        # Append order matches RUNTIME_INSTRUMENTATIONS when absent from the base list.
+        runtime_tail = opted_in[-len(RUNTIME_INSTRUMENTATIONS) :]
+        assert runtime_tail == list(RUNTIME_INSTRUMENTATIONS)
 
     def test_disabled_instrumentors_are_not_imported(
         self,
