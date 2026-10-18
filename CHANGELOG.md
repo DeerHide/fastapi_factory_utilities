@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are opt-in via ``OpenTelemetryConfig.enable_runtime_instrumentation``
   (default ``false``). They are no longer in the default ``instrumentations``
   list. HTTP and other library instrumentors are unchanged.
+- README and knowledge docs: Production/Stable badge, ``RedisPlugin``, JWT sample
+  uses ``JWTAuthenticationServiceAbstract``, plugin directory names
+  (``*_plugin``), S3/Redis next to Taskiq, dependency floors pointed at
+  ``pyproject.toml``.
 
 ### Added
 
