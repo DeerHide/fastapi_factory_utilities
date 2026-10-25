@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Floor ``brotli`` at ``>=1.2.1`` and lock 1.2.1 (GHSA-9v8h-qqgm-4m35,
+  CVE-2026-111497, CVSS v4 9.2). Pulled in by ``aiohttp[speedups]``
+  (main) and ``geventhttpclient`` / locust (test); ``aiohttp`` only
+  requires ``Brotli>=1.2``.
+
 ## [7.3.0] - 2026-10-18
 
 ### Changed
