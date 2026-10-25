@@ -1,6 +1,6 @@
-# Fresh-resolve canary. Pull-request CI installs from the committed lock;
-# this job re-resolves and runs the unit suite independently so upstream
-# breakage arrives on a schedule, not inside a review.
+# Weekly fresh resolve of main. Pull-request CI also resolves from
+# pyproject.toml (no committed lock). This job repeats that outside a
+# review so upstream breakage on main is visible on a schedule.
 name: Dependency canary
 
 on:

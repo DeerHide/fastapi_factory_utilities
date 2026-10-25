@@ -67,7 +67,7 @@ pyaml = "^26.7.0"
 reactivex = "^4.1.0"
 pyjwt = "^2.10.1"
 aiohttp = { version="^3.12.13", extras=["speedups"] }
-# ponytail: aiohttp[speedups] only asks for Brotli>=1.2, so the lock can sit on
+# ponytail: aiohttp[speedups] only requires Brotli>=1.2, which still allows
 # 1.2.0 (GHSA-9v8h-qqgm-4m35). Floor it here. Drop once aiohttp requires >=1.2.1.
 brotli = ">=1.2.1"
 certifi = "^2026.6.17"
