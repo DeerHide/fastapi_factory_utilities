@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.3.1] - 2026-10-25
+
 ### Security
 
 - Floor ``brotli`` at ``>=1.2.1`` (GHSA-9v8h-qqgm-4m35, CVE-2026-111497,
@@ -1181,7 +1183,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.1...HEAD
+[7.3.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.0...v7.3.1
 [7.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.2.0...v7.3.0
 [7.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.1.0...v7.2.0
 [7.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.4...v7.1.0
