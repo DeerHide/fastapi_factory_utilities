@@ -194,8 +194,7 @@ fastapi_factory_utilities/
 │   └── 📁 workflows/
 │       └── 📄 ci.yml                          # CI/CD pipeline
 │
-├── 📄 pyproject.toml                          # Poetry configuration
-├── 📄 poetry.lock                             # CI lock (does not pin consumers)
+├── 📄 pyproject.toml                          # Poetry configuration (no tracked lock)
 ├── 📄 docker-compose.yml                      # Local development services
 ├── 📄 skaffold.yaml                           # Kubernetes development
 ├── 📄 README.md                               # Project documentation

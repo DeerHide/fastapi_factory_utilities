@@ -7,10 +7,10 @@ default_stages:
 repos:
   - repo: local
     hooks:
-      - id: poetry lock check
-        name: poetry lock check
+      - id: poetry check
+        name: poetry check
         entry: bash
-        args: ["-c", "poetry check --lock"]
+        args: ["-c", "poetry check"]
         language: system
         types: [python]
         pass_filenames: false

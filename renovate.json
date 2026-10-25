@@ -40,8 +40,7 @@
     "managerFilePatterns": ["/(^|/)pyproject\\.toml$/"]
   },
   "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 4am on monday"]
+    "enabled": false
   },
   "packageRules": [
     {
@@ -58,7 +57,7 @@
       "enabled": false
     },
     {
-      "description": "Poetry: use rangeStrategy=widen (not bump). bump collapses dual-bound SpecifierSets to a one-patch window (e.g. fastapi >=0.115.13,<0.140.0 → >=0.141.1,<0.141.2) and over-tightens floors; widen keeps/extends existing ranges. FFU commits poetry.lock — Poetry manager refreshes the lock when pyproject.toml changes; lockFileMaintenance covers weekly in-range lock refresh.",
+      "description": "Poetry: use rangeStrategy=widen (not bump). bump collapses dual-bound SpecifierSets to a one-patch window (e.g. fastapi >=0.115.13,<0.140.0 → >=0.141.1,<0.141.2) and over-tightens floors; widen keeps/extends existing ranges. poetry.lock is not tracked, so Renovate only edits pyproject.toml.",
       "matchManagers": ["poetry"],
       "rangeStrategy": "widen"
     },
@@ -151,11 +150,6 @@
       "groupName": null,
       "automerge": false,
       "labels": ["security", "dependencies"]
-    },
-    {
-      "description": "Skip minimum release age for lock-file maintenance",
-      "matchUpdateTypes": ["lockFileMaintenance"],
-      "minimumReleaseAge": null
     },
     {
       "description": "Skip minimum release age for pin-only updates",

@@ -522,7 +522,7 @@ Please ensure:
 - Type checking passes (`poetry run mypy`)
 - Pre-commit hooks pass (`poetry run pre-commit run --all-files`)
 
-`poetry.lock` constrains CI. Published version ranges constrain consumers. The two are allowed to differ; bump the lock on purpose (and let the weekly canary tell you when upstream broke).
+`poetry.lock` is not tracked. CI resolves dependencies from `pyproject.toml` on each run, so two builds can select different transitive versions. Published ranges are what consumers resolve against.
 
 > 📖 See [Development Guide](docs/knowledge/development-guide.md) for complete contribution workflow.
 

@@ -6,7 +6,7 @@ It enables registration, configuration, and management of scheduled tasks in Fas
 
 import asyncio
 from collections.abc import Coroutine
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, ClassVar, Self, cast
 
 import taskiq_fastapi
@@ -145,7 +145,7 @@ class SingleFlightTaskiqScheduler(TaskiqScheduler):
         Returns:
             Redis key unique per ``(task_name, UTC minute)``.
         """
-        minute: str = now.astimezone(timezone.utc).strftime("%Y%m%d%H%M")
+        minute: str = now.astimezone(UTC).strftime("%Y%m%d%H%M")
         return f"{lock_prefix}:taskiq:cron-lock:{task_name}:{minute}"
 
     async def _try_acquire_cron_lock(self, task_name: str, tick: datetime) -> bool:
@@ -182,7 +182,7 @@ class SingleFlightTaskiqScheduler(TaskiqScheduler):
             source: Schedule source that marked the task ready.
             task: Scheduled task to kick.
         """
-        tick = self.pending_ticks.pop(task.schedule_id, datetime.now(timezone.utc))
+        tick = self.pending_ticks.pop(task.schedule_id, datetime.now(UTC))
         if not await self._try_acquire_cron_lock(task.task_name, tick):
             _logger.info(
                 "Skipping duplicate scheduled kick; another scheduler won the cron lock.",
