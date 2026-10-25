@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CVE-2026-111497, CVSS v4 9.2). Pulled in by ``aiohttp[speedups]``
   (main) and ``geventhttpclient`` / locust (test); ``aiohttp`` only
   requires ``Brotli>=1.2``.
+- Lock ``aiohttp`` 3.14.3 → 3.14.5. 3.14.4 fixes the advisories that
+  failed the mandatory-only Grype gate (GHSA-5wr8-gcqf-gqf3,
+  GHSA-9xw5-w5jj-pvcg, GHSA-2g87-pp6c-29x5); 3.14.5 is the newest
+  release inside the existing ``^3.12.13`` range. ``yarl`` 1.24.5 →
+  1.25.1 because aiohttp 3.14.4+ requires ``yarl>=1.25.1``.
+- Lock ``certifi`` 2026.7.22 → 2026.10.23 (GHSA-6q48-6c7w-9gw2, fixed
+  in 2026.10.19). Direct dependency, already in the main and test
+  groups; 2026.10.23 is the newest release inside ``^2026.6.17``.
 
 ## [7.3.0] - 2026-10-18
 
