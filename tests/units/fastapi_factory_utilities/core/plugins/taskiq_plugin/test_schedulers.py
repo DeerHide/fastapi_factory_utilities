@@ -1,7 +1,7 @@
 """Unit tests for SchedulerComponent without a Redis broker."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -153,7 +153,7 @@ class TestMinuteGuardSchedulerLoop:
             interval=None,
             time=None,
         )
-        now = datetime(2026, 10, 1, 12, 0, 59, 995000, tzinfo=timezone.utc)
+        now = datetime(2026, 10, 1, 12, 0, 59, 995000, tzinfo=UTC)
 
         with patch.object(SchedulerLoop, "_is_schedule_ready_to_send", return_value=True):
             assert loop._is_schedule_ready_to_send(task, now) is True
@@ -175,7 +175,7 @@ class TestMinuteGuardSchedulerLoop:
             interval=None,
             time=None,
         )
-        now = datetime(2026, 10, 1, 12, 0, 30, tzinfo=timezone.utc)
+        now = datetime(2026, 10, 1, 12, 0, 30, tzinfo=UTC)
 
         with patch.object(SchedulerLoop, "_is_schedule_ready_to_send", return_value=False):
             assert loop._is_schedule_ready_to_send(task, now) is False
@@ -198,7 +198,7 @@ class TestSingleFlightTaskiqScheduler:
 
     def test_cron_lock_key_uses_task_name_and_utc_minute(self) -> None:
         """Lock key is per task_name and UTC minute, not schedule_id."""
-        now = datetime(2026, 9, 30, 16, 0, 42, tzinfo=timezone.utc)
+        now = datetime(2026, 9, 30, 16, 0, 42, tzinfo=UTC)
         key = SingleFlightTaskiqScheduler.cron_lock_key(
             "youtube-integration",
             "system_synchronization_dispatch",
@@ -225,8 +225,8 @@ class TestSingleFlightTaskiqScheduler:
             args=(),
             kwargs={},
         )
-        tick = datetime(2026, 10, 1, 12, 0, 0, 9000, tzinfo=timezone.utc)
-        late_tick = datetime(2026, 10, 1, 12, 0, 59, 995000, tzinfo=timezone.utc)
+        tick = datetime(2026, 10, 1, 12, 0, 0, 9000, tzinfo=UTC)
+        late_tick = datetime(2026, 10, 1, 12, 0, 59, 995000, tzinfo=UTC)
 
         kicker = MagicMock()
         kicker.with_labels.return_value = kicker
