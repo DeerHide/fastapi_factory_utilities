@@ -321,4 +321,4 @@ jobs:
           name: ${{ github.ref_name }}
           prerelease: false
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
