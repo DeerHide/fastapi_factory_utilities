@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- PyMongo span statements no longer stringify ``RawBSONDocument`` filters, which attached raw bytes and ``CodecOptions`` to every command span.
+
 ## [7.3.1] - 2026-10-25
 
 ### Security
