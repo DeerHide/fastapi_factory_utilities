@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.3.2] - 2026-11-10
+
 ### Fixed
 
 - PyMongo span statements no longer stringify ``RawBSONDocument`` filters, which attached raw bytes and ``CodecOptions`` to every command span.
@@ -1187,7 +1189,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.1...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.2...HEAD
+[7.3.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.1...v7.3.2
 [7.3.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.0...v7.3.1
 [7.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.2.0...v7.3.0
 [7.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.1.0...v7.2.0
