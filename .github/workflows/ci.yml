@@ -3,7 +3,9 @@ name: CI
 on:
   pull_request:
   push:
-    # branches: [main] # Disable for now, manual release only
+    # main: CI then cut-release (auto version + CHANGELOG + tag).
+    # tags: the tag cut-release creates (or a manual one) runs `release`.
+    branches: [main]
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
@@ -245,6 +247,66 @@ jobs:
           export PATH="/home/runner/.local/bin:$PATH"
           export PYTHONPATH=./src:./tests:$PYTHONPATH
           poetry run pre-commit run --all-files
+  # Auto-release on merge to main (velmios_lib model, adapted to the FFU
+  # ruleset). Computes the next SemVer from Conventional Commits since the last
+  # vX.Y.Z tag, finalizes CHANGELOG [Unreleased], commits it to main and tags it
+  # through a GitHub App that bypasses the "Protected Main" ruleset. The App
+  # token tag push triggers this workflow on refs/tags/v*, where the unchanged
+  # `release` job publishes behind the `pypi` environment approval.
+  cut-release:
+    needs:
+      - setup
+      - pre-commit
+      - dependency-scan
+      - mandatory-only
+    # Skip the run triggered by our own release commit (no recursion).
+    if: >-
+      github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && !startsWith(github.event.head_commit.message, 'chore(release):')
+    runs-on: public-actions-runner-scale-set
+    # Serialize cuts; never cancel one mid-write.
+    concurrency:
+      group: ffu-cut-release
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Only cut from the branch tip
+        id: tip
+        run: |
+          git fetch --quiet --tags origin main
+          TIP="$(git rev-parse origin/main)"
+          if [ "${TIP}" != "${GITHUB_SHA}" ]; then
+            echo "main moved to ${TIP}; the run for the newer commit cuts the release."
+            echo "is_tip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_tip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Prepare release (compute version, rewrite CHANGELOG)
+        id: prepare
+        if: steps.tip.outputs.is_tip == 'true'
+        run: python3 scripts/release_prepare.py
+      - name: Mint release App token
+        id: app-token
+        if: steps.prepare.outputs.released == 'true'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+      - name: Commit CHANGELOG and tag release
+        if: steps.prepare.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_TAG: ${{ steps.prepare.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.prepare.outputs.version }}
+          BRANCH: main
+        run: python3 scripts/release_push.py
   release:
     needs:
       - setup
