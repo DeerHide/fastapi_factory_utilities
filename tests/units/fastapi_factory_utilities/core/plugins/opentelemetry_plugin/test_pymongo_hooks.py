@@ -100,7 +100,7 @@ class TestBuildPymongoRequestHook:
     def test_find_and_modify_with_datetime_does_not_raise(self) -> None:
         """Realm-shaped findAndModify must serialize datetimes without raising."""
         span: MagicMock = MagicMock()
-        now: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        now: datetime.datetime = datetime.datetime.now(tz=datetime.UTC)
         realm_id = uuid4()
         event: monitoring.CommandStartedEvent = monitoring.CommandStartedEvent(
             command={
@@ -142,7 +142,7 @@ class TestBuildPymongoRequestHook:
     def test_find_and_modify_update_pipeline_with_datetime(self) -> None:
         """FindAndModify update pipelines with datetime must stay JSON-safe."""
         span: MagicMock = MagicMock()
-        now: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        now: datetime.datetime = datetime.datetime.now(tz=datetime.UTC)
         event: monitoring.CommandStartedEvent = monitoring.CommandStartedEvent(
             command={
                 "findAndModify": "realms",
