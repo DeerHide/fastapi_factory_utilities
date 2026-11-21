@@ -27,10 +27,10 @@ from .stores import (
 )
 from .verifiers import (
     GenericHydraJWTVerifier,
-    JWTNoneVerifier,
     JWTNoOpIntrospectionVerifier,
     JWTVerifierAbstract,
 )
+from .verifiers import JWTNoneVerifier as JWTNoneVerifier  # re-export; omitted from __all__
 
 __all__: list[str] = [
     "DependsHydraJWKStoreMemory",
