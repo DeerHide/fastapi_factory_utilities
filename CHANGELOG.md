@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- PyMongo span statements no longer raise when ``findAndModify`` carries ``datetime`` (or other BSON) values in the update document; collection names are taken only from string/int command values, and non-JSON values become ``<TypeName>`` placeholders without calling ``str()``.
+
 ## [7.3.2] - 2026-11-10
 
 ### Fixed
