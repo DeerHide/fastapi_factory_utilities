@@ -17,14 +17,22 @@ RequestHookT = Callable[[Span, monitoring.CommandStartedEvent], None]
 
 
 def _truncate_in_arrays(value: Any) -> Any:
-    """Truncate large ``$in`` arrays to keep span attributes bounded."""
+    """Truncate large arrays and refuse to stringify BSON documents.
+
+    PyMongo often hands the command filter over as ``RawBSONDocument``.
+    ``str()`` on that object includes the raw bytes and the full
+    ``CodecOptions`` repr, so every find becomes a 2KB span attribute.
+    """
+    if isinstance(value, str | int | float | bool) or value is None:
+        return value
     if isinstance(value, list):
         if len(value) > MAX_IN_ARRAY_LENGTH:
-            return [*value[:MAX_IN_ARRAY_LENGTH], f"...(+{len(value) - MAX_IN_ARRAY_LENGTH} more)"]
+            head: list[Any] = [_truncate_in_arrays(item) for item in value[:MAX_IN_ARRAY_LENGTH]]
+            return [*head, f"...(+{len(value) - MAX_IN_ARRAY_LENGTH} more)"]
         return [_truncate_in_arrays(item) for item in value]
     if isinstance(value, dict):
         return {key: _truncate_in_arrays(item) for key, item in value.items()}
-    return value
+    return f"<{type(value).__name__}>"
 
 
 def _sanitize_mongo_command(command: Mapping[str, Any]) -> dict[str, Any]:
@@ -44,7 +52,7 @@ def build_pymongo_request_hook() -> RequestHookT:
 
     def request_hook(span: Span, event: monitoring.CommandStartedEvent) -> None:
         """Attach a truncated MongoDB command summary to the active span."""
-        statement: str = json.dumps(_sanitize_mongo_command(event.command), default=str)
+        statement: str = json.dumps(_sanitize_mongo_command(event.command))
         if len(statement) > MAX_DB_STATEMENT_LENGTH:
             statement = f"{statement[: MAX_DB_STATEMENT_LENGTH - 3]}..."
         span.set_attribute(SpanAttributes.DB_STATEMENT, statement)

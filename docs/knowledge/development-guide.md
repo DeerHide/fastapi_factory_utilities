@@ -41,12 +41,14 @@ poetry config virtualenvs.in-project true
 ### 4. Install Dependencies
 
 ```bash
-# Install all dependencies including test group
+# Resolve from pyproject.toml (poetry.lock is gitignored), then install
+poetry lock
 poetry install --with test --extras all
 ```
 
 This will:
 - Create `.venv/` in the project root
+- Resolve dependencies into a local, untracked `poetry.lock`
 - Install all production dependencies
 - Install all test dependencies
 
@@ -374,7 +376,7 @@ logging_mode: "console"
 
 The CI pipeline (`.github/workflows/ci.yml`) runs:
 
-1. **Setup** - Install dependencies, generate `poetry.lock`
+1. **Setup** - Resolve dependencies from `pyproject.toml` and install them
 2. **SBOM Creation** - Generate Software Bill of Materials
 3. **Dependency Scan** - Grype vulnerability scanning
 4. **Pre-commit** - Run all linting, formatting, type checking, tests
@@ -440,16 +442,15 @@ def my_function(param1: str, param2: int) -> bool:
 
 ## Troubleshooting
 
-### Poetry lock (CI vs consumers)
+### Poetry resolve (no tracked lock)
 
-`poetry.lock` is committed. It pins what CI installs. The version ranges in
-`pyproject.toml` are what consumers resolve against, and they are allowed to
-differ. Do not run `poetry update` as a side effect of pushing — pre-push
-only checks that the lock still matches `pyproject.toml`. Fresh resolution
-runs on a weekly canary (`.github/workflows/deps-canary.yml`).
+`poetry.lock` is gitignored. CI and a local `poetry lock` both resolve from
+the ranges in `pyproject.toml`, so two runs can select different transitive
+versions. Consumers resolve those same published ranges.
 
 ```bash
-poetry check --lock
+poetry check
+poetry lock
 poetry install --sync --with test --extras all
 ```
 
@@ -491,7 +492,8 @@ export PYTHONPATH=./src:./tests:$PYTHONPATH
 | Type check | `poetry run mypy` |
 | Pre-commit | `poetry run pre-commit run --all-files` |
 | Run example | `poetry run python -m fastapi_factory_utilities.example` |
-| Check lock | `poetry check --lock` |
+| Check pyproject | `poetry check` |
+| Resolve lock (local, untracked) | `poetry lock` |
 
 ---
 

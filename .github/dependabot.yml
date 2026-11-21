@@ -1,8 +1,0 @@
-# pip + poetry.lock is GitHub's Poetry update path. The lock is the artifact
-# Dependabot rewrites; published ranges in pyproject.toml stay open.
-version: 2
-updates:
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"

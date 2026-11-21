@@ -17,15 +17,7 @@
 
 ## Quick Reference
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **FastAPI** | >= 0.115.13 | Web framework |
-| **Beanie** | ^2.0.0 | MongoDB ODM |
-| **Taskiq** | ^0.3.5 | Task queue (Redis) |
-| **AioPika** | ^9.5.7 | RabbitMQ messaging |
-| **OpenTelemetry** | ^1.26.0 | Observability |
-| **Pydantic** | ^2.8.2 | Data validation |
-| **Structlog** | >= 24.1 | Structured logging |
+Versions live in `pyproject.toml`. Current floors: FastAPI `>=0.115.13`, Pydantic `^2.8.2`, Beanie `^2.0.0`, AioPika `^9.5.7`, OpenTelemetry API `^1.45.0` / instrumentation `>=0.66b0,<1`, structlog `>=26.1.0`. Taskiq, Redis, and S3 are optional extras.
 
 **Entry Point:** `src/fastapi_factory_utilities/core/` (main library)
 
@@ -44,13 +36,7 @@
 | [Architecture Decisions](../planning-artifacts/architecture.md) | Formal architectural decisions, patterns, and AI agent guidelines |
 | [Source Tree Analysis](./source-tree-analysis.md) | Complete directory structure with annotations |
 | [Development Guide](./development-guide.md) | Setup, testing, code style, CI/CD |
-
-### Technical Reference
-
-| Document | Description |
-|----------|-------------|
-| [API Contracts](./api-contracts.md) | _(To be generated)_ |
-| [Data Models](./data-models.md) | _(To be generated)_ |
+| [Agent Skill](../SKILL.md) | Canonical skill lives in DeerHide/agent_skills |
 
 ---
 

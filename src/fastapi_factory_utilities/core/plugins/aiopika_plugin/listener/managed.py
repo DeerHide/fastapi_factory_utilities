@@ -39,11 +39,14 @@ class AbstractManagedListener(AbstractListener[GenericManagedMessageType], Gener
     Subclasses implement :meth:`process_message`. Optional overrides:
 
     * :meth:`precheck` — cheap filter before gate acquisition.
+    * :meth:`on_gate_saturated` — settlement when the concurrency gate is full.
     * :meth:`map_exception_to_outcome` — map handler exceptions to delivery outcomes.
+    * :meth:`prefetch_count` — optional ``basic.qos`` prefetch before consume.
     """
 
     LISTENER_CONCURRENCY_LIMIT: ClassVar[int | None] = None
     GATE_KEY: ClassVar[str | None] = None
+    PREFETCH_COUNT: ClassVar[int | None] = None
     POISON_MESSAGE_REQUEUE: ClassVar[bool] = False
     ENABLE_TELEMETRY: ClassVar[bool] = True
 
@@ -83,6 +86,23 @@ class AbstractManagedListener(AbstractListener[GenericManagedMessageType], Gener
     def _queue_name(self) -> str:
         """Return the bound queue name for tracing."""
         return str(getattr(self._queue, "_name", self._name))
+
+    def prefetch_count(self) -> int | None:
+        """Return the channel prefetch count applied before consume, if any.
+
+        Returns:
+            Prefetch count, or ``None`` to leave broker defaults unchanged.
+        """
+        return self.PREFETCH_COUNT
+
+    async def listen(self) -> None:
+        """Apply optional ``basic.qos`` then start consuming."""
+        count: int | None = self.prefetch_count()
+        if count is not None:
+            if count < 1:
+                raise ValueError("prefetch_count must be at least 1")
+            await self._queue.queue.channel.set_qos(prefetch_count=count)
+        await super().listen()
 
     async def _on_message(self, incoming_message: AbstractIncomingMessage) -> None:
         """Decode and validate the message, then dispatch to :meth:`on_message`.
@@ -153,6 +173,21 @@ class AbstractManagedListener(AbstractListener[GenericManagedMessageType], Gener
         del exc
         return MessageDeliveryOutcome.REQUEUE
 
+    async def on_gate_saturated(self, message: GenericManagedMessageType) -> MessageDeliveryOutcome:
+        """Decide settlement when the concurrency gate is saturated.
+
+        Default: immediate requeue. Override to delay (e.g. republish to a TTL
+        retry queue) so a saturated worker does not hot-loop redeliveries.
+
+        Args:
+            message: Validated incoming message that passed precheck.
+
+        Returns:
+            Delivery outcome used for settlement.
+        """
+        del message
+        return MessageDeliveryOutcome.REQUEUE
+
     @abstractmethod
     async def process_message(self, message: GenericManagedMessageType) -> MessageDeliveryOutcome | None:
         """Execute the message handler after pre-check and gate acquisition.
@@ -166,6 +201,41 @@ class AbstractManagedListener(AbstractListener[GenericManagedMessageType], Gener
         Raises:
             BaseException: Propagates to :meth:`map_exception_to_outcome` when not ``CancelledError``.
         """
+
+    async def _settle_gate_denied(
+        self,
+        message: GenericManagedMessageType,
+        root_span: Any,
+    ) -> None:
+        """Settle a delivery after the concurrency gate refused it.
+
+        Args:
+            message: Validated incoming message that passed precheck.
+            root_span: Root message span for attributes and error marking.
+        """
+        try:
+            final_outcome: MessageDeliveryOutcome = await self.on_gate_saturated(message)
+        except BaseException as exc:
+            if isinstance(exc, Exception):
+                final_outcome = self.map_exception_to_outcome(exc)
+                self._telemetry.record_settlement(
+                    listener=self._name,
+                    outcome=final_outcome,
+                    phase=PHASE_ERROR,
+                )
+                mark_span_error(root_span, exc)
+                root_span.set_attribute("aiopika.gate.acquired", False)
+                await settle_message(message, final_outcome)
+                return
+            raise
+        self._telemetry.record_settlement(
+            listener=self._name,
+            outcome=final_outcome,
+            phase=PHASE_GATE,
+        )
+        root_span.set_attribute("aiopika.delivery.outcome", final_outcome.value)
+        root_span.set_attribute("aiopika.gate.acquired", False)
+        await settle_message(message, final_outcome)
 
     async def on_message(self, message: GenericManagedMessageType) -> None:
         """Orchestrate pre-check, gate acquisition, processing, and settlement.
@@ -206,15 +276,7 @@ class AbstractManagedListener(AbstractListener[GenericManagedMessageType], Gener
             with self._telemetry.trace_phase(listener=self._name, phase="gate.acquire"):
                 gate_acquired: bool = await self._concurrency_gate.try_acquire(gate_key)
             if not gate_acquired:
-                final_outcome = MessageDeliveryOutcome.REQUEUE
-                self._telemetry.record_settlement(
-                    listener=self._name,
-                    outcome=final_outcome,
-                    phase=PHASE_GATE,
-                )
-                root_span.set_attribute("aiopika.delivery.outcome", final_outcome.value)
-                root_span.set_attribute("aiopika.gate.acquired", False)
-                await settle_message(message, final_outcome)
+                await self._settle_gate_denied(message, root_span)
                 return
 
             root_span.set_attribute("aiopika.gate.acquired", True)

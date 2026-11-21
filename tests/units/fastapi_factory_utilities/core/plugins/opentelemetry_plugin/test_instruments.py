@@ -4,9 +4,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import InstrumentationName, OpenTelemetryConfig
+from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.configs import (
+    RUNTIME_INSTRUMENTATIONS,
+    InstrumentationName,
+    OpenTelemetryConfig,
+)
 from fastapi_factory_utilities.core.plugins.opentelemetry_plugin.instruments import (
     INSTRUMENTS,
+    _effective_instrumentations,
     apply_instruments,
     instrument_aio_pika,
     instrument_aiobotocore,
@@ -473,6 +478,19 @@ class TestInstrumentRedis(_BaseInstrumentTest):
 
 class TestApplyInstruments(_BaseInstrumentTest):
     """Tests for config-driven instrumentation loading."""
+
+    def test_every_runtime_member_excluded_by_default_and_reenabled_by_flag(self) -> None:
+        """Every RUNTIME_INSTRUMENTATIONS member is off by default and on with the flag."""
+        default_effective = _effective_instrumentations(OpenTelemetryConfig())
+        opted_in = _effective_instrumentations(OpenTelemetryConfig(enable_runtime_instrumentation=True))
+        for name in RUNTIME_INSTRUMENTATIONS:
+            assert name not in default_effective
+            assert name in opted_in
+        assert InstrumentationName.FASTAPI in opted_in
+        assert InstrumentationName.HTTPX in opted_in
+        # Append order matches RUNTIME_INSTRUMENTATIONS when absent from the base list.
+        runtime_tail = opted_in[-len(RUNTIME_INSTRUMENTATIONS) :]
+        assert runtime_tail == list(RUNTIME_INSTRUMENTATIONS)
 
     def test_disabled_instrumentors_are_not_imported(
         self,

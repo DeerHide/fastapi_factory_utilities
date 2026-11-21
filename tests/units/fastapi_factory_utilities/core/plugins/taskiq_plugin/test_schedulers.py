@@ -1,12 +1,18 @@
 """Unit tests for SchedulerComponent without a Redis broker."""
 
 import asyncio
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
+from taskiq.cli.scheduler.run import SchedulerLoop
 
-from fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers import SchedulerComponent
+from fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers import (
+    MinuteGuardSchedulerLoop,
+    SchedulerComponent,
+    SingleFlightTaskiqScheduler,
+)
 
 
 class TestSchedulerComponentUnits:
@@ -91,6 +97,7 @@ class TestSchedulerComponentUnits:
             maxlen=10_000,
             approximate=True,
         )
+        assert isinstance(component.scheduler, SingleFlightTaskiqScheduler)
 
     @pytest.mark.asyncio
     async def test_startup_and_shutdown_with_mocks(self) -> None:
@@ -113,7 +120,7 @@ class TestSchedulerComponentUnits:
                 _hang,
             ),
             patch(
-                "fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers.run_scheduler_task",
+                "fastapi_factory_utilities.core.plugins.taskiq_plugin.schedulers.run_minute_guard_scheduler_task",
                 _hang,
             ),
             patch("taskiq_fastapi.populate_dependency_context"),
@@ -126,3 +133,226 @@ class TestSchedulerComponentUnits:
             assert component.scheduler_source is component._scheduler_source
 
             await component.shutdown()
+
+
+class TestMinuteGuardSchedulerLoop:
+    """Tick handoff from the scheduler loop into the Redis lock."""
+
+    def test_ready_cron_records_pending_tick(self) -> None:
+        """A ready cron task stores the loop tick for the lock key."""
+        scheduler = SingleFlightTaskiqScheduler(
+            broker=MagicMock(),
+            sources=[],
+            redis_url="redis://localhost:6379/0",
+            lock_prefix="svc",
+        )
+        loop = MinuteGuardSchedulerLoop(scheduler, event_loop=asyncio.new_event_loop())
+        task = MagicMock(
+            cron="0 * * * *",
+            schedule_id="sched-1",
+            interval=None,
+            time=None,
+        )
+        now = datetime(2026, 10, 1, 12, 0, 59, 995000, tzinfo=UTC)
+
+        with patch.object(SchedulerLoop, "_is_schedule_ready_to_send", return_value=True):
+            assert loop._is_schedule_ready_to_send(task, now) is True
+
+        assert scheduler.pending_ticks["sched-1"] == now
+
+    def test_not_ready_does_not_record_tick(self) -> None:
+        """A not-ready check must not populate pending_ticks."""
+        scheduler = SingleFlightTaskiqScheduler(
+            broker=MagicMock(),
+            sources=[],
+            redis_url="redis://localhost:6379/0",
+            lock_prefix="svc",
+        )
+        loop = MinuteGuardSchedulerLoop(scheduler, event_loop=asyncio.new_event_loop())
+        task = MagicMock(
+            cron="0 * * * *",
+            schedule_id="sched-1",
+            interval=None,
+            time=None,
+        )
+        now = datetime(2026, 10, 1, 12, 0, 30, tzinfo=UTC)
+
+        with patch.object(SchedulerLoop, "_is_schedule_ready_to_send", return_value=False):
+            assert loop._is_schedule_ready_to_send(task, now) is False
+
+        assert scheduler.pending_ticks == {}
+
+
+class TestSingleFlightTaskiqScheduler:
+    """Redis SET NX gate before kicking a scheduled task."""
+
+    def _scheduler(self) -> SingleFlightTaskiqScheduler:
+        """Build a scheduler with a mock broker and no live Redis."""
+        broker = MagicMock()
+        return SingleFlightTaskiqScheduler(
+            broker=broker,
+            sources=[],
+            redis_url="redis://localhost:6379/0",
+            lock_prefix="youtube-integration",
+        )
+
+    def test_cron_lock_key_uses_task_name_and_utc_minute(self) -> None:
+        """Lock key is per task_name and UTC minute, not schedule_id."""
+        now = datetime(2026, 9, 30, 16, 0, 42, tzinfo=UTC)
+        key = SingleFlightTaskiqScheduler.cron_lock_key(
+            "youtube-integration",
+            "system_synchronization_dispatch",
+            now,
+        )
+        assert key == "youtube-integration:taskiq:cron-lock:system_synchronization_dispatch:202609301600"
+
+    @pytest.mark.asyncio
+    async def test_on_ready_keys_lock_on_tick_not_wall_clock(self) -> None:
+        """End-of-minute wake must lock on the loop tick minute, not send time."""
+        scheduler = self._scheduler()
+        redis = AsyncMock()
+        redis.set = AsyncMock(side_effect=[True, None])
+        scheduler._redis = redis
+
+        source = AsyncMock()
+        source.pre_send = AsyncMock()
+        source.post_send = AsyncMock()
+        task = MagicMock(
+            task_name="system_synchronization_dispatch",
+            schedule_id="sched-1",
+            task_id=None,
+            labels={},
+            args=(),
+            kwargs={},
+        )
+        tick = datetime(2026, 10, 1, 12, 0, 0, 9000, tzinfo=UTC)
+        late_tick = datetime(2026, 10, 1, 12, 0, 59, 995000, tzinfo=UTC)
+
+        kicker = MagicMock()
+        kicker.with_labels.return_value = kicker
+        kicker.with_task_id.return_value = kicker
+        kicker.kiq = AsyncMock()
+
+        with patch("taskiq.scheduler.scheduler.AsyncKicker", return_value=kicker):
+            scheduler.pending_ticks["sched-1"] = tick
+            await scheduler.on_ready(source, task)
+
+            scheduler.pending_ticks["sched-1"] = late_tick
+            await scheduler.on_ready(source, task)
+
+        assert redis.set.await_count == 2  # noqa: PLR2004
+        first_key = redis.set.await_args_list[0].args[0]
+        second_key = redis.set.await_args_list[1].args[0]
+        assert first_key == second_key
+        assert first_key.endswith(":202610011200")
+        assert kicker.kiq.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_on_ready_skips_kick_when_lock_lost(self) -> None:
+        """A lost SET NX must not enqueue the task."""
+        scheduler = self._scheduler()
+        redis = AsyncMock()
+        redis.set = AsyncMock(return_value=None)
+        scheduler._redis = redis
+
+        source = AsyncMock()
+        source.pre_send = AsyncMock()
+        source.post_send = AsyncMock()
+        task = MagicMock(
+            task_name="system_synchronization_dispatch",
+            schedule_id="sched-1",
+            task_id=None,
+            labels={},
+            args=(),
+            kwargs={},
+        )
+
+        with patch("taskiq.scheduler.scheduler.AsyncKicker") as kicker_cls:
+            await scheduler.on_ready(source, task)
+
+        kicker_cls.assert_not_called()
+        redis.set.assert_awaited_once()
+        set_kwargs = redis.set.await_args
+        assert set_kwargs.kwargs["nx"] is True
+        assert set_kwargs.kwargs["ex"] == SingleFlightTaskiqScheduler._LOCK_TTL_SECONDS
+
+    @pytest.mark.asyncio
+    async def test_on_ready_kicks_when_lock_won(self) -> None:
+        """A won SET NX enqueues the task once via AsyncKicker."""
+        scheduler = self._scheduler()
+        redis = AsyncMock()
+        redis.set = AsyncMock(return_value=True)
+        scheduler._redis = redis
+
+        source = AsyncMock()
+        source.pre_send = AsyncMock()
+        source.post_send = AsyncMock()
+        task = MagicMock(
+            task_name="system_synchronization_dispatch",
+            schedule_id="sched-1",
+            task_id=None,
+            labels={},
+            args=(),
+            kwargs={},
+        )
+
+        kicker = MagicMock()
+        kicker.with_labels.return_value = kicker
+        kicker.with_task_id.return_value = kicker
+        kicker.kiq = AsyncMock()
+
+        with patch("taskiq.scheduler.scheduler.AsyncKicker", return_value=kicker) as kicker_cls:
+            await scheduler.on_ready(source, task)
+
+        kicker_cls.assert_called_once()
+        kicker.kiq.assert_awaited_once()
+        redis.set.assert_awaited_once()
+
+
+class TestEnsureCronScheduleUnits:
+    """Mock-driven paths for ``SchedulerComponent.ensure_cron_schedule``."""
+
+    @pytest.mark.asyncio
+    async def test_ensure_requires_scheduler_source(self) -> None:
+        """ensure_cron_schedule before configure raises."""
+        component = SchedulerComponent(name_suffix="svc")
+        with pytest.raises(ValueError, match="Scheduler source"):
+            await component.ensure_cron_schedule("task", "* * * * *")
+
+    @pytest.mark.asyncio
+    async def test_ensure_noop_when_matching_stable_row(self) -> None:
+        """Matching schedule_id + cron is a no-op."""
+        component = SchedulerComponent(name_suffix="svc")
+        source = AsyncMock()
+        source.get_schedules.return_value = [
+            MagicMock(task_name="task", schedule_id="task", cron="0 * * * *"),
+        ]
+        component._scheduler_source = source
+        component._schedulers_tasks["task"] = MagicMock()
+
+        await component.ensure_cron_schedule("task", "0 * * * *")
+
+        source.delete_schedule.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_ensure_replaces_legacy_and_cron_change(self) -> None:
+        """Legacy random ids and cron changes are deleted then re-inserted."""
+        component = SchedulerComponent(name_suffix="svc")
+        source = AsyncMock()
+        source.get_schedules.return_value = [
+            MagicMock(task_name="task", schedule_id="random-uuid", cron="0 * * * *"),
+        ]
+        component._scheduler_source = source
+
+        decorated = MagicMock()
+        kicker = MagicMock()
+        kicker.with_schedule_id.return_value = kicker
+        kicker.schedule_by_cron = AsyncMock()
+        decorated.kicker.return_value = kicker
+        component._schedulers_tasks["task"] = decorated
+
+        await component.ensure_cron_schedule("task", "*/5 * * * *")
+
+        source.delete_schedule.assert_awaited_once_with("random-uuid")
+        kicker.with_schedule_id.assert_called_once_with("task")
+        kicker.schedule_by_cron.assert_awaited_once_with(source, "*/5 * * * *")

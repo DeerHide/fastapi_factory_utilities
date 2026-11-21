@@ -39,8 +39,10 @@ HTTP query examples:
 from .markers import (
     ApiField,
     ApiResponseField,
+    Redacted,
     SearchableField,
     UpdateableField,
+    get_redacted_marker,
     has_response_flag,
     has_searchable_flag,
     has_updateable_flag,
@@ -59,6 +61,7 @@ from .query_types import (
     RawQueryFieldName,
     RawQuerySort,
 )
+from .redaction import redact
 from .response_model import (
     ApiResponseModelAbstract,
     ApiResponseSchemaBase,
@@ -93,15 +96,18 @@ __all__: list[str] = [
     "RawQueryFieldName",
     "RawQuerySort",
     "ReconcileResult",
+    "Redacted",
     "SearchableEntity",
     "SearchableField",
     "UpdateableField",
     "build_query_filter_kwargs",
     "fields_query_param",
+    "get_redacted_marker",
     "has_response_flag",
     "has_searchable_flag",
     "has_updateable_flag",
     "parse_fields_param",
     "project",
+    "redact",
     "resolve_offset",
 ]

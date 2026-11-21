@@ -95,8 +95,8 @@ ipython_config.py
 #Pipfile.lock
 
 # poetry
-# poetry.lock IS committed. It constrains CI; published version ranges still
-# constrain consumers, and the two are allowed to differ. See the development guide.
+# Not tracked. CI resolves from pyproject.toml on each run.
+poetry.lock
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.

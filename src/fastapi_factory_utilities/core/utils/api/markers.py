@@ -7,6 +7,11 @@ introspection helpers in this package:
 - ``updateable`` — field can be updated via PUT/PATCH reconciliation.
 - ``searchable`` — field is exposed as a query filter on dynamic search models.
 
+:class:`Redacted` is a separate marker (not an ``ApiField`` flag): it marks
+fields whose values must be replaced before leaving a trust boundary (notably
+audit event publish). It carries a replacement value, which a boolean flag
+cannot express.
+
 Multiple :class:`ApiField` markers may appear in a single ``Annotated`` metadata
 tuple. When multiple markers are present, their flags are OR-combined when the
 introspection helpers compute behavior. This lets the convenience singletons
@@ -23,6 +28,15 @@ Examples:
         class Product(...):
             id: Annotated[int, ApiField(searchable=True)]
             label: Annotated[str, ApiField(updateable=True, searchable=True)]
+
+    Redacted sensitive fields::
+
+        from fastapi_factory_utilities.core.utils.api import Redacted
+
+
+        class Credentials(...):
+            access_token: Annotated[str | None, Redacted()]
+            body: Annotated[str, Redacted("[redacted]")]
 
     Legacy singleton aliases (:data:`ApiResponseField`, :data:`UpdateableField`,
     :data:`SearchableField`) remain available and compose with the same OR semantics.
@@ -113,6 +127,50 @@ def has_updateable_flag(metadata: tuple[Any, ...]) -> bool:
 def has_searchable_flag(metadata: tuple[Any, ...]) -> bool:
     """Return ``True`` when any :class:`ApiField` marker in ``metadata`` enables ``searchable``."""
     return any(isinstance(meta, ApiField) and meta.searchable for meta in metadata)
+
+
+class Redacted:
+    """Annotated marker: field value is replaced before leaving the trust boundary.
+
+    Used by :func:`fastapi_factory_utilities.core.utils.api.redact` and the
+    default :meth:`AuditEventObject.pre_publish_hook`. The replacement is deep-
+    copied on each redaction so mutable values (e.g. ``[]``) are never shared.
+
+    Args:
+        replacement: Value written in place of the original. Defaults to
+            ``None`` (valid only when the field annotation allows ``None``).
+    """
+
+    __slots__ = ("replacement",)
+
+    def __init__(self, replacement: Any = None) -> None:
+        """Initialize the marker.
+
+        Args:
+            replacement: Value that replaces the field when redacting.
+        """
+        self.replacement = replacement
+
+    def __repr__(self) -> str:
+        """Return a stable repr useful for debugging marker composition."""
+        return f"Redacted(replacement={self.replacement!r})"
+
+    def __eq__(self, other: object) -> bool:
+        """Equality compares the replacement value."""
+        if not isinstance(other, Redacted):
+            return NotImplemented
+        return self.replacement == other.replacement
+
+    # Unhashable: replacement may be a mutable list/dict (e.g. Redacted([])).
+    __hash__ = None  # type: ignore[assignment]
+
+
+def get_redacted_marker(metadata: tuple[Any, ...]) -> Redacted | None:
+    """Return the first :class:`Redacted` marker in ``metadata``, or ``None``."""
+    for meta in metadata:
+        if isinstance(meta, Redacted):
+            return meta
+    return None
 
 
 ApiResponseField: ApiField = ApiField()
