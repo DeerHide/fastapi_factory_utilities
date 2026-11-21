@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Continuous Mongo document schema migration on the ODM plugin: indexed
+  ``schema_version`` on ``BaseDocument`` / ``PersistedEntity``,
+  ``CURRENT_SCHEMA_VERSION`` + contiguous ``SchemaMigration`` chains, in-memory
+  upgrade on read, and a non-blocking startup batch sweep (``update_one`` per
+  document, no bulk write) gated by ``SchemaMigrationLock`` (default
+  ``MongoSchemaMigrationLock`` lease). Expand and contract remain separate
+  releases.
+
 ## [7.3.4] - 2026-11-21
 
 ### Fixed

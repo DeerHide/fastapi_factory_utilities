@@ -15,6 +15,12 @@ from .exceptions import (
     UnableToCreateEntityDueToDuplicateKeyError,
 )
 from .helpers import PersistedEntity
+from .migration_lock import (
+    AlwaysAcquireMigrationLock,
+    MongoSchemaMigrationLock,
+    SchemaMigrationLock,
+)
+from .migrations import SchemaMigration
 from .mockers import AbstractRepositoryInMemory
 from .plugins import ODMPlugin
 from .queries import ODMFindQuery, ODMQueryBuilder
@@ -23,7 +29,9 @@ from .repositories import AbstractRepository
 __all__ = [
     "AbstractRepository",
     "AbstractRepositoryInMemory",
+    "AlwaysAcquireMigrationLock",
     "BaseDocument",
+    "MongoSchemaMigrationLock",
     "ODMConfig",
     "ODMFindQuery",
     "ODMPlugin",
@@ -32,6 +40,8 @@ __all__ = [
     "ODMQueryBuilder",
     "OperationError",
     "PersistedEntity",
+    "SchemaMigration",
+    "SchemaMigrationLock",
     "UnableToCreateEntityDueToDuplicateKeyError",
     "depends_odm_client",
     "depends_odm_database",
