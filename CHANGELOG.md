@@ -142,6 +142,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hydra JWT introspection cache keys are namespaced by configured issuer
   (``issuer`` + NUL + ``jti``), not ``jti`` alone, preventing cross-issuer
   cache confusion in a shared process. Cache hits also re-check ``exp``.
+- Mark ``JWTNoneVerifier`` as a test-only no-op: renamed conceptually to
+  ``JWTNoOpIntrospectionVerifier`` (preferred in ``__all__``), and warn on
+  instantiation. Compatibility alias ``JWTNoneVerifier`` remains importable
+  from ``fastapi_factory_utilities.core.security.jwt`` and ``.verifiers``,
+  but is omitted from package ``__all__`` / star-import.
 - OpenAPI / Swagger / ReDoc are disabled by default outside ``development``.
   Set ``docs.enabled: true`` to opt in (or ``false`` to force off).
 
