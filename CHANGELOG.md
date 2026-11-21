@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.3.4] - 2026-11-21
+
 ### Fixed
 
-- Replace ``cacheout = "^0.16.0 || ^0.17.0"`` with ``>=0.16.0,<0.18.0`` so wheel ``Requires-Dist`` metadata is valid for PyPI.
+- Replace ``cacheout = "^0.16.0 || ^0.17.0"`` with ``>=0.16.0,<0.18.0`` so wheel ``Requires-Dist`` metadata is valid for PyPI (7.3.3 GitHub release could not upload).
 
 ## [7.3.3] - 2026-11-21
 
@@ -1199,7 +1201,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.3...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.4...HEAD
+[7.3.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.3...v7.3.4
 [7.3.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.2...v7.3.3
 [7.3.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.1...v7.3.2
 [7.3.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.0...v7.3.1
