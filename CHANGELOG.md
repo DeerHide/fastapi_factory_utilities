@@ -156,6 +156,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **Breaking** for configs that only set ``issuer`` (or only the unused
   ``audience`` field without realizing it was ignored).
 
+- Pin GitHub Actions to full commit SHAs (version kept in a comment).
+  Renovate refreshes those pins; Dependabot is not reintroduced.
 - CI PR-path jobs drop unused ``packages: write`` / ``contents: write``.
   Dependency-graph snapshot submit moves to a ``main``/tag-only
   ``dependency-snapshot`` job.
