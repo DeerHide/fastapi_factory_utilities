@@ -1,6 +1,8 @@
 """Oriented Data Model (ODM) plugin package."""
 
 import asyncio
+import os
+import socket
 from logging import INFO, Logger, getLogger
 from typing import Any, Self, cast
 
@@ -23,6 +25,8 @@ from .documents import BaseDocument
 from .encryption import STARTUP_PROBE_COLLECTION, STARTUP_PROBE_FIELD
 from .exceptions import OperationError, UnableToCreateEntityDueToDuplicateKeyError
 from .helpers import PersistedEntity
+from .migration_lock import MongoSchemaMigrationLock, SchemaMigrationLock
+from .migration_sweep import run_schema_migration_loop
 from .repositories import AbstractRepository
 
 _logger: BoundLogger = get_logger()
@@ -32,14 +36,28 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
     """ODM plugin."""
 
     def __init__(
-        self, document_models: list[type[Document]] | None = None, odm_config: ODMConfig | None = None
+        self,
+        document_models: list[type[Document]] | None = None,
+        odm_config: ODMConfig | None = None,
+        migration_lock: SchemaMigrationLock | None = None,
     ) -> None:
-        """Initialize the ODM plugin."""
+        """Initialize the ODM plugin.
+
+        Args:
+            document_models: Beanie document classes to register.
+            odm_config: Optional ODM configuration override.
+            migration_lock: Exclusive sweep lock. ``None`` selects the default
+                Mongo lease on the same database. Pass a custom lock (e.g. Redis)
+                or ``AlwaysAcquireMigrationLock`` in tests.
+        """
         super().__init__()
         self._document_models: list[type[Document]] | None = document_models
         self._odm_config: ODMConfig | None = odm_config
+        self._migration_lock: SchemaMigrationLock | None = migration_lock
         self._odm_client: AsyncMongoClient[Any] | None = None
         self._odm_database: AsyncDatabase[Any] | None = None
+        self._migration_tasks: list[asyncio.Task[None]] = []
+        self._migration_owner: str = f"{socket.gethostname()}:{os.getpid()}"
 
     def set_application(self, application: ApplicationAbstractProtocol) -> Self:
         """Set the application."""
@@ -97,6 +115,42 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
             _logger.exception("CSFLE startup smoke test failed: mongocryptd spawn/connect or Vault unreachable.")
             raise
 
+    def _start_schema_migrations(self) -> None:
+        """Spawn one non-blocking sweep task per document with CURRENT_SCHEMA_VERSION > 0."""
+        assert self._odm_database is not None
+        assert self._document_models is not None
+
+        lock: SchemaMigrationLock = self._migration_lock or MongoSchemaMigrationLock(self._odm_database)
+        for document_model in self._document_models:
+            if not issubclass(document_model, BaseDocument):
+                continue
+            if document_model.CURRENT_SCHEMA_VERSION <= 0:
+                continue
+            task: asyncio.Task[None] = asyncio.create_task(
+                run_schema_migration_loop(
+                    document_model,
+                    lock=lock,
+                    owner=self._migration_owner,
+                ),
+                name=f"schema-migration:{document_model.__name__}",
+            )
+            self._migration_tasks.append(task)
+            _logger.info(
+                "schema migration sweep started",
+                document=document_model.__name__,
+                schema_version=document_model.CURRENT_SCHEMA_VERSION,
+                owner=self._migration_owner,
+            )
+
+    async def _stop_schema_migrations(self) -> None:
+        """Cancel and await background migration tasks."""
+        if not self._migration_tasks:
+            return
+        for task in self._migration_tasks:
+            task.cancel()
+        await asyncio.gather(*self._migration_tasks, return_exceptions=True)
+        self._migration_tasks.clear()
+
     async def on_startup(self) -> None:
         """Actions to perform on startup for the ODM plugin."""
         host: str
@@ -136,6 +190,8 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
 
         assert self._odm_client is not None
 
+        self._start_schema_migrations()
+
         _logger.info(
             f"ODM plugin started. Database: {self._odm_database.name} - "
             f"Client: {host}:{port} - "
@@ -146,6 +202,7 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
 
     async def on_shutdown(self) -> None:
         """Actions to perform on shutdown for the ODM plugin."""
+        await self._stop_schema_migrations()
         if self._odm_client is not None:
             await self._odm_client.close()
         _logger.debug("ODM plugin shutdown.")

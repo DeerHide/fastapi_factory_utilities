@@ -24,6 +24,7 @@ class PersistedEntity(SearchableEntity, ApiResponseModelAbstract, BaseModel, Gen
         revision_id: The revision ID of the persisted entity.
         created_at: The creation date of the persisted entity.
         updated_at: The last update date of the persisted entity.
+        schema_version: Persisted document schema version (mirrors BaseDocument).
 
     ```python
     from fastapi_factory_utilities.core.plugins.odm_plugin.helpers import PersistedEntity
@@ -45,3 +46,7 @@ class PersistedEntity(SearchableEntity, ApiResponseModelAbstract, BaseModel, Gen
     revision_id: uuid.UUID | None = Field(default=None)
     created_at: Annotated[datetime.datetime, ApiField(searchable=True)] = Field(default_factory=datetime.datetime.now)
     updated_at: Annotated[datetime.datetime, ApiField(searchable=True)] = Field(default_factory=datetime.datetime.now)
+    # Mirrored on BaseDocument. Not searchable / not an API response field.
+    # Entities that do not extend PersistedEntity must declare the same field or
+    # model_dump() drops it (extra=ignore) and the next save cannot carry it.
+    schema_version: int = Field(default=0)
