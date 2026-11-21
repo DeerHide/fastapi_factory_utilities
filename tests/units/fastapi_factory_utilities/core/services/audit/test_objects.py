@@ -3,10 +3,10 @@
 import datetime
 import json
 import uuid
-from typing import Any
+from typing import Annotated, Any, ClassVar
 
 import pytest
-from pydantic import ValidationError
+from pydantic import ConfigDict, Field, ValidationError
 
 from fastapi_factory_utilities.core.services.audit.objects import (
     AuditableEntity,
@@ -14,8 +14,10 @@ from fastapi_factory_utilities.core.services.audit.objects import (
     DomainName,
     EntityFunctionalEventName,
     EntityName,
+    PersistedAuditableEntity,
     ServiceName,
 )
+from fastapi_factory_utilities.core.utils.api import ApiField
 
 
 def _sample_auditable_entity() -> AuditableEntity:
@@ -40,6 +42,27 @@ def _audit_event_base_kwargs() -> dict[str, Any]:
         "domain": DomainName("dom_testing"),
         "service": ServiceName("evt_service"),
     }
+
+
+class TestPersistedAuditableEntitySchemaVersion:
+    """``schema_version`` mirrors BaseDocument for repository document→entity loads."""
+
+    def test_extra_forbid_subclass_accepts_schema_version(self) -> None:
+        """Document dumps with schema_version must validate under extra=forbid."""
+
+        class _ForbidEntity(PersistedAuditableEntity[uuid.UUID]):
+            model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+            title: Annotated[str, ApiField()] = Field(default="x")
+
+        entity = _ForbidEntity(
+            id=uuid.uuid4(),
+            created_at=datetime.datetime.now(datetime.UTC),
+            updated_at=datetime.datetime.now(datetime.UTC),
+            schema_version=0,
+        )
+        assert entity.schema_version == 0
+        assert entity.model_dump()["schema_version"] == 0
+        assert "schema_version" not in _ForbidEntity.build_response_model().model_fields
 
 
 class TestAuditableEntity:

@@ -48,6 +48,8 @@ class PersistedAuditableEntity(AuditableEntity[GenericPersistedEntityId], Generi
         default_factory=cast(Callable[[], GenericPersistedEntityId], uuid.uuid4)
     )
     revision_id: uuid.UUID | None = Field(default=None)
+    # Mirrored on BaseDocument / PersistedEntity. Not searchable / not an API field.
+    schema_version: int = Field(default=0)
 
 
 AuditEventActorGeneric = TypeVar("AuditEventActorGeneric", bound=AuditableEntity[Any])
