@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.4.0] - 2026-11-21
+
 ### Added
 
 - Continuous Mongo document schema migration on the ODM plugin: indexed
@@ -16,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   document, no bulk write) gated by ``SchemaMigrationLock`` (default
   ``MongoSchemaMigrationLock`` lease). Expand and contract remain separate
   releases.
+
+### Fixed
+
+- Pin GitHub Actions ``uses:`` entries to immutable commit SHAs and add a
+  Dependabot ``github-actions`` ecosystem plus a guardrail test (closes #44).
+- Demote ``JWTNoneVerifier`` to a test-only no-op alias of
+  ``JWTNoOpIntrospectionVerifier`` (warning on init; omitted from package
+  ``__all__``) (closes #46).
 
 ## [7.3.4] - 2026-11-21
 
@@ -1218,7 +1228,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.4...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.4.0...HEAD
+[7.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.4...v7.4.0
 [7.3.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.3...v7.3.4
 [7.3.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.2...v7.3.3
 [7.3.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.1...v7.3.2
