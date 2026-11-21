@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.3.3] - 2026-11-21
+
 ### Fixed
 
 - PyMongo span statements no longer raise when ``findAndModify`` carries ``datetime`` (or other BSON) values in the update document; collection names are taken only from string/int command values, and non-JSON values become ``<TypeName>`` placeholders without calling ``str()``.
@@ -1193,7 +1195,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.2...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.3...HEAD
+[7.3.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.2...v7.3.3
 [7.3.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.1...v7.3.2
 [7.3.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.0...v7.3.1
 [7.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.2.0...v7.3.0
