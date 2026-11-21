@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.4.1] - 2026-11-21
+
+### Fixed
+
+- Mirror ``schema_version`` on ``PersistedAuditableEntity`` so
+  ``extra="forbid"`` auditable entities accept document dumps from
+  ``BaseDocument`` (repository document→entity conversion).
+
 ## [7.4.0] - 2026-11-21
 
 ### Added
@@ -1228,7 +1236,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.4.0...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.4.1...HEAD
+[7.4.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.4.0...v7.4.1
 [7.4.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.4...v7.4.0
 [7.3.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.3...v7.3.4
 [7.3.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.2...v7.3.3
