@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Replace ``cacheout = "^0.16.0 || ^0.17.0"`` with ``>=0.16.0,<0.18.0`` so wheel ``Requires-Dist`` metadata is valid for PyPI.
+
 ## [7.3.3] - 2026-11-21
 
 ### Fixed
