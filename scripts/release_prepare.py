@@ -90,7 +90,7 @@ def bump_kind(commits: list[tuple[str, str]]) -> str:
     """Return ``major``, ``minor`` or ``patch``."""
     bump = "patch"
     for subject, body in commits:
-        if BREAKING_SUBJECT_RE.match(subject) or "BREAKING CHANGE" in body or "BREAKING-CHANGE" in body:
+        if BREAKING_SUBJECT_RE.match(subject) or re.search(r"(?m)^BREAKING[ -]CHANGE:", body):
             return "major"
         if FEAT_RE.match(subject):
             bump = "minor"
