@@ -32,8 +32,8 @@ def _sample_auditable_entity() -> AuditableEntity[uuid.UUID]:
     """Minimal entity for audit service tests."""
     return AuditableEntity(
         id=uuid.uuid4(),
-        created_at=datetime.datetime.now(datetime.timezone.utc),
-        updated_at=datetime.datetime.now(datetime.timezone.utc),
+        created_at=datetime.datetime.now(datetime.UTC),
+        updated_at=datetime.datetime.now(datetime.UTC),
     )
 
 
@@ -68,7 +68,7 @@ def fixture_audit_event() -> MockAuditEventObject:
         what=EntityName(PartStr("test_entity")),
         why=EntityFunctionalEventName(PartStr("created")),
         where=ServiceName(PartStr("test_service")),
-        when=datetime.datetime.now(datetime.timezone.utc),
+        when=datetime.datetime.now(datetime.UTC),
         who={"id": str(uuid.uuid4())},
         entity=_sample_auditable_entity(),
         domain=DomainName(PartStr("dom_testing")),

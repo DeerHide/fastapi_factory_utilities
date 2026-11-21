@@ -7,6 +7,117 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.3.2] - 2026-11-10
+
+### Fixed
+
+- PyMongo span statements no longer stringify ``RawBSONDocument`` filters, which attached raw bytes and ``CodecOptions`` to every command span.
+
+## [7.3.1] - 2026-10-25
+
+### Security
+
+- Floor ``brotli`` at ``>=1.2.1`` (GHSA-9v8h-qqgm-4m35, CVE-2026-111497,
+  CVSS v4 9.2). ``aiohttp[speedups]`` only requires ``Brotli>=1.2``, so
+  this floor is what keeps a fresh resolve off 1.2.0.
+- ``aiohttp`` stays ``^3.12.13`` and ``certifi`` stays ``^2026.6.17``.
+  A fresh resolve currently selects aiohttp 3.14.5 (advisories fixed in
+  3.14.4: GHSA-5wr8-gcqf-gqf3, GHSA-9xw5-w5jj-pvcg, GHSA-2g87-pp6c-29x5)
+  and certifi 2026.10.23 (GHSA-6q48-6c7w-9gw2, fixed in 2026.10.19).
+
+### Changed
+
+- ``poetry.lock`` is no longer tracked. CI resolves dependencies from
+  ``pyproject.toml`` on each run and scans that resolution.
+
+## [7.3.0] - 2026-10-18
+
+### Changed
+
+- **Behavior:** ``OpenTelemetryMeterConfig`` defaults
+  ``reader_interval_millis`` to ``60000`` and ``reader_timeout_millis`` to
+  ``10000`` (was ``1000`` / ``1000``). Validates
+  ``reader_timeout_millis <= reader_interval_millis``. Restores prior cadence
+  with an explicit ``meter_config`` block.
+- **Behavior:** System metrics, asyncio, and CPython runtime auto-instrumentation
+  are opt-in via ``OpenTelemetryConfig.enable_runtime_instrumentation``
+  (default ``false``). They are no longer in the default ``instrumentations``
+  list. HTTP and other library instrumentors are unchanged.
+- README and knowledge docs: Production/Stable badge, ``RedisPlugin``, JWT sample
+  uses ``JWTAuthenticationServiceAbstract``, plugin directory names
+  (``*_plugin``), S3/Redis next to Taskiq, dependency floors pointed at
+  ``pyproject.toml``.
+
+### Added
+
+- ``OpenTelemetryConfig.enable_runtime_instrumentation`` flag to opt into
+  ``asyncio`` and ``system_metrics`` instrumentors.
+
+## [7.2.0] - 2026-10-02
+
+### Added
+
+- ``AbstractManagedListener.PREFETCH_COUNT`` / :meth:`~.AbstractManagedListener.prefetch_count`
+  apply optional ``basic.qos`` before consume so a worker cannot hoard an unbounded
+  unacked backlog.
+- :meth:`~.AbstractManagedListener.on_gate_saturated` lets subclasses choose
+  settlement when the concurrency gate is full (default remains immediate
+  ``REQUEUE``). Services can delay instead of hot-looping redeliveries.
+
+## [7.1.0] - 2026-10-01
+
+### Added
+
+- Declarative audit field redaction: ``Redacted`` annotation marker and
+  ``redact()`` helper under ``fastapi_factory_utilities.core.utils.api``.
+  ``AuditEventObject.pre_publish_hook`` now runs ``redact(entity)`` by default
+  so services mark sensitive fields on the entity instead of overriding the hook.
+
+## [7.0.4] - 2026-10-01
+
+### Fixed
+
+- Taskiq cron lock keys on the scheduler loop tick minute (via
+  ``pending_ticks``), not wall clock at send time, so an end-of-minute
+  double-ready still singles-flights across pods.
+- ``SchedulerComponent.ensure_cron_schedule`` registers crons with
+  ``schedule_id == task_name``, cleans legacy random-id rows, and replaces
+  the cron expression when config changes.
+
+## [7.0.3] - 2026-10-01
+
+### Security
+
+- Lockfile bumps ``PyJWT`` from 2.13.0 to 2.15.1 (fixes High/Critical
+  advisories that blocked the v7.0.1 tag CI Grype gate: GHSA-ffc3-869f-jxw9 and
+  related). ``v7.0.2`` was tagged before this section existed; use ``7.0.3``.
+
+## [7.0.1] - 2026-10-01
+
+### Fixed
+
+- Taskiq scheduler single-flights cron kicks across processes with a Redis
+  ``SET NX`` lock (``<svc>:taskiq:cron-lock:<task_name>:<YYYYMMDDHHMM>``,
+  TTL 70s). API + worker (and multi-replica) pods no longer each enqueue the
+  same periodic task within the matching minute.
+- Taskiq scheduler loop refuses a second cron kick in the same UTC minute
+  (``MinuteGuardSchedulerLoop``). Upstream Taskiq's ``round((now -
+  last_run).total_seconds()) < 60`` guard lets a wake at ``hh:00:59.995``
+  re-fire while ``pycron`` still sees minute 0; the stream message then lands
+  at ``hh:01:00.00x``.
+
+## [7.0.0] - 2026-09-28
+
+### Changed
+
+- OpenTelemetry SoT upgraded to the coherent **1.45 / 0.66** pair, with major-floor
+  ranges (not exact pins): ``opentelemetry-api`` / ``opentelemetry-sdk`` / OTLP
+  exporters / ``opentelemetry-propagator-b3`` are ``^1.45.0`` (``>=1.45.0,<2``);
+  ``opentelemetry-semantic-conventions`` and all ``opentelemetry-instrumentation*``
+  are ``>=0.66b0,<1``. Replaces the previous 1.43 / 0.64 floor and the
+  thrash-prone ``instrumentation*^0`` hole. Consumers (e.g. ``payment_backend``)
+  can drop app-level OTel pins after bumping FFU.
+
 ### Security
 
 - CORS defaults are deny-by-default: ``allow_origins=[]``,
@@ -19,6 +130,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hydra JWT introspection cache keys are namespaced by configured issuer
   (``issuer`` + NUL + ``jti``), not ``jti`` alone, preventing cross-issuer
   cache confusion in a shared process. Cache hits also re-check ``exp``.
+- OpenAPI / Swagger / ReDoc are disabled by default outside ``development``.
+  Set ``docs.enabled: true`` to opt in (or ``false`` to force off).
 
 - JWT: ``authorized_audiences`` is required and always passed to PyJWT
   decode (fail closed). Legacy ``audience`` is a deprecated alias that
@@ -26,8 +139,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **Breaking** for configs that only set ``issuer`` (or only the unused
   ``audience`` field without realizing it was ignored).
 
-- Pin GitHub Actions to full commit SHAs (with version comments) and add
-  Dependabot ``github-actions`` updates.
+- Pin GitHub Actions to full commit SHAs (version kept in a comment).
+  Renovate refreshes those pins; Dependabot is not reintroduced.
+- CI PR-path jobs drop unused ``packages: write`` / ``contents: write``.
+  Dependency-graph snapshot submit moves to a ``main``/tag-only
+  ``dependency-snapshot`` job.
 
 ## [6.5.3] - 2026-08-29
 
@@ -1075,7 +1191,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exception chaining preserved via `raise ... from` syntax
   - Comprehensive test suite for exception mapping utilities (72 tests)
 
-[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.3...HEAD
+[Unreleased]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.2...HEAD
+[7.3.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.1...v7.3.2
+[7.3.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.3.0...v7.3.1
+[7.3.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.2.0...v7.3.0
+[7.2.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.1.0...v7.2.0
+[7.1.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.4...v7.1.0
+[7.0.4]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.3...v7.0.4
+[7.0.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.1...v7.0.3
+[7.0.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v7.0.0...v7.0.1
+[7.0.0]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.3...v7.0.0
 [6.5.3]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.2...v6.5.3
 [6.5.2]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.1...v6.5.2
 [6.5.1]: https://github.com/DeerHide/fastapi_factory_utilities/compare/v6.5.0...v6.5.1

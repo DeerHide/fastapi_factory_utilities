@@ -2,7 +2,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Development Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/DeerHide/fastapi_factory_utilities)
+[![Development Status](https://img.shields.io/badge/status-production--stable-green.svg)](https://github.com/DeerHide/fastapi_factory_utilities)
 
 **A comprehensive library to build production-ready microservices with FastAPI, Beanie, Taskiq, AioPika, and OpenTelemetry.**
 
@@ -63,6 +63,8 @@ This library consolidates common patterns, plugins, and utilities for creating m
   - MongoDB operations
   - HTTP client requests (aiohttp)
   - RabbitMQ messaging (AioPika)
+- **Metric export defaults:** 60s interval / 10s timeout (override via ``meter_config``)
+- **Runtime metrics opt-in:** system / asyncio / CPython via ``enable_runtime_instrumentation``
 - **Distributed Tracing** with OTLP exporters (HTTP/gRPC)
 - **Structured Logging** with structlog integration
 - **Status Endpoint** for health checks and monitoring
@@ -113,6 +115,23 @@ poetry add fastapi-factory-utilities --extras mongo --extras otel
 ```
 
 Extras: `mongo`, `amqp`, `s3`, `redis`, `taskiq`, `otel`, `all` — declared in `pyproject.toml`. Importing a plugin without its extra raises `MissingExtraError` naming the extra to install. The bundled ASGI server is Uvicorn.
+
+### Supply-chain note: `taskiq` extra and the Velmios index
+
+When resolving with **Poetry**, the optional `taskiq` extra pulls
+`taskiq-dependencies` from the **private** Poetry source `velmios`
+(`https://pypi.velmios.io/simple`, `priority = "explicit"`). That Poetry
+source is an intentional trust boundary:
+
+- PyPI-only installs (no `taskiq` extra) never contact Velmios.
+- Enabling `[taskiq]` **via Poetry** trusts package integrity and availability
+  of `pypi.velmios.io` and its operators.
+- **pip** does not read `[[tool.poetry.source]]`; it only hits Velmios if you
+  explicitly configure an index/extra-index URL.
+- Prefer hash-checked / attested installs in CI when you enable the extra;
+  publish to PyPI later if you need a public-only path.
+
+See also [SECURITY.md](SECURITY.md#supply-chain-trust-boundaries).
 
 ---
 
@@ -258,6 +277,7 @@ Each plugin extends your application with specific capabilities:
 | **`AioPikaPlugin`** | RabbitMQ messaging capabilities | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
 | **`AioHttpPlugin`** | Instrumented HTTP client | [Plugin Architecture](docs/knowledge/architecture.md#available-plugins) |
 | **`S3Plugin`** | Async MinIO / S3 (aioboto3), named buckets | [S3 skill reference](https://github.com/DeerHide/agent_skills/blob/main/skills/fastapi-factory-utilities/references/s3-plugin.md) |
+| **`RedisPlugin`** | Standalone Redis / Valkey client (`name_suffix`, `build_key`) | [Redis skill reference](https://github.com/DeerHide/agent_skills/blob/main/skills/fastapi-factory-utilities/references/redis-plugin.md) |
 
 Plugins follow a consistent lifecycle:
 1. `on_load()` - Initial setup when plugin is registered
@@ -274,25 +294,18 @@ Plugins follow a consistent lifecycle:
 
 ```python
 from fastapi_factory_utilities.core.security.jwt import (
-    JWTAuthenticationService,
+    JWTAuthenticationServiceAbstract,
     JWTBearerAuthenticationConfig,
 )
 
-# Configure JWT authentication (authorized_audiences is required and enforced)
+# authorized_audiences is required and always passed to PyJWT decode
 jwt_config = JWTBearerAuthenticationConfig(
     issuer="https://your-auth-server.com",
     authorized_audiences=["your-api"],
 )
-
-# Use in FastAPI dependencies
-from fastapi import Depends
-
-async def get_current_user(
-    token: str = Depends(JWTAuthenticationService),
-):
-    # Token is automatically verified
-    return token.sub
 ```
+
+Subclass `JWTAuthenticationServiceAbstract` with a decoder and verifier; do not `Depends()` the abstract class. Config, extraction, and Hydra wiring: [JWT skill reference](https://github.com/DeerHide/agent_skills/blob/main/skills/fastapi-factory-utilities/references/jwt-authentication.md).
 
 #### Ory Kratos Integration
 
@@ -509,7 +522,7 @@ Please ensure:
 - Type checking passes (`poetry run mypy`)
 - Pre-commit hooks pass (`poetry run pre-commit run --all-files`)
 
-`poetry.lock` constrains CI. Published version ranges constrain consumers. The two are allowed to differ; bump the lock on purpose (and let the weekly canary tell you when upstream broke).
+`poetry.lock` is not tracked. CI resolves dependencies from `pyproject.toml` on each run, so two builds can select different transitive versions. Published ranges are what consumers resolve against.
 
 > 📖 See [Development Guide](docs/knowledge/development-guide.md) for complete contribution workflow.
 

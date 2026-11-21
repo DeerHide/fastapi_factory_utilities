@@ -12,15 +12,15 @@ defaults:
     shell: bash
 
 jobs:
-  # Install from the committed lock. The lock constrains CI; published ranges
-  # still constrain consumers. Fresh resolution lives in deps-canary.yml.
+  # No committed lock. Resolve from pyproject.toml on every run and pass
+  # that lock to the scan jobs. A cache hit only warms the venv; install
+  # still syncs to the lock just produced.
   setup:
     runs-on: public-actions-runner-scale-set
     permissions:
       contents: read
-      packages: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       - name: Verify runner Python and Poetry toolchain
@@ -30,32 +30,41 @@ jobs:
           poetry --version
           uv --version
       - name: Cache virtual environment
-        id: venv-cache
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25  # v5.1.0
         with:
           path: ./.venv
-          key: venv-${{ hashFiles('poetry.lock') }}
+          key: venv-${{ hashFiles('pyproject.toml') }}
       - name: Configure Poetry virtualenvs
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
-      - name: Check lock is current
+      - name: Check pyproject and resolve a lock
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
-          poetry check --lock
+          poetry check
+          poetry lock
       - name: Install the project dependencies
-        if: steps.venv-cache.outputs.cache-hit != 'true'
         run: |
           export PATH="/home/runner/.local/bin:$PATH"
           poetry install --sync --with test --extras all
+      - name: Upload resolved lock
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: poetry.lock
+          path: poetry.lock
+          if-no-files-found: error
   mandatory-only:
+    needs: setup
     runs-on: public-actions-runner-scale-set
     permissions:
       contents: read
-      packages: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      - name: Download resolved lock
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: poetry.lock
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       # ponytail: runner Python has no ensurepip (`python3.12 -m venv` fails).
@@ -85,12 +94,12 @@ jobs:
           cat "${REPO_NAME}-mandatory-grype-scan.txt"
           exit $GRYPE_EXIT
       - name: Upload mandatory SBOM
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: "${{ github.event.repository.name }}-mandatory-sbom.spdx.json"
           path: "${{ github.event.repository.name }}-mandatory-sbom.spdx.json"
       - name: Upload mandatory Grype report
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: "${{ github.event.repository.name }}-mandatory-grype-scan.txt"
           path: "${{ github.event.repository.name }}-mandatory-grype-scan.txt"
@@ -102,45 +111,19 @@ jobs:
     needs: setup
     runs-on: public-actions-runner-scale-set
     permissions:
-      contents: write
-      actions: read
-      packages: write
-      security-events: write
-      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      - name: Download resolved lock
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: poetry.lock
       - name: Generate SBOM with Syft
         env:
           REPO_NAME: ${{ github.event.repository.name }}
         run: |
           syft --version
-          syft ./poetry.lock -o "spdx-json=${REPO_NAME}-sbom.spdx.json" -o "github-json=dependency-snapshot.json"
-      # Dependabot reads only the default-branch graph, and syft leaves ref/sha/job
-      # empty. Renaming this job changes the correlator and strands the old manifest
-      # under detector syft, which keeps stale versions alerting until purged.
-      - name: Submit dependency snapshot
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          snap = json.loads(Path("dependency-snapshot.json").read_text())
-          snap["sha"] = os.environ["GITHUB_SHA"]
-          snap["ref"] = "refs/heads/main"
-          snap["job"] = {
-              "correlator": f"{os.environ['GITHUB_WORKFLOW']}_{os.environ['GITHUB_JOB']}",
-              "id": os.environ["GITHUB_RUN_ID"],
-          }
-          Path("dependency-snapshot.json").write_text(json.dumps(snap))
-          PY
-          curl -sS -f -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/dependency-graph/snapshots" \
-            --data-binary @dependency-snapshot.json
+          syft ./poetry.lock -o "spdx-json=${REPO_NAME}-sbom.spdx.json"
       - name: Scan current project with Grype
         env:
           REPO_NAME: ${{ github.event.repository.name }}
@@ -160,28 +143,72 @@ jobs:
           cat "${REPO_NAME}-grype-scan.txt"
           exit $GRYPE_EXIT
       - name: Upload SBOM
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: "${{ github.event.repository.name }}-sbom.spdx.json"
           path: "${{ github.event.repository.name }}-sbom.spdx.json"
       - name: Upload Grype text report
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: "${{ github.event.repository.name }}-grype-scan.txt"
           path: "${{ github.event.repository.name }}-grype-scan.txt"
       - name: Upload Grype SARIF artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: "${{ github.event.repository.name }}-grype-scan.sarif"
           path: "${{ github.event.repository.name }}-grype-scan.sarif"
+  # Write-scoped snapshot publish — main/tags only (PR path stays contents:read).
+  # Correlator is hard-coded below to "${GITHUB_WORKFLOW}_dependency-scan" so
+  # snapshots keep merging with the historical dependency-scan detector; the
+  # job id itself is not part of the correlator.
+  dependency-snapshot:
+    needs: setup
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: public-actions-runner-scale-set
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      - name: Download resolved lock
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: poetry.lock
+      - name: Generate and submit dependency snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          syft --version
+          syft ./poetry.lock -o "github-json=dependency-snapshot.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          snap = json.loads(Path("dependency-snapshot.json").read_text())
+          snap["sha"] = os.environ["GITHUB_SHA"]
+          snap["ref"] = "refs/heads/main"
+          snap["job"] = {
+              "correlator": f"{os.environ['GITHUB_WORKFLOW']}_dependency-scan",
+              "id": os.environ["GITHUB_RUN_ID"],
+          }
+          Path("dependency-snapshot.json").write_text(json.dumps(snap))
+          PY
+          curl -sS -f -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/dependency-graph/snapshots" \
+            --data-binary @dependency-snapshot.json
   pre-commit:
     needs: setup
     runs-on: public-actions-runner-scale-set
     permissions:
       contents: read
-      packages: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      - name: Download resolved lock
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: poetry.lock
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       - name: Verify runner Python and Poetry toolchain
@@ -191,17 +218,17 @@ jobs:
           poetry --version
           uv --version
       - name: Restore Cache
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25  # v5.1.0
         with:
           path: ./.venv
-          key: venv-${{ hashFiles('poetry.lock') }}
+          key: venv-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             venv-
-      - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25  # v5.1.0
         name: Restore virtualenv
         with:
           path: ./.venv
-          key: venv-${{ hashFiles('poetry.lock') }}
+          key: venv-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             venv-
       - name: Setup a local virtual environment
@@ -234,15 +261,15 @@ jobs:
       packages: write
       discussions: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
       - name: Ensure Poetry and uv are on PATH
         run: echo "/home/runner/.local/bin" >> "$GITHUB_PATH"
       - name: Download SBOM
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
           name: "${{ github.event.repository.name }}-sbom.spdx.json"
       - name: Download Grype Scan
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
           name: "${{ github.event.repository.name }}-grype-scan.txt"
       - name: Verify runner Python and Poetry toolchain
@@ -282,17 +309,16 @@ jobs:
           echo "Extracted release notes for v$VERSION:"
           cat release_notes.txt
       - name: Release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3  # v3.0.4
         with:
           body_path: release_notes.txt
           files: |
             dist/fastapi_factory_utilities-*.tar.gz
             dist/fastapi_factory_utilities-*.whl
-            poetry.lock
             ${{ github.event.repository.name }}-sbom.spdx.json
             ${{ github.event.repository.name }}-grype-scan.txt
           tag_name: ${{ github.ref }}
           name: ${{ github.ref_name }}
           prerelease: false
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # v1.13.0
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3

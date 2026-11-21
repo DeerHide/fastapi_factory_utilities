@@ -1,5 +1,6 @@
 """Guardrail: GitHub Actions must be pinned to full commit SHAs."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,7 @@ import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _WORKFLOWS_DIR = _REPO_ROOT / ".github" / "workflows"
-_DEPENDABOT_PATH = _REPO_ROOT / ".github" / "dependabot.yml"
+_RENOVATE_PATH = _REPO_ROOT / "renovate.json"
 _SHA_LENGTH = 40
 
 
@@ -52,8 +53,8 @@ def test_actions_are_pinned_to_full_commit_shas(workflow_path: Path) -> None:
         )
 
 
-def test_dependabot_tracks_github_actions_ecosystem() -> None:
-    """Dependabot must refresh Action pins, not only pip."""
-    dependabot = yaml.safe_load(_DEPENDABOT_PATH.read_text())
-    ecosystems = {entry["package-ecosystem"] for entry in dependabot["updates"]}
-    assert "github-actions" in ecosystems
+def test_renovate_tracks_github_actions() -> None:
+    """Renovate must refresh Action pins. Dependabot was removed in favor of it."""
+    config = json.loads(_RENOVATE_PATH.read_text())
+    managers = {manager for rule in config.get("packageRules", []) for manager in rule.get("matchManagers", [])}
+    assert "github-actions" in managers

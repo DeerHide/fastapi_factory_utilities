@@ -64,3 +64,31 @@ class TestBuildPymongoRequestHook:
         attribute_value: str = span.set_attribute.call_args.args[1]
         assert "(+10 more)" in attribute_value
         assert "vid-29" not in attribute_value
+
+    def test_does_not_stringify_raw_bson_documents(self) -> None:
+        """BSON document filters must not be dumped via ``str()`` onto the span."""
+
+        class _RawBSONDocument:
+            def __str__(self) -> str:
+                return "CodecOptions(" + ("x" * 3000)
+
+        span: MagicMock = MagicMock()
+        event: monitoring.CommandStartedEvent = monitoring.CommandStartedEvent(
+            command={
+                "find": "YoutubeMediaModel",
+                "filter": _RawBSONDocument(),
+                "limit": 1,
+            },
+            database_name="youtube-integration",
+            request_id=3,
+            connection_id=MagicMock(),
+            operation_id=3,
+        )
+        request_hook = build_pymongo_request_hook()
+
+        request_hook(span, event)
+
+        attribute_value: str = span.set_attribute.call_args.args[1]
+        assert "CodecOptions" not in attribute_value
+        assert "_RawBSONDocument" in attribute_value
+        assert len(attribute_value) <= MAX_DB_STATEMENT_LENGTH

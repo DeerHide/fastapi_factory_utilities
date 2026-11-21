@@ -22,14 +22,14 @@ def _sample_auditable_entity() -> AuditableEntity:
     """Minimal `AuditableEntity` for `AuditEventObject` tests."""
     return AuditableEntity(
         id=uuid.uuid4(),
-        created_at=datetime.datetime.now(datetime.timezone.utc),
-        updated_at=datetime.datetime.now(datetime.timezone.utc),
+        created_at=datetime.datetime.now(datetime.UTC),
+        updated_at=datetime.datetime.now(datetime.UTC),
     )
 
 
 def _audit_event_base_kwargs() -> dict[str, Any]:
     """Full valid kwargs for `AuditEventObject` construction in tests."""
-    when = datetime.datetime.now(datetime.timezone.utc)
+    when = datetime.datetime.now(datetime.UTC)
     return {
         "what": EntityName("test_entity"),
         "why": EntityFunctionalEventName("created"),
@@ -49,8 +49,8 @@ class TestAuditableEntity:
         """Test valid creation with all required fields."""
         # Arrange
         entity_id = uuid.uuid4()
-        created_at = datetime.datetime.now(datetime.timezone.utc)
-        updated_at = datetime.datetime.now(datetime.timezone.utc)
+        created_at = datetime.datetime.now(datetime.UTC)
+        updated_at = datetime.datetime.now(datetime.UTC)
 
         # Act
         entity = AuditableEntity(
@@ -69,9 +69,9 @@ class TestAuditableEntity:
         """Test valid creation with deleted_at populated."""
         # Arrange
         entity_id = uuid.uuid4()
-        created_at = datetime.datetime.now(datetime.timezone.utc)
-        updated_at = datetime.datetime.now(datetime.timezone.utc)
-        deleted_at = datetime.datetime.now(datetime.timezone.utc)
+        created_at = datetime.datetime.now(datetime.UTC)
+        updated_at = datetime.datetime.now(datetime.UTC)
+        deleted_at = datetime.datetime.now(datetime.UTC)
 
         # Act
         entity = AuditableEntity(
@@ -88,8 +88,8 @@ class TestAuditableEntity:
         """Primary key is required."""
         with pytest.raises(ValidationError) as exc_info:
             AuditableEntity(
-                created_at=datetime.datetime.now(datetime.timezone.utc),
-                updated_at=datetime.datetime.now(datetime.timezone.utc),
+                created_at=datetime.datetime.now(datetime.UTC),
+                updated_at=datetime.datetime.now(datetime.UTC),
             )
 
         locs = {err["loc"][0] for err in exc_info.value.errors()}
@@ -99,8 +99,8 @@ class TestAuditableEntity:
         """Published and published_at default when omitted."""
         entity = AuditableEntity(
             id=uuid.uuid4(),
-            created_at=datetime.datetime.now(datetime.timezone.utc),
-            updated_at=datetime.datetime.now(datetime.timezone.utc),
+            created_at=datetime.datetime.now(datetime.UTC),
+            updated_at=datetime.datetime.now(datetime.UTC),
         )
         assert entity.published is False
         assert entity.published_at is None
@@ -109,9 +109,9 @@ class TestAuditableEntity:
         """Test model serialization using model_dump."""
         # Arrange
         entity_id = uuid.uuid4()
-        created_at = datetime.datetime.now(datetime.timezone.utc)
-        updated_at = datetime.datetime.now(datetime.timezone.utc)
-        deleted_at = datetime.datetime.now(datetime.timezone.utc)
+        created_at = datetime.datetime.now(datetime.UTC)
+        updated_at = datetime.datetime.now(datetime.UTC)
+        deleted_at = datetime.datetime.now(datetime.UTC)
 
         entity = AuditableEntity(
             id=entity_id,
@@ -135,8 +135,8 @@ class TestAuditableEntity:
         """Test model serialization using model_dump_json."""
         # Arrange
         entity_id = uuid.uuid4()
-        created_at = datetime.datetime.now(datetime.timezone.utc)
-        updated_at = datetime.datetime.now(datetime.timezone.utc)
+        created_at = datetime.datetime.now(datetime.UTC)
+        updated_at = datetime.datetime.now(datetime.UTC)
 
         entity = AuditableEntity(
             id=entity_id,
