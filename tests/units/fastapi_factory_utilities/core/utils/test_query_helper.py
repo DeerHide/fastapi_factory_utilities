@@ -328,29 +328,29 @@ class TestQueryFilterHelperValidateFilters:
 class TestQueryFilterHelperCall:
     """Unit tests for __call__ method."""
 
-    def test_calls_with_valid_query_params(self) -> None:
+    async def test_calls_with_valid_query_params(self) -> None:
         """Test __call__ with valid query parameters."""
         helper = QueryFilterHelper(authorized_filters={"name": str, "age": int})
         mock_request = MagicMock(spec=Request)
         mock_request.query_params.items.return_value = [("name", "John"), ("age", "25")]
 
-        result = helper(mock_request)
+        result = await helper(mock_request)
 
         assert result == {"name": "John", "age": 25}
         assert helper._filters == {"name": "John", "age": 25}
 
-    def test_calls_with_empty_query_params(self) -> None:
+    async def test_calls_with_empty_query_params(self) -> None:
         """Test __call__ with empty query parameters."""
         helper = QueryFilterHelper(authorized_filters={"name": str})
         mock_request = MagicMock(spec=Request)
         mock_request.query_params.items.return_value = []
 
-        result = helper(mock_request)
+        result = await helper(mock_request)
 
         assert not result
         assert not helper._filters
 
-    def test_calls_raises_on_unauthorized_filter(self) -> None:
+    async def test_calls_raises_on_unauthorized_filter(self) -> None:
         """Test __call__ raises exception for unauthorized filter."""
         helper = QueryFilterHelper(
             authorized_filters={"name": str},
@@ -360,9 +360,9 @@ class TestQueryFilterHelperCall:
         mock_request.query_params.items.return_value = [("name", "John"), ("unauthorized", "value")]
 
         with pytest.raises(QueryFilterUnauthorizedError, match="Unauthorized filter: unauthorized"):
-            helper(mock_request)
+            await helper(mock_request)
 
-    def test_calls_raises_on_invalid_filter(self) -> None:
+    async def test_calls_raises_on_invalid_filter(self) -> None:
         """Test __call__ raises exception for invalid filter value."""
         helper = QueryFilterHelper(
             authorized_filters={"age": int},
@@ -372,36 +372,36 @@ class TestQueryFilterHelperCall:
         mock_request.query_params.items.return_value = [("age", "not_a_number")]
 
         with pytest.raises(QueryFilterValidationError, match="Invalid filter: age with value: not_a_number"):
-            helper(mock_request)
+            await helper(mock_request)
 
-    def test_calls_stores_filters_in_instance(self) -> None:
+    async def test_calls_stores_filters_in_instance(self) -> None:
         """Test that __call__ stores filters in instance variable."""
         helper = QueryFilterHelper(authorized_filters={"name": str})
         mock_request = MagicMock(spec=Request)
         mock_request.query_params.items.return_value = [("name", "John")]
 
-        result = helper(mock_request)
+        result = await helper(mock_request)
 
         assert helper._filters == result
         assert helper._filters == {"name": "John"}
 
-    def test_calls_overwrites_previous_filters(self) -> None:
+    async def test_calls_overwrites_previous_filters(self) -> None:
         """Test that subsequent __call__ overwrites previous filters."""
         helper = QueryFilterHelper(authorized_filters={"name": str})
         mock_request1 = MagicMock(spec=Request)
         mock_request1.query_params.items.return_value = [("name", "John")]
 
-        result1 = helper(mock_request1)
+        result1 = await helper(mock_request1)
         assert result1 == {"name": "John"}
 
         mock_request2 = MagicMock(spec=Request)
         mock_request2.query_params.items.return_value = [("name", "Jane")]
 
-        result2 = helper(mock_request2)
+        result2 = await helper(mock_request2)
         assert result2 == {"name": "Jane"}
         assert helper._filters == {"name": "Jane"}
 
-    def test_calls_with_multiple_filters(self) -> None:
+    async def test_calls_with_multiple_filters(self) -> None:
         """Test __call__ with multiple filters of different types."""
         helper = QueryFilterHelper(
             authorized_filters={
@@ -417,7 +417,7 @@ class TestQueryFilterHelperCall:
             ("price", "99.99"),
         ]
 
-        result = helper(mock_request)
+        result = await helper(mock_request)
 
         assert result == {"name": "John", "age": 25, "price": 99.99}
         assert isinstance(result["name"], str)
@@ -428,7 +428,7 @@ class TestQueryFilterHelperCall:
 class TestQueryFilterHelperIntegration:
     """Integration tests for QueryFilterHelper with various scenarios."""
 
-    def test_complete_workflow_with_all_flags_true(self) -> None:
+    async def test_complete_workflow_with_all_flags_true(self) -> None:
         """Test complete workflow with all validation flags enabled."""
         helper = QueryFilterHelper(
             authorized_filters={"name": str, "age": int, "active": bool},
@@ -442,11 +442,11 @@ class TestQueryFilterHelperIntegration:
             ("active", "True"),
         ]
 
-        result = helper(mock_request)
+        result = await helper(mock_request)
 
         assert result == {"name": "John", "age": 30, "active": True}
 
-    def test_complete_workflow_with_all_flags_false(self) -> None:
+    async def test_complete_workflow_with_all_flags_false(self) -> None:
         """Test complete workflow with all validation flags disabled.
 
         Note: Current implementation has a bug where unauthorized filters cause KeyError
@@ -465,9 +465,9 @@ class TestQueryFilterHelperIntegration:
 
         # Current implementation raises KeyError for unauthorized filters
         with pytest.raises(KeyError):
-            helper(mock_request)
+            await helper(mock_request)
 
-    def test_mixed_validation_flags(self) -> None:
+    async def test_mixed_validation_flags(self) -> None:
         """Test workflow with mixed validation flags."""
         helper = QueryFilterHelper(
             authorized_filters={"name": str, "age": int},
@@ -484,7 +484,7 @@ class TestQueryFilterHelperIntegration:
         # but the key is still added to validated_filters with None value
         # However, the actual behavior shows that invalid filters are not added
         # This might be a bug or intended behavior - testing actual behavior
-        result = helper(mock_request)
+        result = await helper(mock_request)
         # Note: Current implementation doesn't add keys when transformation returns None
         # This might need to be fixed in the implementation
         assert result == {"name": "John"}

@@ -45,7 +45,7 @@ class NamedResourceDepends(Generic[T]):
             raise cls.not_found_error(cls.not_found_message, key=key)
         return resource
 
-    def __call__(self, request: Request) -> T:
+    async def __call__(self, request: Request) -> T:
         """Resolve the resource for the given request.
 
         Args:

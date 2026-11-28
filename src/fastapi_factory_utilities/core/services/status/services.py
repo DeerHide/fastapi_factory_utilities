@@ -213,6 +213,6 @@ class StatusService:
         return subject
 
 
-def depends_status_service(request: Request) -> StatusService:
+async def depends_status_service(request: Request) -> StatusService:
     """Get the status service, through fastapi depends."""
     return request.app.state.status_service

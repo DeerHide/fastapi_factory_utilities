@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Request-scoped state-lookup dependencies are now ``async def``, so FastAPI
+  resolves them on the event loop instead of sending each one to the AnyIO
+  threadpool. Under CPU load every threadpool hop waited for a GIL handoff
+  (5 ms switch interval), which added up across the 10+ such dependencies a
+  typical authenticated route resolves. Affected: ``NamedResourceDepends``
+  (``AioHttpResourceDepends``, ``S3BucketDepends``),
+  ``DependsJWTBearerAuthenticationConfig``, ``DependsHydraJWKStoreMemory``,
+  ``DependsRootConfig``, ``DependsApplicationConfig``, ``DependsCsrfProtect``,
+  ``QueryFilterHelper``, ``depends_csrf_config``, ``depends_odm_client``,
+  ``depends_odm_database``, ``depends_redis``, ``depends_redis_plugin``,
+  ``depends_s3_client``, ``depends_scheduler_component``,
+  ``depends_aiopika_robust_connection``, ``depends_tracer_provider``,
+  ``depends_meter_provider``, ``depends_otel_config`` and
+  ``depends_status_service``. Usage through ``Depends`` / ``TaskiqDepends`` is
+  unchanged; code that calls one of them directly must now ``await`` it.
+
 ## [7.4.1] - 2026-11-21
 
 ### Fixed

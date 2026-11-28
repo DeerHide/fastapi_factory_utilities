@@ -25,7 +25,7 @@ class DependsRootConfig(Generic[GenericRootConfig]):
         """Import the root config to the state."""
         setattr(state, "config", config)
 
-    def __call__(self, request: Request = TaskiqDepends()) -> GenericRootConfig:
+    async def __call__(self, request: Request = TaskiqDepends()) -> GenericRootConfig:
         """Dependency for the root config.
 
         ``TaskiqDepends()`` default lets Taskiq inject the FastAPI-bound Request
@@ -42,7 +42,7 @@ depends_root_config = DependsRootConfig[RootConfig]()
 class DependsApplicationConfig(Generic[GenericApplicationConfig]):
     """Dependency for the application config."""
 
-    def __call__(self, root_config: RootConfig = Depends(depends_root_config)) -> GenericApplicationConfig:
+    async def __call__(self, root_config: RootConfig = Depends(depends_root_config)) -> GenericApplicationConfig:
         """Dependency for the application config."""
         return cast(GenericApplicationConfig, root_config.application)
 
@@ -50,7 +50,7 @@ class DependsApplicationConfig(Generic[GenericApplicationConfig]):
 depends_application_config = DependsApplicationConfig[BaseApplicationConfig]()
 
 
-def depends_csrf_config(root_config: RootConfig = Depends(depends_root_config)) -> AppCsrfConfig:
+async def depends_csrf_config(root_config: RootConfig = Depends(depends_root_config)) -> AppCsrfConfig:
     """Dependency for the CSRF config."""
     if root_config.csrf is None:
         raise ValueError("CSRF config not found in the root config.")

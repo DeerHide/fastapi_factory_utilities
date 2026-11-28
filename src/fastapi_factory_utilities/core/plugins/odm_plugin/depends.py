@@ -10,7 +10,7 @@ from taskiq import TaskiqDepends
 from fastapi_factory_utilities.core.plugins.state import ODM_CLIENT, ODM_DATABASE, get_from_state
 
 
-def depends_odm_client(request: Request = TaskiqDepends()) -> AsyncMongoClient[Any]:
+async def depends_odm_client(request: Request = TaskiqDepends()) -> AsyncMongoClient[Any]:
     """Acquire the ODM client from application state.
 
     Args:
@@ -25,7 +25,7 @@ def depends_odm_client(request: Request = TaskiqDepends()) -> AsyncMongoClient[A
     return get_from_state(request.app.state, ODM_CLIENT)
 
 
-def depends_odm_database(request: Request = TaskiqDepends()) -> AsyncDatabase[Any]:
+async def depends_odm_database(request: Request = TaskiqDepends()) -> AsyncDatabase[Any]:
     """Acquire the ODM database from application state.
 
     Args:

@@ -539,7 +539,7 @@ class TestDependsHydraJWKStoreMemory:
         DependsHydraJWKStoreMemory.import_to_state(state=state, jwk_store=jwk_store)
         assert getattr(state, DependsHydraJWKStoreMemory.DEPENDENCY_KEY) is jwk_store
 
-    def test_call_returns_store_from_request_app_state(self) -> None:
+    async def test_call_returns_store_from_request_app_state(self) -> None:
         """__call__ returns store from request.app.state."""
         jwk_store = JWKStoreMemory()
         app_state = MagicMock()
@@ -549,5 +549,5 @@ class TestDependsHydraJWKStoreMemory:
         request.app.state = app_state
 
         dep = DependsHydraJWKStoreMemory()
-        result = dep(request)
+        result = await dep(request)
         assert result is jwk_store

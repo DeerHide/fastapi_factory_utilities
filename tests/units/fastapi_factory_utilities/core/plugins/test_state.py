@@ -51,15 +51,15 @@ class TestPluginNotBound:
 class TestPluginNotRegistered:
     """depends_* accessors when the plugin was never registered."""
 
-    def test_depends_odm_client_names_missing_plugin(self) -> None:
+    async def test_depends_odm_client_names_missing_plugin(self) -> None:
         """Missing ODM client is PluginNotRegisteredError, not AttributeError."""
         with pytest.raises(PluginNotRegisteredError, match="ODMPlugin"):
-            depends_odm_client(_BareRequest())  # type: ignore[arg-type]
+            await depends_odm_client(_BareRequest())  # type: ignore[arg-type]
 
-    def test_depends_odm_database_names_missing_plugin(self) -> None:
+    async def test_depends_odm_database_names_missing_plugin(self) -> None:
         """Missing ODM database names ODMPlugin."""
         with pytest.raises(PluginNotRegisteredError, match="ODMPlugin"):
-            depends_odm_database(_BareRequest())  # type: ignore[arg-type]
+            await depends_odm_database(_BareRequest())  # type: ignore[arg-type]
 
 
 class TestRegistryDrift:

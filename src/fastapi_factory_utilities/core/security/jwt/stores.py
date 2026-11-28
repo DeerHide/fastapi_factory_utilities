@@ -181,6 +181,6 @@ class DependsHydraJWKStoreMemory:
         """Import the Hydra JWKS store in memory to the state."""
         setattr(state, cls.DEPENDENCY_KEY, jwk_store)
 
-    def __call__(self, request: Request) -> JWKStoreMemory:
+    async def __call__(self, request: Request) -> JWKStoreMemory:
         """Dependency for the Hydra JWKS store in memory."""
         return self.export_from_state(state=request.app.state)

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .plugins import RedisPlugin
 
 
-def depends_redis(request: Request = TaskiqDepends()) -> "Redis":
+async def depends_redis(request: Request = TaskiqDepends()) -> "Redis":
     """Acquire the async Redis client from application state.
 
     Works for HTTP routes and Taskiq workers (via ``TaskiqDepends``).
@@ -30,7 +30,7 @@ def depends_redis(request: Request = TaskiqDepends()) -> "Redis":
     return get_from_state(request.app.state, REDIS_CLIENT)
 
 
-def depends_redis_plugin(request: Request = TaskiqDepends()) -> "RedisPlugin":
+async def depends_redis_plugin(request: Request = TaskiqDepends()) -> "RedisPlugin":
     """Acquire the Redis plugin (client + ``build_key``) from application state.
 
     Args:

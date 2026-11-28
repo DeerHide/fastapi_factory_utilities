@@ -15,7 +15,7 @@ from fastapi_factory_utilities.core.plugins.state import (
 from .configs import OpenTelemetryConfig
 
 
-def depends_tracer_provider(request: Request = TaskiqDepends()) -> TracerProvider:
+async def depends_tracer_provider(request: Request = TaskiqDepends()) -> TracerProvider:
     """Get the tracer provider.
 
     Raises:
@@ -24,7 +24,7 @@ def depends_tracer_provider(request: Request = TaskiqDepends()) -> TracerProvide
     return get_from_state(request.app.state, TRACER_PROVIDER)
 
 
-def depends_meter_provider(request: Request = TaskiqDepends()) -> MeterProvider:
+async def depends_meter_provider(request: Request = TaskiqDepends()) -> MeterProvider:
     """Get the meter provider.
 
     Raises:
@@ -33,7 +33,7 @@ def depends_meter_provider(request: Request = TaskiqDepends()) -> MeterProvider:
     return get_from_state(request.app.state, METER_PROVIDER)
 
 
-def depends_otel_config(request: Request = TaskiqDepends()) -> OpenTelemetryConfig:
+async def depends_otel_config(request: Request = TaskiqDepends()) -> OpenTelemetryConfig:
     """Get the OpenTelemetry config.
 
     Raises:
