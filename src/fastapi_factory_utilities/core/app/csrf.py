@@ -28,7 +28,7 @@ class DependsCsrfProtect:
         """Export the CSRF protect from the state."""
         return state[cls.STATE_KEY]
 
-    def __call__(self, request: Request) -> CsrfProtect:
+    async def __call__(self, request: Request) -> CsrfProtect:
         """Call the dependency."""
         return self.export_from_state(state=request.app.state)
 

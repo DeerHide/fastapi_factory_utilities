@@ -212,6 +212,6 @@ class DependsJWTBearerAuthenticationConfig:
         """Import the JWT bearer authentication configuration to the state."""
         setattr(state, f"{cls.STATE_PREFIX_KEY}.{key}", config)
 
-    def __call__(self, request: Request) -> JWTBearerAuthenticationConfig:
+    async def __call__(self, request: Request) -> JWTBearerAuthenticationConfig:
         """Dependency for the JWT bearer authentication configuration."""
         return self.export_from_state(state=request.app.state, key=self._key)

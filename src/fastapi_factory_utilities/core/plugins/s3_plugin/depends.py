@@ -10,7 +10,7 @@ from fastapi_factory_utilities.core.plugins.s3_plugin.resources import S3BucketR
 from fastapi_factory_utilities.core.plugins.state import S3_BUCKET_PREFIX, S3_CLIENT, get_from_state
 
 
-def depends_s3_client(request: Request) -> Any:
+async def depends_s3_client(request: Request) -> Any:
     """Acquire the shared async S3 client from the request.
 
     Args:

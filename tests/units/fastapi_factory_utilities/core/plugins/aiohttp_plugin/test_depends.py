@@ -21,7 +21,7 @@ class TestAioHttpResourceDepends:
 
         assert depends._key == key
 
-    def test_call_with_resource_found(self) -> None:
+    async def test_call_with_resource_found(self) -> None:
         """Test __call__ when resource is found in app state."""
         key = "test_service"
         depends = AioHttpResourceDepends(key=key)
@@ -35,11 +35,11 @@ class TestAioHttpResourceDepends:
         setattr(mock_state, f"{STATE_PREFIX_KEY}{key}", mock_resource)
         mock_request.app.state = mock_state
 
-        result = depends(mock_request)
+        result = await depends(mock_request)
 
         assert result == mock_resource
 
-    def test_call_with_resource_not_found(self) -> None:
+    async def test_call_with_resource_not_found(self) -> None:
         """Test __call__ when resource is not found in app state."""
         key = "test_service"
         depends = AioHttpResourceDepends(key=key)
@@ -55,12 +55,12 @@ class TestAioHttpResourceDepends:
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
                 with pytest.raises(AioHttpClientResourceNotFoundError) as exc_info:
-                    depends(mock_request)
+                    await depends(mock_request)
 
                 assert hasattr(exc_info.value, "key")
                 assert getattr(exc_info.value, "key") == key
 
-    def test_call_with_none_resource(self) -> None:
+    async def test_call_with_none_resource(self) -> None:
         """Test __call__ when resource is explicitly None in app state."""
         key = "test_service"
         depends = AioHttpResourceDepends(key=key)
@@ -77,9 +77,9 @@ class TestAioHttpResourceDepends:
             with patch("fastapi_factory_utilities.core.exceptions.get_current_span") as mock_span:
                 mock_span.return_value = INVALID_SPAN
                 with pytest.raises(AioHttpClientResourceNotFoundError):
-                    depends(mock_request)
+                    await depends(mock_request)
 
-    def test_multiple_depends_with_different_keys(self) -> None:
+    async def test_multiple_depends_with_different_keys(self) -> None:
         """Test multiple AioHttpResourceDepends with different keys."""
         key1 = "service1"
         key2 = "service2"
@@ -97,14 +97,14 @@ class TestAioHttpResourceDepends:
         setattr(mock_state, f"{STATE_PREFIX_KEY}{key2}", mock_resource2)
         mock_request.app.state = mock_state
 
-        result1 = depends1(mock_request)
-        result2 = depends2(mock_request)
+        result1 = await depends1(mock_request)
+        result2 = await depends2(mock_request)
 
         assert result1 == mock_resource1
         assert result2 == mock_resource2
         assert result1 != result2
 
-    def test_state_prefix_key_is_used(self) -> None:
+    async def test_state_prefix_key_is_used(self) -> None:
         """Test that STATE_PREFIX_KEY is correctly used for attribute lookup."""
         key = "my_service"
         depends = AioHttpResourceDepends(key=key)
@@ -118,6 +118,6 @@ class TestAioHttpResourceDepends:
         setattr(mock_state, expected_attr, mock_resource)
         mock_request.app.state = mock_state
 
-        result = depends(mock_request)
+        result = await depends(mock_request)
 
         assert result == mock_resource

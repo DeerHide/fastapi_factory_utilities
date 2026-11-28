@@ -19,7 +19,7 @@ __all__: list[str] = [
 DEPENDS_SCHEDULER_COMPONENT_KEY: str = SCHEDULER_COMPONENT.attr
 
 
-def depends_scheduler_component(
+async def depends_scheduler_component(
     request: Request = TaskiqDepends(),
 ) -> "SchedulerComponent":
     """Dependency injection for the scheduler component.

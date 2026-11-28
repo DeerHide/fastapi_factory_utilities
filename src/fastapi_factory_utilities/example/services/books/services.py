@@ -1,9 +1,11 @@
 """Provides services for books."""
 
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import Request
+from fastapi import Depends
 from opentelemetry import metrics
+from pymongo.asynchronous.database import AsyncDatabase
 
 from fastapi_factory_utilities.core.plugins.odm_plugin.depends import (
     depends_odm_database,
@@ -146,13 +148,18 @@ class BookService:
         return updated_book
 
 
-def depends_book_service(request: Request) -> BookService:
+async def depends_book_service(
+    database: Annotated[AsyncDatabase[Any], Depends(depends_odm_database)],
+) -> BookService:
     """Provide Book Service.
 
+    ``async def`` keeps this cheap constructor on the event loop; a sync ``def``
+    dependency would be sent to the threadpool on every request.
+
     Args:
-        request: FastAPI request object.
+        database: The shared ODM database.
 
     Returns:
         BookService instance.
     """
-    return BookService(book_repository=BookRepository(database=depends_odm_database(request=request)))
+    return BookService(book_repository=BookRepository(database=database))

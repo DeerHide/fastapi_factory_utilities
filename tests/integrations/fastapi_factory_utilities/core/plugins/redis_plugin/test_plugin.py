@@ -56,13 +56,13 @@ class TestRedisPluginIntegration:
         # HTTP-style Depends accessor
         mock_request: MagicMock = MagicMock(spec=Request)
         mock_request.app = fastapi_app
-        depends_client: Redis = depends_redis(mock_request)
+        depends_client: Redis = await depends_redis(mock_request)
         assert await depends_client.get(key) == "42"
 
         # Taskiq-style: same Depends with a request whose app.state is set
         taskiq_request: MagicMock = MagicMock()
         taskiq_request.app = fastapi_app
-        taskiq_client: Redis = depends_redis(taskiq_request)
+        taskiq_client: Redis = await depends_redis(taskiq_request)
         assert await taskiq_client.get(key) == "42"
 
         await plugin.on_shutdown()

@@ -110,7 +110,7 @@ class QueryFilterHelper:
                 validated_filters[key] = transformed_value
         return validated_filters
 
-    def __call__(self, request: Request) -> dict[str, Any]:
+    async def __call__(self, request: Request) -> dict[str, Any]:
         """Call the QueryFilterHelper."""
         self._filters = self.validate_filters(filters=dict(request.query_params.items()))
         return self._filters

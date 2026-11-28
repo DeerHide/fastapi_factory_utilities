@@ -9,7 +9,7 @@ from fastapi_factory_utilities.core.plugins.state import AIOPIKA_CONNECTION, get
 DEPENDS_AIOPIKA_ROBUST_CONNECTION_KEY: str = AIOPIKA_CONNECTION.attr
 
 
-def depends_aiopika_robust_connection(
+async def depends_aiopika_robust_connection(
     request: Request = TaskiqDepends(),
 ) -> AbstractRobustConnection:
     """Get the Aiopika robust connection.

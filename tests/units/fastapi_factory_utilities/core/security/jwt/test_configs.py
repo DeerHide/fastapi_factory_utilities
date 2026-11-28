@@ -612,7 +612,7 @@ class TestDependsJWTBearerAuthenticationConfig:
         DependsJWTBearerAuthenticationConfig.import_to_state(state=state, config=config, key="my_jwt")
         assert getattr(state, "jwt_configs.my_jwt") is config
 
-    def test_call_returns_config_from_request_app_state(self) -> None:
+    async def test_call_returns_config_from_request_app_state(self) -> None:
         """__call__ returns config from request.app.state using the dependency key."""
         config = JWTBearerAuthenticationConfig(authorized_audiences=["test-api"], issuer=_DEFAULT_ISSUER)
         app_state: State = MagicMock(spec=State)
@@ -622,5 +622,5 @@ class TestDependsJWTBearerAuthenticationConfig:
         request.app.state = app_state
 
         dep = DependsJWTBearerAuthenticationConfig("my_jwt")
-        result = dep(request)
+        result = await dep(request)
         assert result is config
