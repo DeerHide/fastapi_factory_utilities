@@ -71,6 +71,8 @@ class ODMBuilder:
         self._odm_client: AsyncMongoClient[Any] | None = odm_client
         self._odm_database: AsyncDatabase[Any] | None = odm_database
         self._auto_encryption_opts: AutoEncryptionOpts | None = auto_encryption_opts
+        self._plain_odm_client: AsyncMongoClient[Any] | None = None
+        self._plain_odm_database: AsyncDatabase[Any] | None = None
 
     @property
     def config(self) -> ODMConfig | None:
@@ -98,6 +100,28 @@ class ODMBuilder:
             AsyncDatabase | None: The ODM database.
         """
         return self._odm_database
+
+    @property
+    def plain_odm_client(self) -> AsyncMongoClient[Any] | None:
+        """Provide the non-encrypting client, built only when CSFLE is enabled.
+
+        Returns:
+            AsyncMongoClient | None: The plain client, or None when CSFLE is off.
+        """
+        return self._plain_odm_client
+
+    @property
+    def plain_odm_database(self) -> AsyncDatabase[Any] | None:
+        """Provide the database for documents without encrypted fields.
+
+        With CSFLE on, this is the plain client's database, so those documents skip
+        libmongocrypt (and its mongocryptd round trip) entirely. With CSFLE off it is the
+        ODM database itself.
+
+        Returns:
+            AsyncDatabase | None: The database to register unencrypted documents on.
+        """
+        return self._plain_odm_database if self._plain_odm_database is not None else self._odm_database
 
     @property
     def auto_encryption_opts(self) -> AutoEncryptionOpts | None:
@@ -281,6 +305,10 @@ class ODMBuilder:
         if self._config.heartbeat_frequency_ms is not None and self._config.heartbeat_frequency_ms > 0:
             client_kwargs["heartbeatFrequencyMS"] = self._config.heartbeat_frequency_ms
         if self._auto_encryption_opts is not None:
+            # Documents without encrypted fields use a second, plain client: going through
+            # the encrypting one costs a libmongocrypt pass and a mongocryptd round trip on
+            # every operation, for nothing to encrypt or decrypt.
+            self._plain_odm_client = AsyncMongoClient(**client_kwargs)
             client_kwargs["auto_encryption_opts"] = self._auto_encryption_opts
 
         self._odm_client = AsyncMongoClient(**client_kwargs)
@@ -320,12 +348,14 @@ class ODMBuilder:
                 "ODM client is not set. Provide the ODM client using build_client method or through parameter."
             )
 
-        self._odm_database = self._odm_client.get_database(
-            name=database_name,
-            codec_options=CodecOptions(  # pyright: ignore[reportUnknownArgumentType]
-                tz_aware=True,
-            ),
+        codec_options: CodecOptions[Any] = CodecOptions(  # pyright: ignore[reportUnknownVariableType]
+            tz_aware=True,
         )
+        self._odm_database = self._odm_client.get_database(name=database_name, codec_options=codec_options)
+        if self._plain_odm_client is not None:
+            self._plain_odm_database = self._plain_odm_client.get_database(
+                name=database_name, codec_options=codec_options
+            )
 
         return self
 

@@ -22,7 +22,7 @@ from .builder import ODMBuilder
 from .configs import ODMConfig
 from .depends import depends_odm_client, depends_odm_database
 from .documents import BaseDocument
-from .encryption import STARTUP_PROBE_COLLECTION, STARTUP_PROBE_FIELD
+from .encryption import STARTUP_PROBE_COLLECTION, STARTUP_PROBE_FIELD, has_encrypted_fields
 from .exceptions import OperationError, UnableToCreateEntityDueToDuplicateKeyError
 from .helpers import PersistedEntity
 from .migration_lock import MongoSchemaMigrationLock, SchemaMigrationLock
@@ -56,6 +56,8 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
         self._migration_lock: SchemaMigrationLock | None = migration_lock
         self._odm_client: AsyncMongoClient[Any] | None = None
         self._odm_database: AsyncDatabase[Any] | None = None
+        self._plain_odm_client: AsyncMongoClient[Any] | None = None
+        self._plain_odm_database: AsyncDatabase[Any] | None = None
         self._migration_tasks: list[asyncio.Task[None]] = []
         self._migration_owner: str = f"{socket.gethostname()}:{os.getpid()}"
 
@@ -79,10 +81,18 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
         # TODO: Find a better way to initialize beanie with the document models of the concrete application
         # through an hook in the application, a dynamis import ?
         try:
-            await init_beanie(
-                database=self._odm_database,
-                document_models=self._document_models,
-            )
+            plain_database: AsyncDatabase[Any] | None = self._plain_odm_database
+            if plain_database is None:
+                await init_beanie(database=self._odm_database, document_models=self._document_models)
+            else:
+                # CSFLE on: only documents that declare encrypted fields need the
+                # encrypting client; the rest go to the plain one.
+                encrypted: list[type[Document]] = [m for m in self._document_models if has_encrypted_fields(m)]
+                plain: list[type[Document]] = [m for m in self._document_models if not has_encrypted_fields(m)]
+                if encrypted:
+                    await init_beanie(database=self._odm_database, document_models=encrypted)
+                if plain:
+                    await init_beanie(database=plain_database, document_models=plain)
         except Exception:
             self._report_unhealthy()
             _logger.exception("ODM plugin failed to start.")
@@ -175,6 +185,9 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
             )
             self._odm_database = odm_factory.odm_database
             self._odm_client = odm_factory.odm_client
+            self._plain_odm_client = odm_factory.plain_odm_client
+            if self._plain_odm_client is not None:
+                self._plain_odm_database = odm_factory.plain_odm_database
         except Exception:
             self._report_unhealthy()
             _logger.exception("ODM plugin failed to start.")
@@ -205,6 +218,8 @@ class ODMPlugin(PluginStatusMixin, PluginAbstract):
         await self._stop_schema_migrations()
         if self._odm_client is not None:
             await self._odm_client.close()
+        if self._plain_odm_client is not None:
+            await self._plain_odm_client.close()
         _logger.debug("ODM plugin shutdown.")
 
 
