@@ -6,6 +6,7 @@ from http import HTTPStatus
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
+import aiohttp
 import jwt
 import pytest
 from pydantic import HttpUrl, ValidationError
@@ -454,6 +455,107 @@ class TestHydraIntrospectGenericService:
 
             assert "Failed to validate the JWKS from the Hydra service" in str(exc_info.value)
             assert isinstance(exc_info.value.__cause__, ValidationError)
+
+
+class TestHydraIntrospectRetry:
+    """Transport-failure retry and per-attempt timeout of the read-only Hydra calls."""
+
+    @pytest.fixture
+    def service(
+        self,
+        http_resource_admin: AioHttpClientResource,
+        http_resource_public: AioHttpClientResource,
+        hydra_jwt_config: JWTBearerAuthenticationConfig,
+    ) -> HydraIntrospectService:
+        """Build a default introspect service."""
+        return HydraIntrospectService(
+            identifier="hydra-introspect-retry-test",
+            config=hydra_jwt_config,
+            hydra_admin_http_resource=http_resource_admin,
+            hydra_public_http_resource=http_resource_public,
+        )
+
+    @pytest.mark.parametrize(
+        "transport_error",
+        [TimeoutError(), aiohttp.ServerDisconnectedError(), aiohttp.ClientOSError()],
+    )
+    @pytest.mark.asyncio
+    async def test_introspect_retries_once_on_transport_error(
+        self,
+        service: HydraIntrospectService,
+        mock_introspect_data: dict[str, Any],
+        transport_error: BaseException,
+    ) -> None:
+        """A dropped or stalled connection is retried once and the second attempt succeeds."""
+        calls: list[dict[str, Any]] = []
+        ok_response = build_mocked_aiohttp_response(status=HTTPStatus.OK, json=mock_introspect_data)
+
+        def post(**kwargs: Any) -> Any:
+            calls.append(kwargs)
+            if len(calls) == 1:
+                raise transport_error
+            return ok_response
+
+        service._hydra_admin_http_resource = build_mocked_aiohttp_resource(post=post)
+
+        result = await service.introspect(token=HydraAccessToken("test_token"))
+
+        assert result.active == mock_introspect_data["active"]
+        assert len(calls) == HydraIntrospectService.MAX_ATTEMPTS
+        assert all(c["timeout"].total == HydraIntrospectService.REQUEST_TIMEOUT_SECONDS for c in calls)
+
+    @pytest.mark.asyncio
+    async def test_introspect_gives_up_after_max_attempts(self, service: HydraIntrospectService) -> None:
+        """Persistent transport failures surface as HydraOperationError after MAX_ATTEMPTS."""
+        calls: list[dict[str, Any]] = []
+
+        def post(**kwargs: Any) -> Any:
+            calls.append(kwargs)
+            raise TimeoutError()
+
+        service._hydra_admin_http_resource = build_mocked_aiohttp_resource(post=post)
+
+        with pytest.raises(HydraOperationError):
+            await service.introspect(token=HydraAccessToken("test_token"))
+        assert len(calls) == HydraIntrospectService.MAX_ATTEMPTS
+
+    @pytest.mark.asyncio
+    async def test_introspect_does_not_retry_http_errors(self, service: HydraIntrospectService) -> None:
+        """An HTTP error response is an answer, not a transport failure: no retry."""
+        calls: list[dict[str, Any]] = []
+        error_response = build_mocked_aiohttp_response(status=HTTPStatus.SERVICE_UNAVAILABLE)
+
+        def post(**kwargs: Any) -> Any:
+            calls.append(kwargs)
+            return error_response
+
+        service._hydra_admin_http_resource = build_mocked_aiohttp_resource(post=post)
+
+        with pytest.raises(HydraOperationError) as exc_info:
+            await service.introspect(token=HydraAccessToken("test_token"))
+        assert exc_info.value.status_code == HTTPStatus.SERVICE_UNAVAILABLE
+        assert len(calls) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_wellknown_jwks_retries_once_on_transport_error(
+        self, service: HydraIntrospectService, mock_jwks_data: dict[str, Any]
+    ) -> None:
+        """The JWKS fetch is retried once on a dropped connection."""
+        calls: list[dict[str, Any]] = []
+        ok_response = build_mocked_aiohttp_response(status=HTTPStatus.OK, json=mock_jwks_data)
+
+        def get(**kwargs: Any) -> Any:
+            calls.append(kwargs)
+            if len(calls) == 1:
+                raise aiohttp.ServerDisconnectedError()
+            return ok_response
+
+        service._hydra_public_http_resource = build_mocked_aiohttp_resource(get=get)
+
+        result = await service.get_wellknown_jwks()
+
+        assert len(result) == 1
+        assert len(calls) == HydraIntrospectService.MAX_ATTEMPTS
 
 
 class TestHydraIntrospectService:

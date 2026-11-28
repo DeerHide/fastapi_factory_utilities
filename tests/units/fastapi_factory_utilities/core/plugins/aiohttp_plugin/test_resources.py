@@ -233,6 +233,7 @@ class TestAioHttpClientResourceBuildTcpConnector:
                     limit_per_host=25,
                     use_dns_cache=True,
                     ttl_dns_cache=600,
+                    keepalive_timeout=15.0,
                     ssl=False,
                 )
 
@@ -441,6 +442,43 @@ class TestAioHttpClientResourceAcquireClientSession:
                     assert mock_session in resource._client_sessions  # pyright: ignore[reportPrivateUsage]
 
                 assert mock_session not in resource._client_sessions  # pyright: ignore[reportPrivateUsage]
+
+    @pytest.mark.parametrize(
+        ("request_timeout", "explicit_timeout", "expected_total"),
+        [
+            (None, None, None),
+            (7.5, None, 7.5),
+            (7.5, 2.0, 2.0),
+        ],
+    )
+    async def test_acquire_client_session_request_timeout(
+        self, request_timeout: float | None, explicit_timeout: float | None, expected_total: float | None
+    ) -> None:
+        """The configured request timeout is the session default; an explicit timeout wins."""
+        config = HttpServiceDependencyConfig(request_timeout=request_timeout)
+        resource = AioHttpClientResource(dependency_config=config)
+        resource._tcp_connector = MagicMock()  # pyright: ignore[reportPrivateUsage]
+        kwargs: dict[str, Any] = {}
+        if explicit_timeout is not None:
+            kwargs["timeout"] = aiohttp.ClientTimeout(total=explicit_timeout)
+
+        with patch.object(AioHttpClientResource, "build_trace_config", return_value=None):
+            with patch(
+                "fastapi_factory_utilities.core.plugins.aiohttp_plugin.resources.aiohttp.ClientSession"
+            ) as mock_session_class:
+                mock_session = MagicMock()
+                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_session.__aexit__ = AsyncMock(return_value=None)
+                mock_session_class.return_value = mock_session
+
+                async with resource.acquire_client_session(**kwargs):
+                    pass
+
+        session_kwargs = mock_session_class.call_args.kwargs
+        if expected_total is None:
+            assert "timeout" not in session_kwargs
+        else:
+            assert session_kwargs["timeout"].total == expected_total
 
     async def test_acquire_client_session_raises_without_connector(self) -> None:
         """Test acquire_client_session raises when connector not initialized."""
