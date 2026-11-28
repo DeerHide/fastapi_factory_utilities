@@ -2,11 +2,13 @@
 
 import json
 from base64 import b64encode
+from collections.abc import Awaitable, Callable
 from typing import Any, Generic, TypeVar, get_args
 
 import aiohttp
 import jwt
 from pydantic import ValidationError
+from structlog.stdlib import BoundLogger, get_logger
 
 from fastapi_factory_utilities.core.plugins.aiohttp_plugin import (
     AioHttpClientResource,
@@ -19,6 +21,15 @@ from .objects import HydraTokenIntrospectObject
 from .types import HydraAccessToken, HydraClientId, HydraClientSecret
 
 HydraIntrospectObjectGeneric = TypeVar("HydraIntrospectObjectGeneric", bound=HydraTokenIntrospectObject)
+_T = TypeVar("_T")
+
+_logger: BoundLogger = get_logger()
+
+# Transport failures where the request never got a usable answer: a pooled
+# connection that was silently dropped (e.g. its backend pod vanished behind
+# an L7 proxy), a reset, or a timeout. Safe to retry for read-only calls.
+# HTTP error responses (ClientResponseError) are not retried.
+_RETRYABLE_TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (TimeoutError, aiohttp.ClientConnectionError)
 
 
 class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
@@ -26,6 +37,10 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
 
     INTROSPECT_ENDPOINT: str = "/admin/oauth2/introspect"
     WELLKNOWN_JWKS_ENDPOINT: str = "/.well-known/jwks.json"
+    # Per-attempt total timeout for introspect and JWKS calls, in seconds.
+    REQUEST_TIMEOUT_SECONDS: float = 5.0
+    # Total attempts for read-only calls on transport failures (1 = no retry).
+    MAX_ATTEMPTS: int = 2
 
     def __init__(
         self,
@@ -57,16 +72,12 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
             token (str): The token to introspect.
         """
         try:
-            async with self._hydra_admin_http_resource.acquire_client_session() as session:
-                async with session.post(
-                    url=self.INTROSPECT_ENDPOINT,
-                    data={"token": token},
-                ) as response:
-                    response.raise_for_status()
-                    response_data: dict[str, Any] = await response.json()
-                    instrospect: HydraIntrospectObjectGeneric = self._concreate_introspect_object_class.model_validate(
-                        response_data
-                    )
+            response_data: dict[str, Any] = await self._call_with_retry(
+                operation="introspect", call=lambda: self._post_introspect(token=token)
+            )
+            instrospect: HydraIntrospectObjectGeneric = self._concreate_introspect_object_class.model_validate(
+                response_data
+            )
         except aiohttp.ClientResponseError as error:
             raise HydraOperationError(
                 "An error occurred while introspecting the token", status_code=error.status
@@ -87,14 +98,11 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
     async def get_wellknown_jwks(self) -> list[jwt.PyJWK]:
         """Get the JWKS from the Hydra service."""
         try:
-            async with self._hydra_public_http_resource.acquire_client_session() as session:
-                async with session.get(
-                    url=self.WELLKNOWN_JWKS_ENDPOINT,
-                ) as response:
-                    response.raise_for_status()
-                    jwks_data: dict[str, Any] = await response.json()
-                    jwks: jwt.PyJWKSet = jwt.PyJWKSet.from_dict(jwks_data)
-                    return jwks.keys  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            jwks_data: dict[str, Any] = await self._call_with_retry(
+                operation="get_wellknown_jwks", call=self._get_wellknown_jwks_data
+            )
+            jwks: jwt.PyJWKSet = jwt.PyJWKSet.from_dict(jwks_data)
+            return jwks.keys  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         except aiohttp.ClientResponseError as error:
             raise HydraOperationError(
                 "Failed to get the JWKS from the Hydra service", status_code=error.status
@@ -105,6 +113,59 @@ class HydraIntrospectGenericService(Generic[HydraIntrospectObjectGeneric]):
             raise HydraOperationError("Failed to validate the JWKS from the Hydra service") from error
         except Exception as error:
             raise HydraOperationError("Failed to get the JWKS from the Hydra service") from error
+
+    async def _call_with_retry(self, operation: str, call: Callable[[], Awaitable[_T]]) -> _T:
+        """Run a read-only Hydra call, retrying transport failures.
+
+        A failed attempt's connection is discarded by aiohttp, so the retry runs on
+        another (or a fresh) connection.
+
+        Args:
+            operation (str): Operation name, used in logs.
+            call (Callable[[], Awaitable[_T]]): Factory building one attempt.
+
+        Returns:
+            _T: The result of the first successful attempt.
+
+        Raises:
+            TimeoutError | aiohttp.ClientConnectionError: When every attempt fails on transport.
+        """
+        attempt: int = 1
+        while True:
+            try:
+                return await call()
+            except _RETRYABLE_TRANSPORT_ERRORS as error:
+                if attempt >= self.MAX_ATTEMPTS:
+                    raise
+                _logger.warning(
+                    "Hydra call failed on transport, retrying",
+                    identifier=self._identifier,
+                    operation=operation,
+                    attempt=attempt,
+                    error=repr(error),
+                )
+                attempt += 1
+
+    async def _post_introspect(self, token: HydraAccessToken) -> dict[str, Any]:
+        """Run one introspect attempt and return the raw JSON payload."""
+        async with self._hydra_admin_http_resource.acquire_client_session() as session:
+            async with session.post(
+                url=self.INTROSPECT_ENDPOINT,
+                data={"token": token},
+                timeout=aiohttp.ClientTimeout(total=self.REQUEST_TIMEOUT_SECONDS),
+            ) as response:
+                response.raise_for_status()
+                return await response.json()
+
+    async def _get_wellknown_jwks_data(self) -> dict[str, Any]:
+        """Run one JWKS fetch attempt and return the raw JSON payload."""
+        async with self._hydra_public_http_resource.acquire_client_session() as session:
+            async with session.get(
+                url=self.WELLKNOWN_JWKS_ENDPOINT,
+                timeout=aiohttp.ClientTimeout(total=self.REQUEST_TIMEOUT_SECONDS),
+            ) as response:
+                response.raise_for_status()
+                return await response.json()
 
 
 class HydraIntrospectService(HydraIntrospectGenericService[HydraTokenIntrospectObject]):

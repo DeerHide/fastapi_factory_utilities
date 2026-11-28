@@ -97,6 +97,7 @@ class AioHttpClientResource:
             limit_per_host=dependency_config.limit_per_host,
             use_dns_cache=dependency_config.use_dns_cache,
             ttl_dns_cache=dependency_config.ttl_dns_cache,
+            keepalive_timeout=dependency_config.keepalive_timeout,
             ssl=ssl_context,
         )
 
@@ -231,6 +232,9 @@ class AioHttpClientResource:
 
         if self._dependency_config.url is not None:
             kwargs["base_url"] = str(self._dependency_config.url)
+
+        if self._dependency_config.request_timeout is not None and "timeout" not in kwargs:
+            kwargs["timeout"] = aiohttp.ClientTimeout(total=self._dependency_config.request_timeout)
 
         trace_config: aiohttp.TraceConfig | None = self.build_trace_config(
             tracer_provider=self._tracer_provider, meter_provider=self._meter_provider

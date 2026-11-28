@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- ``HttpServiceDependencyConfig`` gained ``keepalive_timeout`` (idle pooled
+  connection lifetime, default 15 s, same as aiohttp) and ``request_timeout``
+  (default total timeout per request, applied to every session the resource
+  hands out). ``request_timeout`` defaults to ``None``, which keeps aiohttp's
+  300 s default. A per-call ``timeout=`` still wins.
+
+### Fixed
+
+- ``HydraIntrospectGenericService.introspect`` and ``get_wellknown_jwks`` now
+  time out each attempt after 5 s (``REQUEST_TIMEOUT_SECONDS``) and retry once
+  (``MAX_ATTEMPTS = 2``) on a timeout or dropped connection, so they no longer
+  hang for up to 300 s. This happened when the pooled connection's backend pod
+  had disappeared behind an L7 proxy (e.g. during a Hydra rollout). HTTP error
+  responses are still raised at once, without a retry.
+
 ## [7.6.1] - 2026-11-28
 
 ### Fixed
