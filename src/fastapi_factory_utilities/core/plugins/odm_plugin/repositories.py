@@ -65,10 +65,15 @@ class AbstractRepository(ABC, Generic[DocumentGenericType, EntityGenericType]):
 
     @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncClientSession, None]:
-        """Yield a new session."""
+        """Yield a new session on the client this repository's document is bound to.
+
+        With CSFLE on, a document without encrypted fields is registered on the plain
+        client, not the encrypting one passed in as ``database``; PyMongo rejects a
+        session started by a different client.
+        """
         session: AsyncClientSession | None = None
         try:
-            session = self._database.client.start_session()
+            session = self._document_type.get_pymongo_collection().database.client.start_session()
             yield session
         except PyMongoError as error:
             raise OperationError(f"Failed to create session: {error}") from error

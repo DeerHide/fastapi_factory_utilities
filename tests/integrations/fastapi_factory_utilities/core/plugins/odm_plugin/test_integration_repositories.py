@@ -1,6 +1,7 @@
 """Provide tests for AbstractRepository class."""
 
 import datetime
+import os
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -11,6 +12,7 @@ from beanie import (  # pyright: ignore[reportUnknownVariableType]
 )
 from pydantic import BaseModel, Field
 from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.asynchronous.mongo_client import AsyncMongoClient
 
 from fastapi_factory_utilities.core.plugins.odm_plugin.documents import BaseDocument
 from fastapi_factory_utilities.core.plugins.odm_plugin.repositories import (
@@ -45,6 +47,34 @@ class RepositoryForTest(AbstractRepository[DocumentForTest, EntityForTest]):
 
 class TestAbstractRepository:
     """Test AbstractRepository class."""
+
+    @pytest.mark.asyncio()
+    async def test_session_uses_the_document_client(self, async_motor_database: AsyncDatabase[Any]) -> None:
+        """A repository given another client's database still works (CSFLE plain client, TEST-200).
+
+        With CSFLE on, unencrypted documents are registered on a plain client while
+        repositories receive the encrypting client's database from app state. Sessions must
+        come from the document's client: PyMongo rejects a session from another client.
+        """
+        host, port = await async_motor_database.client.address  # pyright: ignore[reportGeneralTypeIssues]
+        other_client: AsyncMongoClient[Any] = AsyncMongoClient(
+            host=host,
+            port=port,
+            username=os.environ.get("MONGO_INITDB_ROOT_USERNAME", "test"),
+            password=os.environ.get("MONGO_INITDB_ROOT_PASSWORD", "test"),
+        )
+        try:
+            await init_beanie(database=async_motor_database, document_models=[DocumentForTest])
+            repository: RepositoryForTest = RepositoryForTest(database=other_client[async_motor_database.name])
+            entity_id: UUID = uuid4()
+
+            await repository.insert(entity=EntityForTest(id=entity_id, my_field="my_field"))
+            fetched: EntityForTest | None = await repository.get_one_by_id(entity_id=entity_id)
+
+            assert fetched is not None
+            assert fetched.my_field == "my_field"
+        finally:
+            await other_client.close()
 
     @pytest.mark.asyncio()
     async def test_insert(self, async_motor_database: AsyncDatabase[Any]) -> None:
