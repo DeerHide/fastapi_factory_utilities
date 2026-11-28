@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pymongo.encryption_options import AutoEncryptionOpts
 
+from fastapi_factory_utilities.core.plugins.odm_plugin.documents import BaseDocument
 from fastapi_factory_utilities.core.plugins.odm_plugin.encryption import (
     STARTUP_PROBE_COLLECTION,
     STARTUP_PROBE_FIELD,
@@ -222,3 +223,57 @@ class TestODMPluginCsfleStartupProbe:
         status = mock_subject.on_next.call_args.kwargs["value"]
         assert status["health"] == HealthStatusEnum.UNHEALTHY
         assert status["readiness"] == ReadinessStatusEnum.NOT_READY
+
+
+class _EncryptedDocument(BaseDocument):
+    """Document declaring an encrypted field."""
+
+    secret: str
+
+    class Settings(BaseDocument.Settings):
+        """Settings for ``_EncryptedDocument``."""
+
+        encrypted_fields = ["secret"]  # noqa: RUF012
+
+
+class _PlainDocument(BaseDocument):
+    """Document without encrypted fields."""
+
+    name: str
+
+
+class TestODMPluginBeanieSplit:
+    """With CSFLE on, only encrypted documents use the encrypting client (TEST-200)."""
+
+    @pytest.mark.asyncio
+    @patch("fastapi_factory_utilities.core.plugins.odm_plugin.plugins.init_beanie", new_callable=AsyncMock)
+    async def test_registers_documents_on_the_matching_database(self, mock_init_beanie: AsyncMock) -> None:
+        """Encrypted documents go to the ODM database, the others to the plain database."""
+        plugin: ODMPlugin = ODMPlugin()
+        plugin._application = MagicMock()
+        plugin._odm_database = MagicMock(name="encrypting_db")
+        plugin._plain_odm_database = MagicMock(name="plain_db")
+        plugin._document_models = [_EncryptedDocument, _PlainDocument]
+
+        await plugin._setup_beanie()
+
+        calls = {tuple(c.kwargs["document_models"]): c.kwargs["database"] for c in mock_init_beanie.await_args_list}
+        assert calls == {
+            (_EncryptedDocument,): plugin._odm_database,
+            (_PlainDocument,): plugin._plain_odm_database,
+        }
+
+    @pytest.mark.asyncio
+    @patch("fastapi_factory_utilities.core.plugins.odm_plugin.plugins.init_beanie", new_callable=AsyncMock)
+    async def test_single_registration_when_csfle_disabled(self, mock_init_beanie: AsyncMock) -> None:
+        """Without a plain database every document is registered on the ODM database at once."""
+        plugin: ODMPlugin = ODMPlugin()
+        plugin._application = MagicMock()
+        plugin._odm_database = MagicMock(name="db")
+        plugin._document_models = [_EncryptedDocument, _PlainDocument]
+
+        await plugin._setup_beanie()
+
+        mock_init_beanie.assert_awaited_once_with(
+            database=plugin._odm_database, document_models=[_EncryptedDocument, _PlainDocument]
+        )

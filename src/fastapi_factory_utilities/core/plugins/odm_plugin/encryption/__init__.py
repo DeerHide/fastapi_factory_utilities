@@ -7,6 +7,7 @@ from .schema import (
     STARTUP_PROBE_FIELD,
     build_schema_map,
     build_startup_probe_schema,
+    has_encrypted_fields,
     validate_no_index_collisions,
 )
 from .vault import VaultUnwrapClient
@@ -19,6 +20,7 @@ __all__ = [
     "VaultUnwrapClient",
     "build_schema_map",
     "build_startup_probe_schema",
+    "has_encrypted_fields",
     "resolve_or_create_data_key",
     "validate_no_index_collisions",
 ]

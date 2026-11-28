@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- ODM plugin: with CSFLE enabled, only documents that declare
+  ``Settings.encrypted_fields`` are registered on the auto-encrypting client.
+  Every other document uses a second, plain ``AsyncMongoClient`` built from the
+  same configuration, so its operations no longer go through libmongocrypt and a
+  mongocryptd ``mark_command`` round trip (also traced as an extra Mongo span).
+  ``ODM_CLIENT`` / ``ODM_DATABASE`` in app state are still the encrypting client.
+  ``ODMBuilder`` exposes ``plain_odm_client`` and ``plain_odm_database``, and
+  ``has_encrypted_fields`` is exported from ``odm_plugin.encryption``. Nothing
+  changes with CSFLE off. TEST-200
+
 ## [7.5.0] - 2026-11-28
 
 ### Changed

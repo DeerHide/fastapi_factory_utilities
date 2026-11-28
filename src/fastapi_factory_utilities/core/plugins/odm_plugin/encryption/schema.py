@@ -55,6 +55,11 @@ def _encrypted_fields(document_class: type[Document]) -> list[str]:
     return list(getattr(settings_class, "encrypted_fields", None) or [])
 
 
+def has_encrypted_fields(document_class: type[Document]) -> bool:
+    """Return True when the document declares at least one ``Settings.encrypted_fields`` entry."""
+    return bool(_encrypted_fields(document_class))
+
+
 def _indexed_top_level_fields(document_class: type[Document]) -> set[str]:
     """Collect every top-level field name that is indexed, by any mechanism Beanie supports.
 

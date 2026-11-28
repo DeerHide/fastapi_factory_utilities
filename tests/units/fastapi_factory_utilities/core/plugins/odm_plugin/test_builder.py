@@ -128,6 +128,45 @@ class TestODMBuilderBuildClient:
         assert client_kwargs["auto_encryption_opts"] is auto_encryption_opts
 
 
+class TestODMBuilderPlainClient:
+    """The plain client for unencrypted documents exists only when CSFLE is on (TEST-200)."""
+
+    @patch("fastapi_factory_utilities.core.plugins.odm_plugin.builder.AsyncMongoClient")
+    def test_no_plain_client_when_csfle_disabled(self, mock_async_mongo_client: MagicMock) -> None:
+        """CSFLE off: one client, and the plain database is the ODM database."""
+        builder: ODMBuilder = ODMBuilder(application=MagicMock(), odm_config=ODMConfig(uri="mongodb://localhost:27017"))
+
+        builder.build_client().build_database()
+
+        assert mock_async_mongo_client.call_count == 1
+        assert builder.plain_odm_client is None
+        assert builder.plain_odm_database is builder.odm_database
+
+    @patch("fastapi_factory_utilities.core.plugins.odm_plugin.builder.AsyncMongoClient")
+    def test_plain_client_without_auto_encryption_when_csfle_enabled(self, mock_async_mongo_client: MagicMock) -> None:
+        """CSFLE on: a second client without ``auto_encryption_opts`` backs the plain database."""
+        mock_async_mongo_client.side_effect = [MagicMock(name="plain"), MagicMock(name="encrypting")]
+        auto_encryption_opts: AutoEncryptionOpts = AutoEncryptionOpts(
+            kms_providers={"local": {"key": b"k" * 96}},
+            key_vault_namespace="test.__keyVault",
+        )
+        builder: ODMBuilder = ODMBuilder(
+            application=MagicMock(),
+            odm_config=ODMConfig(uri="mongodb://localhost:27017"),
+            auto_encryption_opts=auto_encryption_opts,
+        )
+
+        builder.build_client().build_database()
+
+        plain_kwargs, encrypting_kwargs = (c.kwargs for c in mock_async_mongo_client.call_args_list)
+        assert "auto_encryption_opts" not in plain_kwargs
+        assert encrypting_kwargs["auto_encryption_opts"] is auto_encryption_opts
+        assert {k: v for k, v in encrypting_kwargs.items() if k != "auto_encryption_opts"} == plain_kwargs
+        assert builder.plain_odm_client is not None
+        assert builder.plain_odm_client is not builder.odm_client
+        assert builder.plain_odm_database is not builder.odm_database
+
+
 class _EncryptedCredsDocument(BaseDocument):
     """Document fixture with a single declared encrypted field, no index collision."""
 
