@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.6.1] - 2026-11-28
+
+### Fixed
+
+- ``AbstractRepository.get_session`` starts its session on the client the
+  repository's document is registered on, not on the client of the ``database`` it
+  was constructed with. In 7.6.0, with CSFLE on, repositories built from the app-state
+  (encrypting) database failed every call on an unencrypted document with "Can only
+  use session with the AsyncMongoClient that started it". TEST-200
+
 ## [7.6.0] - 2026-11-28
 
 ### Changed
